@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData, useHead, useRoute, queryContent } from '#imports';
+import { useAsyncData, useHead, useRoute, queryCollection } from '#imports';
 
 const route = useRoute();
 const pageSize = 10;
@@ -12,7 +12,7 @@ const { data } = await useAsyncData(
     if (!process.server) {
       return { items: [], total: 0 };
     }
-    const posts = await queryContent('blog').sort({ date: -1 }).find();
+    const posts = await queryCollection('blog').order('date', 'DESC').all();
     const total = posts.length;
     const start = (page.value - 1) * pageSize;
     return {

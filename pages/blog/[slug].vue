@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData, useHead, useRoute, queryContent } from '#imports';
+import { useAsyncData, useHead, useRoute, queryCollection } from '#imports';
 import { courses } from '~/config/courses';
 import { defaultCitySlug } from '~/config/cities';
 
@@ -11,7 +11,7 @@ const { data: post } = await useAsyncData(
   () => `blog-post-${slug.value}`,
   async () => {
     if (!process.server) return null;
-    return queryContent('blog').where({ slug: slug.value }).findOne();
+    return queryCollection('blog').where('slug', '=', slug.value).first();
   },
 );
 

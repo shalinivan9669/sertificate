@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData, useHead, useI18n, queryContent } from '#imports';
+import { useAsyncData, useHead, useI18n, queryCollection } from '#imports';
 
 const props = defineProps({
   course: {
@@ -43,9 +43,11 @@ const { data: contentDoc } = await useAsyncData(
   () => `course-content-${slug.value}-${locale.value}`,
   async () => {
     if (!process.server) return null;
-    const localized = await queryContent(`courses/${slug.value}.${locale.value}`).findOne();
+    const fetchCourseDoc = (localeCode) =>
+      queryCollection('courses').where('stem', '=', `courses/${slug.value}.${localeCode}`).first();
+    const localized = await fetchCourseDoc(locale.value);
     if (localized) return localized;
-    return queryContent(`courses/${slug.value}.ru`).findOne();
+    return fetchCourseDoc('ru');
   },
   { watch: [slug, locale] },
 );

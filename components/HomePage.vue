@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData, queryContent } from '#imports';
+import { useAsyncData, queryCollection } from '#imports';
 
 const props = defineProps({
   city: {
@@ -47,7 +47,7 @@ const withCityPath = (slug) => {
 
 const { data: blogArticles } = await useAsyncData('home-blog', async () => {
   if (process.server) {
-    return queryContent('blog').sort({ date: -1 }).limit(4).find();
+    return queryCollection('blog').order('date', 'DESC').limit(4).all();
   }
   return [];
 });
