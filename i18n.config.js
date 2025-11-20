@@ -23,13 +23,13 @@ export default defineI18nConfig(() => ({
       nav: {
         home: 'Басты бет',
         courses: 'Курстар',
-        formats: 'Оқыту формалары',
+        formats: 'Оқыту форматтары',
         blog: 'Блог',
         contacts: 'Байланыс',
         cities: 'Қалалар',
       },
       cta: {
-        apply: 'Өтініш қалдыру',
+        apply: 'Өтінім қалдыру',
         viewCourses: 'Курстарды көру',
       },
     },

@@ -1,13 +1,13 @@
 export const courses = [
   {
     slug: 'ohrana-truda',
-    name: { ru: 'Охрана труда', kk: 'Еңбек қауіпсіздігі' },
+    name: { ru: 'Охрана труда', kk: 'Еңбекті қорғау' },
     mandatoryByLaw: true,
     durationHours: 40,
     seo: {
       title: 'Охрана труда – обучение {{cityPrepositional}} с удостоверением гос. образца',
       description:
-        'Курс по охране труда {{cityPrepositional}}: программа по ТК РК, удостоверение, очно/онлайн, сопровождение документов.',
+        'Курс по охране труда {{cityPrepositional}}: законодательные требования, обучение ответственным лицам, выдача удостоверений и протоколов.',
     },
   },
   {
@@ -17,7 +17,8 @@ export const courses = [
     durationHours: 32,
     seo: {
       title: 'Промышленная безопасность – подготовка специалистов {{cityPrepositional}}',
-      description: 'Обучение по промышленной безопасности {{cityPrepositional}}: законные программы, аттестация, выездные форматы.',
+      description:
+        'Обучение по промышленной безопасности {{cityPrepositional}}: идентификация опасностей, инструкции, комиссии, готовность к проверкам.',
     },
   },
   {
@@ -26,8 +27,9 @@ export const courses = [
     mandatoryByLaw: true,
     durationHours: 24,
     seo: {
-      title: 'Пожарно-технический минимум {{cityPrepositional}} – обучение с тестированием',
-      description: 'ПТМ для работников и руководителей {{cityPrepositional}}: обучение, тесты, удостоверения, помощь с проверками.',
+      title: 'ПТМ – пожарно-технический минимум {{cityPrepositional}}',
+      description:
+        'Пожарно-технический минимум {{cityPrepositional}} для работников и руководителей: практика, инструкции, эвакуация, ответственность.',
     },
   },
   {
@@ -36,8 +38,9 @@ export const courses = [
     mandatoryByLaw: true,
     durationHours: 40,
     seo: {
-      title: 'Электробезопасность – группы допуска {{cityPrepositional}}',
-      description: 'Курс по электробезопасности {{cityPrepositional}}: IV/V группы, проверка знаний, протоколы и удостоверения.',
+      title: 'Электробезопасность IV/V группы {{cityPrepositional}}',
+      description:
+        'Обучение и проверка знаний по электробезопасности {{cityPrepositional}}: допуск, наряд-допуск, первая помощь при поражении током.',
     },
   },
   {
@@ -46,18 +49,20 @@ export const courses = [
     mandatoryByLaw: true,
     durationHours: 16,
     seo: {
-      title: 'Работы на высоте {{cityPrepositional}} – подготовка и допуск',
-      description: 'Обучение безопасным работам на высоте {{cityPrepositional}}: программы для монтажников, стропальщиков, инженеров.',
+      title: 'Работы на высоте {{cityPrepositional}} – обучение и допуск',
+      description:
+        'Курс по работам на высоте {{cityPrepositional}}: средства защиты, оформление нарядов, спасательные мероприятия, закрепление навыков.',
     },
   },
   {
     slug: 'gpm-stropalschiki',
-    name: { ru: 'Грузоподъемные механизмы (стропальщики)' },
+    name: { ru: 'Грузоподъёмные краны (стропальщики)' },
     mandatoryByLaw: true,
     durationHours: 24,
     seo: {
-      title: 'Стропальщики и ГПМ {{cityPrepositional}} – обучение и аттестация',
-      description: 'Обучение стропальщиков и операторов ГПМ {{cityPrepositional}}: теория, практика, проверка знаний.',
+      title: 'Обучение стропальщиков и работа с ГПМ {{cityPrepositional}}',
+      description:
+        'Подготовка стропальщиков {{cityPrepositional}}: сигналы, строповка, устойчивость грузов, типовые схемы и разбор нарушений.',
     },
   },
   {
@@ -66,8 +71,9 @@ export const courses = [
     mandatoryByLaw: true,
     durationHours: 24,
     seo: {
-      title: 'Газоопасные работы {{cityPrepositional}} – обучение персонала',
-      description: 'Подготовка к газоопасным работам {{cityPrepositional}}: наряд-допуск, средства защиты, тестирование.',
+      title: 'Газоопасные работы {{cityPrepositional}} – обучение и аттестация',
+      description:
+        'Курс по газоопасным работам {{cityPrepositional}}: наряды-допуски, средства защиты, контроль атмосферы, действия при ЧС.',
     },
   },
   {
@@ -76,8 +82,9 @@ export const courses = [
     mandatoryByLaw: false,
     durationHours: 24,
     seo: {
-      title: 'Экологическая безопасность {{cityPrepositional}} – обучение специалистов',
-      description: 'Программа по экологии и обращению с отходами {{cityPrepositional}}: требования, отчётность, аттестация.',
+      title: 'Экологическая безопасность {{cityPrepositional}}',
+      description:
+        'Экологическая безопасность {{cityPrepositional}}: обращение с отходами, выбросы, экологический контроль и отчётность.',
     },
   },
   {
@@ -87,7 +94,8 @@ export const courses = [
     durationHours: 16,
     seo: {
       title: 'Первая помощь {{cityPrepositional}} – практический курс',
-      description: 'Практический курс по оказанию первой помощи {{cityPrepositional}}: травмы, ожоги, сердечно-легочная реанимация.',
+      description:
+        'Практический курс по первой помощи {{cityPrepositional}}: базовые алгоритмы, СЛР, остановка кровотечения, работа с травмами.',
     },
   },
 ];

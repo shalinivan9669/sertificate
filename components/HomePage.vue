@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData } from '#imports';
+import { useAsyncData, queryContent } from '#imports';
 
 const props = defineProps({
   city: {
@@ -14,24 +14,24 @@ const resolvedCity = computed(() =>
 );
 
 const directions = [
-  { title: 'Охрана труда', slug: 'ohrana-truda' },
-  { title: 'Промышленная безопасность', slug: 'promyshlennaya-bezopasnost' },
-  { title: 'ПТМ', slug: 'ptm' },
-  { title: 'Электробезопасность', slug: 'elektrobezopasnost' },
-  { title: 'Работы на высоте', slug: 'raboty-na-vysote' },
-  { title: 'ГПМ (стропальщики)', slug: 'gpm-stropalschiki' },
-  { title: 'Газоопасные работы', slug: 'gazoopasnye-raboty' },
-  { title: 'Экология и ООС', slug: 'ekologicheskaya-bezopasnost' },
-  { title: 'Первая помощь', slug: 'pervaya-pomoshch' },
+  { title: 'Охрана труда', slug: 'ohrana-truda', description: 'Требования охраны труда и ответственность руководителей.' },
+  { title: 'Промышленная безопасность', slug: 'promyshlennaya-bezopasnost', description: 'Безопасная эксплуатация производственных объектов и оборудования.' },
+  { title: 'Пожарно-технический минимум (ПТМ)', slug: 'ptm', description: 'Действия персонала при пожаре, инструкции и эвакуация.' },
+  { title: 'Электробезопасность', slug: 'elektrobezopasnost', description: 'Группы допуска IV/V, оформление наряд-допусков, первая помощь.' },
+  { title: 'Работы на высоте', slug: 'raboty-na-vysote', description: 'СИЗ, работа на лестницах и лесах, спасение пострадавших.' },
+  { title: 'ГПМ / стропальщики', slug: 'gpm-stropalschiki', description: 'Строповка, сигналы, устойчивость груза и контроль.' },
+  { title: 'Газоопасные работы', slug: 'gazoopasnye-raboty', description: 'Наряды-допуски, контроль атмосферы, действия при ЧС.' },
+  { title: 'Экологическая безопасность', slug: 'ekologicheskaya-bezopasnost', description: 'Отчётность, выбросы, обращение с отходами.' },
+  { title: 'Первая помощь', slug: 'pervaya-pomoshch', description: 'Базовые алгоритмы, СЛР, остановка кровотечения.' },
 ];
 
 const formatCards = [
-  { title: 'Очное обучение', slug: 'ochnoe-obuchenie' },
-  { title: 'Онлайн обучение', slug: 'online-obuchenie' },
-  { title: 'Выездное обучение', slug: 'vyezdnoe-obuchenie' },
-  { title: 'Срочное обучение', slug: 'srochnoe-obuchenie' },
-  { title: 'Для тендера', slug: 'obuchenie-dlya-tendera' },
-  { title: 'Продление удостоверений', slug: 'prodlenie-udostovereniy' },
+  { title: 'Очное обучение', slug: 'ochnoe-obuchenie', description: 'Занятия в классе, практика, экзамен на месте.' },
+  { title: 'Онлайн', slug: 'online-obuchenie', description: 'Дистанционно из любого города Казахстана.' },
+  { title: 'Выездное', slug: 'vyezdnoe-obuchenie', description: 'Преподаватель приезжает на ваш объект.' },
+  { title: 'Срочное', slug: 'srochnoe-obuchenie', description: 'Быстрое оформление документов и допусков.' },
+  { title: 'Для тендера', slug: 'obuchenie-dlya-tendera', description: 'Готовим персонал и пакеты документов под тендер.' },
+  { title: 'Продление удостоверений', slug: 'prodlenie-udostovereniy', description: 'Актуализация знаний и выдача новых удостоверений.' },
 ];
 
 const heroTitle = computed(() =>
@@ -46,15 +46,10 @@ const withCityPath = (slug) => {
 };
 
 const { data: blogArticles } = await useAsyncData('home-blog', async () => {
-  const res = await $fetch('/api/_content/query', {
-    method: 'POST',
-    body: {
-      where: { _path: { $regex: '^/blog' } },
-      sort: [{ date: -1 }],
-      limit: 4,
-    },
-  });
-  return res?.data || [];
+  if (process.server) {
+    return queryContent('blog').sort({ date: -1 }).limit(4).find();
+  }
+  return [];
 });
 </script>
 
@@ -70,8 +65,7 @@ const { data: blogArticles } = await useAsyncData('home-blog', async () => {
             {{ heroTitle }}
           </h1>
           <p class="text-lg text-slate-700">
-            Обучение по охране труда, промышленной безопасности, ПТМ, электробезопасности. Онлайн, очно и выездно.
-            Удостоверения государственного образца.
+            Обучение по охране труда, промышленной безопасности, ПТМ, электробезопасности. Онлайн, очно и выездно. Удостоверения гос. образца.
           </p>
           <div class="flex flex-wrap gap-3">
             <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">Оставить заявку</a>
@@ -84,9 +78,9 @@ const { data: blogArticles } = await useAsyncData('home-blog', async () => {
 
     <section id="courses" class="space-y-6">
       <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">Программы</p>
-        <h2 class="text-2xl font-bold text-slate-900">Направления обучения</h2>
-        <p class="text-slate-700">Покрываем ключевые отраслевые требования по безопасности труда и промышленности.</p>
+        <p class="text-sm font-semibold text-brand-accent">Направления обучения</p>
+        <h2 class="text-2xl font-bold text-slate-900">Ключевые курсы</h2>
+        <p class="text-slate-700">Подготовка персонала с учётом требований законодательства и отраслевых стандартов.</p>
       </header>
       <div class="grid gap-4 md:grid-cols-3">
         <NuxtLink
@@ -96,7 +90,7 @@ const { data: blogArticles } = await useAsyncData('home-blog', async () => {
           class="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition"
         >
           <h3 class="text-lg font-semibold text-slate-900 group-hover:text-brand">{{ direction.title }}</h3>
-          <p class="mt-2 text-sm text-slate-700">Программа, соответствующая требованиям законодательства и отраслевым стандартам.</p>
+          <p class="mt-2 text-sm text-slate-700">{{ direction.description }}</p>
         </NuxtLink>
       </div>
     </section>
@@ -105,7 +99,7 @@ const { data: blogArticles } = await useAsyncData('home-blog', async () => {
       <header class="space-y-2">
         <p class="text-sm font-semibold text-brand-accent">Форматы</p>
         <h2 class="text-2xl font-bold text-slate-900">Форматы обучения</h2>
-        <p class="text-slate-700">Подбираем удобный формат под график, территорию и задачи вашего предприятия.</p>
+        <p class="text-slate-700">Подберём удобный формат под график, территорию и задачи вашего предприятия.</p>
       </header>
       <div class="grid gap-4 md:grid-cols-3">
         <NuxtLink
@@ -115,7 +109,7 @@ const { data: blogArticles } = await useAsyncData('home-blog', async () => {
           class="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition"
         >
           <h3 class="text-lg font-semibold text-slate-900 group-hover:text-brand">{{ format.title }}</h3>
-          <p class="mt-2 text-sm text-slate-700">Организуем обучение в нужные сроки с официальной отчетностью и документами.</p>
+          <p class="mt-2 text-sm text-slate-700">{{ format.description }}</p>
         </NuxtLink>
       </div>
     </section>
@@ -126,24 +120,24 @@ const { data: blogArticles } = await useAsyncData('home-blog', async () => {
         <h2 class="text-2xl font-bold text-slate-900">Почему выбирают нас</h2>
       </header>
       <div class="grid gap-3 md:grid-cols-2">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Государственная лицензия и аккредитации по ключевым направлениям.</div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Преподаватели-практики с опытом внедрения систем безопасности на производствах.</div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Срочные программы и обучение в удобные для клиента сроки.</div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Онлайн, очные и выездные форматы по всей территории Казахстана.</div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Полный пакет документов для проверок, тендеров и внутренних регламентов.</div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Лицензия и опыт преподавателей. Программы по требованиям ТК и отраслевых стандартов.</div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Срочные группы, онлайн и выезд по Казахстану. Поддержка на всех этапах.</div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Документы: удостоверения, протоколы, приказы. Готовность к проверкам.</div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Гибкое расписание под график производства и смен.</div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Консультации по требованиям заказчиков и тендеров.</div>
       </div>
     </section>
 
     <section class="space-y-4">
       <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">Документы</p>
+        <p class="text-sm font-semibold text-brand-accent">Лицензии</p>
         <h2 class="text-2xl font-bold text-slate-900">Лицензии и сертификаты</h2>
-        <p class="text-slate-700">Скан-копии и реквизиты — по запросу или в открытом доступе.</p>
+        <p class="text-slate-700">Готовы предоставить копии лицензии, аккредитации и документов по запросу.</p>
       </header>
       <div class="grid gap-4 sm:grid-cols-3">
         <div class="h-28 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500">Лицензия</div>
-        <div class="h-28 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500">Аккредитация</div>
         <div class="h-28 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500">Сертификат</div>
+        <div class="h-28 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500">Аккредитация</div>
       </div>
     </section>
 
@@ -154,21 +148,20 @@ const { data: blogArticles } = await useAsyncData('home-blog', async () => {
       </header>
       <div class="grid gap-4 md:grid-cols-2">
         <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 class="font-semibold text-slate-900">АО «Промышленность»</h3>
-          <p class="mt-2 text-slate-700">«Организовали срочное обучение персонала под тендер — все документы подошли контролерам».</p>
+          <h3 class="font-semibold text-slate-900">Опыт и экспертиза</h3>
+          <p class="mt-2 text-slate-700">Работаем с крупными предприятиями, готовим персонал под требования заказчиков и проверок.</p>
         </div>
         <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 class="font-semibold text-slate-900">ТОО «Энергия»</h3>
-          <p class="mt-2 text-slate-700">«Удобные онлайн-сессии и выездная аттестация на площадке. Закрыли требования по ОТ и ПБ».</p>
+          <h3 class="font-semibold text-slate-900">Широкая география</h3>
+          <p class="mt-2 text-slate-700">Проводим обучение по всей Республике Казахстан: онлайн, очно и на выезде.</p>
         </div>
       </div>
     </section>
 
     <section class="space-y-4">
       <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">Блог</p>
+        <p class="text-sm font-semibold text-brand-accent">Статьи</p>
         <h2 class="text-2xl font-bold text-slate-900">Полезные материалы</h2>
-        <p class="text-slate-700">Свежие разъяснения по требованиям надзора и подготовке к проверкам.</p>
       </header>
       <div class="grid gap-4 md:grid-cols-2">
         <article
@@ -184,14 +177,14 @@ const { data: blogArticles } = await useAsyncData('home-blog', async () => {
           </header>
           <p class="mt-2 text-sm text-slate-700">{{ post.description }}</p>
         </article>
-        <p v-if="!blogArticles || blogArticles.length === 0" class="text-slate-600 col-span-full">Статьи появятся совсем скоро.</p>
+        <p v-if="!blogArticles || blogArticles.length === 0" class="text-slate-600 col-span-full">Публикации появятся скоро.</p>
       </div>
     </section>
 
     <section id="contact" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-3">
-      <p class="text-sm font-semibold text-brand-accent">Свяжитесь с нами</p>
-      <h2 class="text-2xl font-bold text-slate-900">Готовы обсудить обучение</h2>
-      <p class="text-slate-700">Оставьте заявку — подберем программу и формат под ваш запрос.</p>
+      <p class="text-sm font-semibold text-brand-accent">Готовы обсудить</p>
+      <h2 class="text-2xl font-bold text-slate-900">Получите консультацию по обучению</h2>
+      <p class="text-slate-700">Оставьте заявку, чтобы подобрать программу и формат под вашу компанию.</p>
       <div class="flex justify-center gap-3">
         <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="/contacts">Оставить заявку</a>
         <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">Позвонить</a>

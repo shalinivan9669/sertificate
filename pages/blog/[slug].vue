@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData, useHead, useRoute } from '#imports';
+import { useAsyncData, useHead, useRoute, queryContent } from '#imports';
 import { courses } from '~/config/courses';
 import { defaultCitySlug } from '~/config/cities';
 
@@ -10,14 +10,8 @@ const slug = computed(() => route.params.slug);
 const { data: post } = await useAsyncData(
   () => `blog-post-${slug.value}`,
   async () => {
-    const res = await $fetch('/api/_content/query', {
-      method: 'POST',
-      body: {
-        where: { slug: slug.value, _path: { $regex: '^/blog' } },
-        limit: 1,
-      },
-    });
-    return res?.data?.[0] || null;
+    if (!process.server) return null;
+    return queryContent('blog').where({ slug: slug.value }).findOne();
   },
 );
 
@@ -74,5 +68,5 @@ useHead(() => ({
       </footer>
     </article>
   </main>
-  <p v-else class="text-slate-700">Статья не найдена.</p>
+  <p v-else class="text-slate-700">Материал не найден.</p>
 </template>

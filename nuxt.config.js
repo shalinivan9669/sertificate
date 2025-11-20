@@ -5,7 +5,9 @@ import { courses } from './config/courses';
 import { formats } from './config/formats';
 
 const siteUrl = 'https://example.kz';
+const siteName = 'Учебный центр по охране труда и промышленной безопасности';
 const defaultLocale = 'ru-KZ';
+const compatibilityDate = '2025-11-20';
 
 const blogDir = path.resolve('./content/blog');
 
@@ -17,7 +19,7 @@ const getBlogRoutes = () => {
   return fs
     .readdirSync(blogDir)
     .filter((file) => file.endsWith('.md'))
-    .map((file) => `/blog/${file.replace(/\\.md$/, '')}`);
+    .map((file) => `/blog/${file.replace(/\.md$/, '')}`);
 };
 
 const buildCityRoutes = () => cities.map((city) => `/${city.slug}`);
@@ -27,7 +29,15 @@ const buildFormatRoutes = () =>
   cities.flatMap((city) => formats.map((format) => `/${city.slug}/${format.slug}`));
 
 const staticRoutes = () => {
-  const baseRoutes = ['/', '/blog'];
+  const baseRoutes = [
+    '/',
+    '/blog',
+    '/licenses',
+    '/public-offer',
+    '/privacy',
+    ...courses.map((course) => `/${course.slug}`),
+    ...formats.map((format) => `/${format.slug}`),
+  ];
   return [
     ...baseRoutes,
     ...getBlogRoutes(),
@@ -39,14 +49,14 @@ const staticRoutes = () => {
 
 const organizationLd = {
   '@type': 'EducationalOrganization',
-  name: 'Учебный центр по охране труда и промышленной безопасности',
+  name: siteName,
   url: siteUrl,
   logo: `${siteUrl}/logo.png`,
-  sameAs: ['https://example.kz'],
+  sameAs: [siteUrl],
   address: {
     '@type': 'PostalAddress',
     addressCountry: 'KZ',
-    addressRegion: 'Казахстан',
+    addressRegion: 'Республика Казахстан',
   },
   areaServed: cities.map((city) => ({
     '@type': 'City',
@@ -61,7 +71,7 @@ const organizationLd = {
 
 const locationsLd = cities.map((city) => ({
   '@type': 'LocalBusiness',
-  name: `Учебный центр по охране труда, г. ${city.nameRu}`,
+  name: `${siteName}, г. ${city.nameRu}`,
   address: {
     '@type': 'PostalAddress',
     addressLocality: city.nameRu,
@@ -72,7 +82,7 @@ const locationsLd = cities.map((city) => ({
 
 export default defineNuxtConfig({
   ssr: true,
-  compatibilityDate: '2025-11-20',
+  compatibilityDate,
   devtools: { enabled: false },
   devServer: {
     host: 'localhost',
@@ -98,14 +108,16 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'ru' },
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
-      title: 'Учебный центр по охране труда и промышленной безопасности',
+      title: siteName,
       titleTemplate: (titleChunk) =>
-        titleChunk
-          ? `Учебный центр по охране труда – ${titleChunk}`
-          : 'Учебный центр по охране труда и промышленной безопасности',
+        titleChunk ? `Учебный центр по охране труда – ${titleChunk}` : siteName,
       meta: [
-        { name: 'description', content: 'Лицензированный учебный центр: охрана труда, промышленная безопасность, ПТМ, электробезопасность по всей РК.' },
-        { property: 'og:site_name', content: 'Учебный центр по охране труда и промышленной безопасности' },
+        {
+          name: 'description',
+          content:
+            'Лицензированный учебный центр: охрана труда, промышленная безопасность, ПТМ, электробезопасность, работы на высоте по всей РК. Онлайн, очно и выездные программы.',
+        },
+        { property: 'og:site_name', content: siteName },
         { property: 'og:type', content: 'website' },
         { property: 'og:locale', content: 'ru_KZ' },
       ],
@@ -133,12 +145,12 @@ export default defineNuxtConfig({
     ],
   },
   content: {
-    documentDriven: true,
+    documentDriven: false,
   },
   seo: {
     site: {
       url: siteUrl,
-      name: 'Учебный центр по охране труда и промышленной безопасности',
+      name: siteName,
       defaultLocale,
     },
     sitemap: {
@@ -162,6 +174,7 @@ export default defineNuxtConfig({
   nitro: {
     prerender: {
       routes: staticRoutes(),
+      crawlLinks: false,
     },
   },
 });

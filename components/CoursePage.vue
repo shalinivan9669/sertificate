@@ -1,7 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData, useHead, useI18n } from '#imports';
-import { courses } from '~/config/courses';
+import { useAsyncData, useHead, useI18n, queryContent } from '#imports';
 
 const props = defineProps({
   course: {
@@ -34,7 +33,7 @@ const metaTitle = computed(() => fillTemplate(props.course.seo?.title || courseN
 const metaDescription = computed(() =>
   fillTemplate(
     props.course.seo?.description ||
-      `Курс ${courseName.value} ${cityPrepositional.value}: обучение, удостоверения, официальные программы.`,
+      `Обучение "${courseName.value}" ${cityPrepositional.value}: программа, практика и выдача удостоверений.`,
   ),
 );
 
@@ -43,19 +42,10 @@ const slug = computed(() => props.course.slug);
 const { data: contentDoc } = await useAsyncData(
   () => `course-content-${slug.value}-${locale.value}`,
   async () => {
-    const query = async (loc) =>
-      $fetch('/api/_content/query', {
-        method: 'POST',
-        body: {
-          where: { _path: `/courses/${slug.value}.${loc}` },
-          limit: 1,
-        },
-      });
-
-    const current = await query(locale.value);
-    if (current?.data?.length) return current.data[0];
-    const fallback = await query('ru');
-    return fallback?.data?.[0] || null;
+    if (!process.server) return null;
+    const localized = await queryContent(`courses/${slug.value}.${locale.value}`).findOne();
+    if (localized) return localized;
+    return queryContent(`courses/${slug.value}.ru`).findOne();
   },
   { watch: [slug, locale] },
 );
@@ -113,11 +103,11 @@ useHead(() => ({
           <strong class="font-semibold text-slate-900">Длительность:</strong> {{ course.durationHours }} часов
         </span>
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">Обязан по закону:</strong>
-          {{ course.mandatoryByLaw ? 'Да' : 'По согласованию / для повышения квалификации' }}
+          <strong class="font-semibold text-slate-900">Обязательность:</strong>
+          {{ course.mandatoryByLaw ? 'Обязательно по закону' : 'Рекомендуется для повышения квалификации' }}
         </span>
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">Город:</strong>
+          <strong class="font-semibold text-slate-900">Регион:</strong>
           {{ resolvedCity?.nameRu || 'Казахстан' }}
         </span>
       </div>
@@ -126,10 +116,10 @@ useHead(() => ({
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
       <h2 class="text-xl font-semibold text-slate-900">Кому необходимо обучение</h2>
       <ul class="grid gap-2 text-slate-700">
-        <li>Руководители и специалисты, ответственные за безопасность работ.</li>
-        <li>Линейный персонал и рабочие, задействованные в опасных процессах.</li>
-        <li>Инженеры охраны труда и специалисты по промышленной безопасности.</li>
-        <li>Сотрудники подрядных организаций и временного персонала.</li>
+        <li>Руководителям и специалистам, ответственным за безопасность.</li>
+        <li>Ново принятым сотрудникам и подрядчикам перед выполнением работ.</li>
+        <li>Командам, работающим на опасных и взрывоопасных объектах.</li>
+        <li>Тендерным проектам, где требуется подтверждение квалификации.</li>
       </ul>
     </section>
 
@@ -137,31 +127,30 @@ useHead(() => ({
       <h2 class="text-xl font-semibold text-slate-900">Программа курса</h2>
       <ContentRenderer v-if="contentDoc" :value="contentDoc" class="prose max-w-none prose-slate" />
       <div v-else class="text-slate-700">
-        Подробная программа курса будет опубликована в ближайшее время.
+        Подробный контент курса скоро будет добавлен. Мы подберём программу под вашу отрасль и объект.
       </div>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
       <h2 class="text-xl font-semibold text-slate-900">Форматы обучения</h2>
       <ul class="grid gap-2 text-slate-700">
-        <li>Очные занятия в учебном центре.</li>
-        <li>Онлайн-трансляции с консультациями преподавателя.</li>
-        <li>Выезд на предприятие с учетом специфики площадки {{ cityPrepositional }}.</li>
-        <li>Сжатые сроки и индивидуальные графики для срочных запросов.</li>
+        <li>Очные занятия в классе.</li>
+        <li>Онлайн-формат с проверкой знаний.</li>
+        <li>Выезд преподавателя на объект {{ cityPrepositional }}.</li>
+        <li>Срочное прохождение и оформление документов.</li>
       </ul>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
       <h2 class="text-xl font-semibold text-slate-900">Итоговая аттестация и удостоверение</h2>
       <p class="text-slate-700">
-        По завершении курса слушатели проходят проверку знаний и получают удостоверение государственного образца
-        и протокол экзаменационной комиссии.
+        По завершении обучения проводится проверка знаний (тест/экзамен). Удостоверение и протокол выдаются согласно требованиям законодательства и допуска к работам.
       </p>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
       <h2 class="text-xl font-semibold text-slate-900">Стоимость обучения</h2>
-      <p class="text-slate-700">Стоимость зависит от формата и количества слушателей. Оставьте заявку, чтобы получить расчёт.</p>
+      <p class="text-slate-700">Стоимость зависит от формата, числа слушателей и срочности. Оставьте заявку для расчёта.</p>
       <div class="flex flex-wrap gap-3">
         <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">Узнать стоимость</a>
         <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">Позвонить</a>
@@ -171,27 +160,27 @@ useHead(() => ({
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
       <h2 class="text-xl font-semibold text-slate-900">Почему выбирают наш центр</h2>
       <ul class="grid gap-2 text-slate-700">
-        <li>Работаем по лицензии, программы соответствуют требованиям законодательства.</li>
-        <li>Преподаватели — практики с опытом внедрения систем безопасности.</li>
-        <li>Готовим полный пакет документов для проверок и тендеров.</li>
-        <li>Покрываем обучение по всей территории Казахстана.</li>
+        <li>Лицензия, актуальные программы, опытные преподаватели.</li>
+        <li>Документы, которые принимают проверяющие и заказчики.</li>
+        <li>Гибкие форматы: онлайн, очно, выезд {{ cityPrepositional }}.</li>
+        <li>Работа по всему Казахстану, поддержка после обучения.</li>
       </ul>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">FAQ по курсу</h2>
+      <h2 class="text-xl font-semibold text-slate-900">FAQ</h2>
       <div class="divide-y divide-slate-200">
         <details class="py-3">
           <summary class="cursor-pointer font-semibold text-slate-900">Можно ли пройти обучение онлайн?</summary>
-          <p class="mt-2 text-slate-700">Да, курс доступен в формате онлайн с последующей аттестацией.</p>
+          <p class="mt-2 text-slate-700">Да, есть дистанционный формат с проверкой знаний и выдачей документов.</p>
+        </details>
+        <details class="py-3">
+          <summary class="cursor-pointer font-semibold text-slate-900">Сколько длится курс?</summary>
+          <p class="mt-2 text-slate-700">Средняя длительность — {{ course.durationHours }} часов, возможно ускоренное прохождение.</p>
         </details>
         <details class="py-3">
           <summary class="cursor-pointer font-semibold text-slate-900">Какие документы выдаются?</summary>
-          <p class="mt-2 text-slate-700">Удостоверение гос. образца и протокол проверки знаний.</p>
-        </details>
-        <details class="py-3">
-          <summary class="cursor-pointer font-semibold text-slate-900">Сколько длится обучение?</summary>
-          <p class="mt-2 text-slate-700">Средняя длительность — {{ course.durationHours }} часов, можно адаптировать под запрос.</p>
+          <p class="mt-2 text-slate-700">Протокол комиссии и удостоверение установленного образца с указанными видами работ.</p>
         </details>
       </div>
     </section>

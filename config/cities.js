@@ -6,7 +6,7 @@ export const cities = [
     nameRuPrepositional: 'в Алматы',
     nameKk: 'Алматы',
     phone: '+7 (727) 000-00-00',
-    address: 'г. Алматы, ул. Пример, 1',
+    address: 'г. Алматы, ул. Примерная, 1',
     email: 'info@example.kz',
   },
   {

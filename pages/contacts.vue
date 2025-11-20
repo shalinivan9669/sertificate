@@ -6,7 +6,8 @@ useHead({
   meta: [
     {
       name: 'description',
-      content: 'Контакты учебного центра по охране труда и промышленной безопасности: телефон, email, адрес, график работы.',
+      content:
+        'Контакты учебного центра по охране труда и промышленной безопасности: телефон, email, адрес, форма заявки.',
     },
   ],
 });
@@ -17,15 +18,15 @@ useHead({
     <header class="space-y-2">
       <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Контакты</p>
       <h1 class="text-3xl font-bold text-slate-900">Свяжитесь с нами</h1>
-      <p class="text-slate-700">Подберем программу, формат и рассчитаем стоимость под вашу задачу.</p>
+      <p class="text-slate-700">Ответим на вопросы по программам, стоимости и форматам обучения.</p>
     </header>
 
     <div class="grid gap-6 md:grid-cols-3">
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-        <h2 class="text-xl font-semibold text-slate-900">Общие контакты</h2>
+        <h2 class="text-xl font-semibold text-slate-900">Оперативно</h2>
         <p class="text-slate-700">Телефон: <a href="tel:+77000000000" class="text-brand">+7 (700) 000-00-00</a></p>
         <p class="text-slate-700">Email: <a href="mailto:info@example.kz" class="text-brand">info@example.kz</a></p>
-        <p class="text-slate-700">График: пн–пт 09:00–18:00</p>
+        <p class="text-slate-700">График: будни 09:00–18:00</p>
       </section>
 
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3 md:col-span-2">

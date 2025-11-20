@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData, useHead, useRoute } from '#imports';
+import { useAsyncData, useHead, useRoute, queryContent } from '#imports';
 
 const route = useRoute();
 const pageSize = 10;
@@ -9,14 +9,10 @@ const page = computed(() => Number(route.query.page) || 1);
 const { data } = await useAsyncData(
   () => `blog-page-${page.value}`,
   async () => {
-    const res = await $fetch('/api/_content/query', {
-      method: 'POST',
-      body: {
-        where: { _path: { $regex: '^/blog' } },
-        sort: [{ date: -1 }],
-      },
-    });
-    const posts = res?.data || [];
+    if (!process.server) {
+      return { items: [], total: 0 };
+    }
+    const posts = await queryContent('blog').sort({ date: -1 }).find();
     const total = posts.length;
     const start = (page.value - 1) * pageSize;
     return {
@@ -30,11 +26,12 @@ const { data } = await useAsyncData(
 const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total || 0) / pageSize)));
 
 useHead({
-  title: 'Блог об охране труда и промышленной безопасности',
+  title: 'Блог об охране труда и безопасности',
   meta: [
     {
       name: 'description',
-      content: 'Разъяснения по охране труда, промышленной безопасности, ПТМ, продлению удостоверений и требованиям проверок.',
+      content:
+        'Статьи об охране труда, промышленной и пожарной безопасности, ПТМ, электробезопасности, подготовке персонала.',
     },
   ],
 });
@@ -45,7 +42,7 @@ useHead({
     <header class="space-y-2">
       <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Блог</p>
       <h1 class="text-3xl font-bold text-slate-900">Полезные материалы</h1>
-      <p class="text-slate-700">Разъяснения для специалистов по охране труда и безопасности.</p>
+      <p class="text-slate-700">Свежие публикации по охране труда и промышленной безопасности.</p>
     </header>
 
     <section class="grid gap-4 md:grid-cols-2">
@@ -62,16 +59,16 @@ useHead({
         </header>
         <p class="mt-2 text-sm text-slate-700">{{ post.description }}</p>
       </article>
-      <p v-if="!data?.items?.length" class="text-slate-600 col-span-full">Статей пока нет, скоро появится свежий контент.</p>
+      <p v-if="!data?.items?.length" class="text-slate-600 col-span-full">Публикации скоро появятся.</p>
     </section>
 
-    <nav class="flex items-center gap-4 text-sm text-slate-700" aria-label="Страницы блога">
+    <nav class="flex items-center gap-4 text-sm text-slate-700" aria-label="Постраничная навигация">
       <NuxtLink
         v-if="page > 1"
         :to="`/blog?page=${page - 1}`"
         class="px-3 py-2 rounded border border-slate-200 bg-white hover:border-brand"
       >
-        Предыдущая
+        Назад
       </NuxtLink>
       <span>Страница {{ page }} из {{ totalPages }}</span>
       <NuxtLink
@@ -79,7 +76,7 @@ useHead({
         :to="`/blog?page=${page + 1}`"
         class="px-3 py-2 rounded border border-slate-200 bg-white hover:border-brand"
       >
-        Следующая
+        Вперёд
       </NuxtLink>
     </nav>
   </main>
