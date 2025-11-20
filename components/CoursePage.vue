@@ -101,24 +101,31 @@ useHead(() => ({
 </script>
 
 <template>
-  <article class="course-page">
-    <header class="course-hero">
-      <h1>{{ courseName }}</h1>
-      <p class="lead">
+  <article class="space-y-10">
+    <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm space-y-4">
+      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Курс</p>
+      <h1 class="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">{{ courseName }}</h1>
+      <p class="text-lg text-slate-700">
         {{ metaDescription }}
       </p>
-      <div class="course-meta">
-        <span><strong>Длительность:</strong> {{ course.durationHours }} часов</span>
-        <span>
-          <strong>Обязан по закону:</strong>
+      <div class="flex flex-wrap gap-3 text-sm text-slate-700">
+        <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
+          <strong class="font-semibold text-slate-900">Длительность:</strong> {{ course.durationHours }} часов
+        </span>
+        <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
+          <strong class="font-semibold text-slate-900">Обязан по закону:</strong>
           {{ course.mandatoryByLaw ? 'Да' : 'По согласованию / для повышения квалификации' }}
+        </span>
+        <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
+          <strong class="font-semibold text-slate-900">Город:</strong>
+          {{ resolvedCity?.nameRu || 'Казахстан' }}
         </span>
       </div>
     </header>
 
-    <section class="section">
-      <h2>Кому необходимо обучение</h2>
-      <ul class="list">
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+      <h2 class="text-xl font-semibold text-slate-900">Кому необходимо обучение</h2>
+      <ul class="grid gap-2 text-slate-700">
         <li>Руководители и специалисты, ответственные за безопасность работ.</li>
         <li>Линейный персонал и рабочие, задействованные в опасных процессах.</li>
         <li>Инженеры охраны труда и специалисты по промышленной безопасности.</li>
@@ -126,17 +133,17 @@ useHead(() => ({
       </ul>
     </section>
 
-    <section class="section">
-      <h2>Программа курса</h2>
-      <ContentRenderer v-if="contentDoc" :value="contentDoc" />
-      <div v-else class="placeholder">
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+      <h2 class="text-xl font-semibold text-slate-900">Программа курса</h2>
+      <ContentRenderer v-if="contentDoc" :value="contentDoc" class="prose max-w-none prose-slate" />
+      <div v-else class="text-slate-700">
         Подробная программа курса будет опубликована в ближайшее время.
       </div>
     </section>
 
-    <section class="section">
-      <h2>Форматы обучения</h2>
-      <ul class="list">
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+      <h2 class="text-xl font-semibold text-slate-900">Форматы обучения</h2>
+      <ul class="grid gap-2 text-slate-700">
         <li>Очные занятия в учебном центре.</li>
         <li>Онлайн-трансляции с консультациями преподавателя.</li>
         <li>Выезд на предприятие с учетом специфики площадки {{ cityPrepositional }}.</li>
@@ -144,26 +151,26 @@ useHead(() => ({
       </ul>
     </section>
 
-    <section class="section">
-      <h2>Итоговая аттестация и удостоверение</h2>
-      <p>
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+      <h2 class="text-xl font-semibold text-slate-900">Итоговая аттестация и удостоверение</h2>
+      <p class="text-slate-700">
         По завершении курса слушатели проходят проверку знаний и получают удостоверение государственного образца
         и протокол экзаменационной комиссии.
       </p>
     </section>
 
-    <section class="section">
-      <h2>Стоимость обучения</h2>
-      <p>Стоимость зависит от формата и количества слушателей. Оставьте заявку, чтобы получить расчёт.</p>
-      <div class="cta__actions">
-        <a class="btn primary" href="#contact">Узнать стоимость</a>
-        <a class="btn ghost" href="tel:+77000000000">Позвонить</a>
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold text-slate-900">Стоимость обучения</h2>
+      <p class="text-slate-700">Стоимость зависит от формата и количества слушателей. Оставьте заявку, чтобы получить расчёт.</p>
+      <div class="flex flex-wrap gap-3">
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">Узнать стоимость</a>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">Позвонить</a>
       </div>
     </section>
 
-    <section class="section">
-      <h2>Почему выбирают наш центр</h2>
-      <ul class="list">
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+      <h2 class="text-xl font-semibold text-slate-900">Почему выбирают наш центр</h2>
+      <ul class="grid gap-2 text-slate-700">
         <li>Работаем по лицензии, программы соответствуют требованиям законодательства.</li>
         <li>Преподаватели — практики с опытом внедрения систем безопасности.</li>
         <li>Готовим полный пакет документов для проверок и тендеров.</li>
@@ -171,20 +178,22 @@ useHead(() => ({
       </ul>
     </section>
 
-    <section class="section faq">
-      <h2>FAQ по курсу</h2>
-      <details>
-        <summary>Можно ли пройти обучение онлайн?</summary>
-        <p>Да, курс доступен в формате онлайн с последующей аттестацией.</p>
-      </details>
-      <details>
-        <summary>Какие документы выдаются?</summary>
-        <p>Удостоверение гос. образца и протокол проверки знаний.</p>
-      </details>
-      <details>
-        <summary>Сколько длится обучение?</summary>
-        <p>Средняя длительность — {{ course.durationHours }} часов, можно адаптировать под запрос.</p>
-      </details>
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+      <h2 class="text-xl font-semibold text-slate-900">FAQ по курсу</h2>
+      <div class="divide-y divide-slate-200">
+        <details class="py-3">
+          <summary class="cursor-pointer font-semibold text-slate-900">Можно ли пройти обучение онлайн?</summary>
+          <p class="mt-2 text-slate-700">Да, курс доступен в формате онлайн с последующей аттестацией.</p>
+        </details>
+        <details class="py-3">
+          <summary class="cursor-pointer font-semibold text-slate-900">Какие документы выдаются?</summary>
+          <p class="mt-2 text-slate-700">Удостоверение гос. образца и протокол проверки знаний.</p>
+        </details>
+        <details class="py-3">
+          <summary class="cursor-pointer font-semibold text-slate-900">Сколько длится обучение?</summary>
+          <p class="mt-2 text-slate-700">Средняя длительность — {{ course.durationHours }} часов, можно адаптировать под запрос.</p>
+        </details>
+      </div>
     </section>
   </article>
 </template>

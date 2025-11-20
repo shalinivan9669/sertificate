@@ -45,31 +45,31 @@ useHead(() => ({
 </script>
 
 <template>
-  <article v-if="format" class="format-landing">
-    <header class="format-hero">
-      <p class="eyebrow">Формат обучения</p>
-      <h1>{{ metaTitle }}</h1>
-      <p class="lead">{{ metaDescription }}</p>
+  <article v-if="format" class="space-y-8">
+    <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm space-y-3">
+      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Формат обучения</p>
+      <h1 class="text-3xl font-bold text-slate-900">{{ metaTitle }}</h1>
+      <p class="text-lg text-slate-700">{{ metaDescription }}</p>
     </header>
 
     <section
       v-for="section in format.sections"
       :key="section.id"
-      class="section"
+      class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3"
     >
-      <h2>{{ section.title }}</h2>
-      <p class="section__subtitle">{{ section.subtitle }}</p>
-      <ul class="list">
+      <h2 class="text-xl font-semibold text-slate-900">{{ section.title }}</h2>
+      <p class="text-slate-700">{{ section.subtitle }}</p>
+      <ul class="grid gap-2 text-slate-700 list-disc pl-5">
         <li v-for="item in section.bullets" :key="item">{{ item }}</li>
       </ul>
     </section>
 
-    <section class="section cta">
-      <h2>Оставить заявку</h2>
-      <p>Подберем график и формат под вашу задачу.</p>
-      <div class="cta__actions">
-        <a class="btn primary" href="#contact">Оставить заявку</a>
-        <a class="btn ghost" href="tel:+77000000000">Позвонить</a>
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center space-y-3">
+      <h2 class="text-xl font-semibold text-slate-900">Оставить заявку</h2>
+      <p class="text-slate-700">Подберем график и формат под вашу задачу.</p>
+      <div class="flex justify-center gap-3">
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="/contacts">Оставить заявку</a>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">Позвонить</a>
       </div>
     </section>
   </article>

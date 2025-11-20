@@ -85,7 +85,14 @@ export default defineNuxtConfig({
       },
     },
   },
-  modules: ['@nuxtjs/i18n', '@nuxt/content', '@nuxtjs/seo'],
+  modules: ['@nuxtjs/i18n', '@nuxt/content', '@nuxtjs/seo', '@nuxtjs/tailwindcss'],
+  css: ['~/assets/css/tailwind.css'],
+  postcss: {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    },
+  },
   app: {
     head: {
       htmlAttrs: { lang: 'ru' },

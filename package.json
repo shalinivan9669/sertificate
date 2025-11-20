@@ -14,6 +14,10 @@
     "@nuxt/content": "latest",
     "@nuxtjs/i18n": "latest",
     "@nuxtjs/seo": "latest",
+    "@nuxtjs/tailwindcss": "latest",
+    "autoprefixer": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest",
     "better-sqlite3": "latest",
     "nuxt": "latest"
   },

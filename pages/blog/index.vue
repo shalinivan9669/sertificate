@@ -41,34 +41,35 @@ useHead({
 </script>
 
 <template>
-  <main class="blog-index">
-    <header class="section__header">
-      <h1>Блог</h1>
-      <p>Полезные материалы и разъяснения для специалистов по охране труда и безопасности.</p>
+  <main class="space-y-8">
+    <header class="space-y-2">
+      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Блог</p>
+      <h1 class="text-3xl font-bold text-slate-900">Полезные материалы</h1>
+      <p class="text-slate-700">Разъяснения для специалистов по охране труда и безопасности.</p>
     </header>
 
-    <section class="blog-list">
+    <section class="grid gap-4 md:grid-cols-2">
       <article
         v-for="post in data?.items || []"
         :key="post._path"
-        class="blog-card"
+        class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
       >
-        <header>
-          <h2>
-            <NuxtLink :to="post._path">{{ post.title }}</NuxtLink>
+        <header class="flex items-start justify-between gap-2">
+          <h2 class="text-lg font-semibold text-slate-900">
+            <NuxtLink :to="post._path" class="hover:text-brand">{{ post.title }}</NuxtLink>
           </h2>
-          <time :datetime="post.date">{{ post.date }}</time>
+          <time :datetime="post.date" class="text-xs text-slate-500">{{ post.date }}</time>
         </header>
-        <p>{{ post.description }}</p>
+        <p class="mt-2 text-sm text-slate-700">{{ post.description }}</p>
       </article>
-      <p v-if="!data?.items?.length">Статей пока нет, скоро появится свежий контент.</p>
+      <p v-if="!data?.items?.length" class="text-slate-600 col-span-full">Статей пока нет, скоро появится свежий контент.</p>
     </section>
 
-    <nav class="pagination" aria-label="Страницы блога">
+    <nav class="flex items-center gap-4 text-sm text-slate-700" aria-label="Страницы блога">
       <NuxtLink
         v-if="page > 1"
         :to="`/blog?page=${page - 1}`"
-        class="page-link"
+        class="px-3 py-2 rounded border border-slate-200 bg-white hover:border-brand"
       >
         Предыдущая
       </NuxtLink>
@@ -76,7 +77,7 @@ useHead({
       <NuxtLink
         v-if="page < totalPages"
         :to="`/blog?page=${page + 1}`"
-        class="page-link"
+        class="px-3 py-2 rounded border border-slate-200 bg-white hover:border-brand"
       >
         Следующая
       </NuxtLink>

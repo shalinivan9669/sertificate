@@ -49,28 +49,30 @@ useHead(() => ({
 </script>
 
 <template>
-  <main v-if="post" class="blog-post">
-    <article>
-      <header>
-        <p class="eyebrow">Блог</p>
-        <h1>{{ post.title }}</h1>
-        <time :datetime="post.date">{{ post.date }}</time>
-        <p class="lead">{{ post.description }}</p>
+  <main v-if="post" class="space-y-8">
+    <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <header class="space-y-2 mb-4">
+        <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Блог</p>
+        <h1 class="text-3xl font-bold text-slate-900">{{ post.title }}</h1>
+        <time :datetime="post.date" class="text-sm text-slate-500">{{ post.date }}</time>
+        <p class="text-slate-700">{{ post.description }}</p>
       </header>
 
-      <ContentRenderer :value="post" />
+      <ContentRenderer :value="post" class="prose max-w-none prose-slate" />
 
-      <footer class="section">
-        <section v-if="relatedCourses.length" class="related-courses">
-          <h2>Связанные курсы</h2>
-          <ul>
+      <footer class="mt-8 border-t border-slate-200 pt-4">
+        <section v-if="relatedCourses.length" class="space-y-2">
+          <h2 class="text-xl font-semibold text-slate-900">Связанные курсы</h2>
+          <ul class="grid gap-2 md:grid-cols-2">
             <li v-for="course in relatedCourses" :key="course.slug">
-              <NuxtLink :to="courseLink(course.slug)">{{ course.name.ru }}</NuxtLink>
+              <NuxtLink :to="courseLink(course.slug)" class="text-brand hover:underline">
+                {{ course.name.ru }}
+              </NuxtLink>
             </li>
           </ul>
         </section>
       </footer>
     </article>
   </main>
-  <p v-else>Статья не найдена.</p>
+  <p v-else class="text-slate-700">Статья не найдена.</p>
 </template>

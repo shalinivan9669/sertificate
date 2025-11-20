@@ -26,9 +26,14 @@ const changeCity = (event) => {
 </script>
 
 <template>
-  <div class="city-switcher">
-    <label class="city-switcher__label" for="city-select">Город</label>
-    <select id="city-select" class="city-switcher__select" :value="currentCity" @change="changeCity">
+  <div class="flex items-center gap-2">
+    <label class="text-sm text-slate-600" for="city-select">Город</label>
+    <select
+      id="city-select"
+      class="rounded border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent"
+      :value="currentCity"
+      @change="changeCity"
+    >
       <option value="" disabled>Выберите город</option>
       <option
         v-for="city in cities"

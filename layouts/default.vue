@@ -25,22 +25,28 @@ useHead({
 </script>
 
 <template>
-  <div class="layout wrap">
-    <header class="header">
-      <div class="header__top">
-        <NuxtLink to="/" class="logo">UC Safety</NuxtLink>
-        <div class="header__actions">
+  <div class="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+    <header class="border-b border-slate-200 bg-white/70 backdrop-blur">
+      <div class="container flex items-center justify-between py-4 gap-4">
+        <NuxtLink to="/" class="text-lg font-semibold text-brand">UC Safety</NuxtLink>
+        <div class="flex items-center gap-3">
           <CitySwitcher />
-          <div class="lang-switch">
+          <div class="flex items-center gap-1 text-sm text-slate-600">
             <NuxtLink
-              :class="['lang', locale === 'ru' && 'lang--active']"
+              :class="[
+                'px-2 py-1 rounded hover:text-brand',
+                locale === 'ru' ? 'bg-slate-100 text-brand font-medium' : '',
+              ]"
               :to="switchLocalePath('ru')"
             >
               RU
             </NuxtLink>
             <span>/</span>
             <NuxtLink
-              :class="['lang', locale === 'kk' && 'lang--active']"
+              :class="[
+                'px-2 py-1 rounded hover:text-brand',
+                locale === 'kk' ? 'bg-slate-100 text-brand font-medium' : '',
+              ]"
               :to="switchLocalePath('kk')"
             >
               KK
@@ -48,49 +54,55 @@ useHead({
           </div>
         </div>
       </div>
-      <nav class="nav">
-        <NuxtLink :to="localePath('/')" class="nav__link">Главная</NuxtLink>
-        <NuxtLink :to="`${localePath('/') }#courses`" class="nav__link">Курсы</NuxtLink>
-        <NuxtLink :to="`${localePath('/') }#formats`" class="nav__link">Форматы обучения</NuxtLink>
-        <NuxtLink :to="localePath('/blog')" class="nav__link">Блог</NuxtLink>
-        <NuxtLink :to="localePath('/contacts')" class="nav__link">Контакты</NuxtLink>
+      <nav class="border-t border-slate-200 bg-white">
+        <div class="container flex flex-wrap items-center gap-4 py-3 text-sm font-medium text-slate-700">
+          <NuxtLink :to="localePath('/')" class="hover:text-brand">Главная</NuxtLink>
+          <NuxtLink :to="`${localePath('/') }#courses`" class="hover:text-brand">Курсы</NuxtLink>
+          <NuxtLink :to="`${localePath('/') }#formats`" class="hover:text-brand">Форматы обучения</NuxtLink>
+          <NuxtLink :to="localePath('/blog')" class="hover:text-brand">Блог</NuxtLink>
+          <NuxtLink :to="localePath('/contacts')" class="hover:text-brand">Контакты</NuxtLink>
+        </div>
       </nav>
     </header>
 
-    <main class="main-container">
-      <slot />
+    <main class="flex-1">
+      <div class="container py-10">
+        <slot />
+      </div>
     </main>
 
-    <footer class="footer">
-      <div class="footer__columns">
-        <section class="footer__col">
-          <h3>Контакты</h3>
+    <footer class="border-t border-slate-200 bg-white/80 backdrop-blur">
+      <div class="container py-10 grid gap-8 md:grid-cols-4 text-sm text-slate-700">
+        <section>
+          <h3 class="font-semibold text-slate-900 mb-3">Контакты</h3>
           <p>Телефон: +7 (700) 000-00-00</p>
           <p>Email: info@example.kz</p>
           <p>График: пн–пт 09:00–18:00</p>
         </section>
-        <section class="footer__col">
-          <h3>Документы</h3>
-          <ul>
+        <section>
+          <h3 class="font-semibold text-slate-900 mb-3">Документы</h3>
+          <ul class="space-y-2">
             <li><NuxtLink to="/licenses">Лицензии</NuxtLink></li>
             <li><NuxtLink to="/public-offer">Договор оферты</NuxtLink></li>
             <li><NuxtLink to="/privacy">Политика конфиденциальности</NuxtLink></li>
           </ul>
         </section>
-        <section class="footer__col">
-          <h3>Навигация</h3>
-          <ul>
+        <section>
+          <h3 class="font-semibold text-slate-900 mb-3">Навигация</h3>
+          <ul class="space-y-2">
             <li><NuxtLink to="/">Главная</NuxtLink></li>
             <li><NuxtLink to="/blog">Блог</NuxtLink></li>
             <li><NuxtLink to="/contacts">Контакты</NuxtLink></li>
           </ul>
         </section>
-        <section class="footer__col">
-          <h3>Города</h3>
+        <section>
+          <h3 class="font-semibold text-slate-900 mb-3">Города</h3>
           <CitySwitcher />
         </section>
       </div>
-      <div class="footer__bottom">© {{ new Date().getFullYear() }} Учебный центр. Все права защищены.</div>
+      <div class="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+        © {{ new Date().getFullYear() }} Учебный центр. Все права защищены.
+      </div>
     </footer>
   </div>
 </template>
