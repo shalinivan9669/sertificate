@@ -1,0 +1,24 @@
+{
+  "name": "nuxt-seo-training-center",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "lint": "nuxt lint"
+  },
+  "dependencies": {
+    "@nuxt/content": "latest",
+    "@nuxtjs/i18n": "latest",
+    "@nuxtjs/seo": "latest",
+    "better-sqlite3": "latest",
+    "nuxt": "latest"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "packageManager": "npm@11.6.3"
+}

@@ -1,0 +1,77 @@
+export const cities = [
+  {
+    code: 'almaty',
+    slug: 'almaty',
+    nameRu: 'Алматы',
+    nameRuPrepositional: 'в Алматы',
+    nameKk: 'Алматы',
+    phone: '+7 (727) 000-00-00',
+    address: 'г. Алматы, ул. Пример, 1',
+    email: 'info@example.kz',
+  },
+  {
+    code: 'astana',
+    slug: 'astana',
+    nameRu: 'Астана',
+    nameRuPrepositional: 'в Астане',
+    nameKk: 'Астана',
+  },
+  {
+    code: 'shymkent',
+    slug: 'shymkent',
+    nameRu: 'Шымкент',
+    nameRuPrepositional: 'в Шымкенте',
+    nameKk: 'Шымкент',
+  },
+  {
+    code: 'aktobe',
+    slug: 'aktobe',
+    nameRu: 'Актобе',
+    nameRuPrepositional: 'в Актобе',
+    nameKk: 'Ақтөбе',
+  },
+  {
+    code: 'karaganda',
+    slug: 'karaganda',
+    nameRu: 'Караганда',
+    nameRuPrepositional: 'в Караганде',
+    nameKk: 'Қарағанды',
+  },
+  {
+    code: 'taraz',
+    slug: 'taraz',
+    nameRu: 'Тараз',
+    nameRuPrepositional: 'в Таразе',
+    nameKk: 'Тараз',
+  },
+  {
+    code: 'oskemen',
+    slug: 'oskemen',
+    nameRu: 'Өскемен',
+    nameRuPrepositional: 'в Өскемене',
+    nameKk: 'Өскемен',
+  },
+  {
+    code: 'pavlodar',
+    slug: 'pavlodar',
+    nameRu: 'Павлодар',
+    nameRuPrepositional: 'в Павлодаре',
+    nameKk: 'Павлодар',
+  },
+  {
+    code: 'atyrau',
+    slug: 'atyrau',
+    nameRu: 'Атырау',
+    nameRuPrepositional: 'в Атырау',
+    nameKk: 'Атырау',
+  },
+  {
+    code: 'semey',
+    slug: 'semey',
+    nameRu: 'Семей',
+    nameRuPrepositional: 'в Семее',
+    nameKk: 'Семей',
+  },
+];
+
+export const defaultCitySlug = 'almaty';
