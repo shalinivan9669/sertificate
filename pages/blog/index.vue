@@ -1,37 +1,26 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData, useHead, useRoute, queryCollection } from '#imports';
+import { useHead, useRoute } from '#imports';
+import { getSortedBlogPosts } from '~/config/blog';
 
 const route = useRoute();
 const pageSize = 10;
 const page = computed(() => Number(route.query.page) || 1);
 
-const { data } = await useAsyncData(
-  () => `blog-page-${page.value}`,
-  async () => {
-    if (!process.server) {
-      return { items: [], total: 0 };
-    }
-    const posts = await queryCollection('blog').order('date', 'DESC').all();
-    const total = posts.length;
-    const start = (page.value - 1) * pageSize;
-    return {
-      items: posts.slice(start, start + pageSize),
-      total,
-    };
-  },
-  { watch: [page] },
-);
-
-const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total || 0) / pageSize)));
+const allPosts = computed(() => getSortedBlogPosts());
+const totalPages = computed(() => Math.max(1, Math.ceil(allPosts.value.length / pageSize)));
+const paginatedPosts = computed(() => {
+  const start = (page.value - 1) * pageSize;
+  return allPosts.value.slice(start, start + pageSize);
+});
 
 useHead({
-  title: 'Блог об охране труда и безопасности',
+  title: 'Блог об обучении по охране труда',
   meta: [
     {
       name: 'description',
       content:
-        'Статьи об охране труда, промышленной и пожарной безопасности, ПТМ, электробезопасности, подготовке персонала.',
+        'Статьи об охране труда, промышленной безопасности и обучении: требования, советы, обновления законодательства.',
     },
   ],
 });
@@ -41,13 +30,15 @@ useHead({
   <main class="space-y-8">
     <header class="space-y-2">
       <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Блог</p>
-      <h1 class="text-3xl font-bold text-slate-900">Полезные материалы</h1>
-      <p class="text-slate-700">Свежие публикации по охране труда и промышленной безопасности.</p>
+      <h1 class="text-3xl font-bold text-slate-900">Полезные материалы и новости</h1>
+      <p class="text-slate-700">
+        Свежие статьи об обучении сотрудников, требованиях регуляторов и практических шагах по безопасности.
+      </p>
     </header>
 
     <section class="grid gap-4 md:grid-cols-2">
       <article
-        v-for="post in data?.items || []"
+        v-for="post in paginatedPosts"
         :key="post._path"
         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
       >
@@ -59,10 +50,10 @@ useHead({
         </header>
         <p class="mt-2 text-sm text-slate-700">{{ post.description }}</p>
       </article>
-      <p v-if="!data?.items?.length" class="text-slate-600 col-span-full">Публикации скоро появятся.</p>
+      <p v-if="!paginatedPosts.length" class="text-slate-600 col-span-full">Статьи пока не добавлены.</p>
     </section>
 
-    <nav class="flex items-center gap-4 text-sm text-slate-700" aria-label="Постраничная навигация">
+    <nav class="flex items-center gap-4 text-sm text-slate-700" aria-label="Постраничная навигация блога">
       <NuxtLink
         v-if="page > 1"
         :to="`/blog?page=${page - 1}`"
@@ -76,7 +67,7 @@ useHead({
         :to="`/blog?page=${page + 1}`"
         class="px-3 py-2 rounded border border-slate-200 bg-white hover:border-brand"
       >
-        Вперёд
+        Вперед
       </NuxtLink>
     </nav>
   </main>

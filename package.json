@@ -11,15 +11,14 @@
     "lint": "nuxt lint"
   },
   "dependencies": {
-    "@nuxt/content": "latest",
     "@nuxtjs/i18n": "latest",
     "@nuxtjs/seo": "latest",
     "@nuxtjs/tailwindcss": "latest",
     "autoprefixer": "latest",
-    "postcss": "latest",
-    "tailwindcss": "latest",
     "better-sqlite3": "latest",
-    "nuxt": "latest"
+    "nuxt": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest"
   },
   "engines": {
     "node": ">=18.18.0"

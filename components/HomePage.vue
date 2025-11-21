@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useAsyncData, queryCollection } from '#imports';
+import { getSortedBlogPosts } from '~/config/blog';
 
 const props = defineProps({
   city: {
@@ -45,12 +45,7 @@ const withCityPath = (slug) => {
   return `${prefix}/${slug}`;
 };
 
-const { data: blogArticles } = await useAsyncData('home-blog', async () => {
-  if (process.server) {
-    return queryCollection('blog').order('date', 'DESC').limit(4).all();
-  }
-  return [];
-});
+const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
 </script>
 
 <template>

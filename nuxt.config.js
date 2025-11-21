@@ -1,26 +1,14 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { cities } from './config/cities';
 import { courses } from './config/courses';
 import { formats } from './config/formats';
+import { blogPosts } from './config/blog';
 
 const siteUrl = 'https://example.kz';
 const siteName = 'Учебный центр по охране труда и промышленной безопасности';
 const defaultLocale = 'ru-KZ';
 const compatibilityDate = '2025-11-20';
 
-const blogDir = path.resolve('./content/blog');
-
-const getBlogRoutes = () => {
-  if (!fs.existsSync(blogDir)) {
-    return [];
-  }
-
-  return fs
-    .readdirSync(blogDir)
-    .filter((file) => file.endsWith('.md'))
-    .map((file) => `/blog/${file.replace(/\.md$/, '')}`);
-};
+const getBlogRoutes = () => blogPosts.map((post) => post._path);
 
 const buildCityRoutes = () => cities.map((city) => `/${city.slug}`);
 const buildCourseRoutes = () =>
@@ -95,7 +83,7 @@ export default defineNuxtConfig({
       },
     },
   },
-  modules: ['@nuxtjs/i18n', '@nuxt/content', '@nuxtjs/seo', '@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/i18n', '@nuxtjs/seo', '@nuxtjs/tailwindcss'],
   css: ['~/assets/css/tailwind.css'],
   postcss: {
     plugins: {
@@ -144,9 +132,6 @@ export default defineNuxtConfig({
       { code: 'kk', iso: 'kk-KZ', name: 'Қазақша' },
     ],
   },
-  content: {
-    documentDriven: false,
-  },
   seo: {
     site: {
       url: siteUrl,
@@ -172,6 +157,9 @@ export default defineNuxtConfig({
     },
   },
   nitro: {
-  prerender: false
-},
+    prerender: {
+      crawlLinks: true,
+      routes: staticRoutes(),
+    },
+  },
 });
