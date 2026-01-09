@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue';
-import { useHead } from '#imports';
+import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
 import { getFormatByType } from '~/config/formats';
+import { getCityPrepositional } from '~/composables/useCity';
 
 const props = defineProps({
   type: {
@@ -19,20 +20,44 @@ const resolvedCity = computed(() =>
 );
 
 const format = computed(() => getFormatByType(props.type));
+const { locale, t } = useI18n();
+const localePath = useLocalePath();
+const route = useRoute();
+const runtimeConfig = useRuntimeConfig();
 
 const cityPrepositional = computed(
-  () => resolvedCity.value?.nameRuPrepositional || 'в Казахстане',
+  () =>
+    getCityPrepositional(resolvedCity.value, locale.value) ||
+    (locale.value === 'kk' ? 'Қазақстанда' : 'в Казахстане'),
 );
+
+const resolveSeoValue = (value, fallback = '') => {
+  if (!value) return fallback;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    return value[locale.value] || value.ru || value.kk || fallback;
+  }
+  return fallback;
+};
 
 const metaTitle = computed(() => {
   if (!format.value) return '';
-  return format.value.seo.title.replaceAll('{{cityPrepositional}}', cityPrepositional.value);
+  return resolveSeoValue(format.value.seo?.title).replaceAll(
+    '{{cityPrepositional}}',
+    cityPrepositional.value,
+  );
 });
 
 const metaDescription = computed(() => {
   if (!format.value) return '';
-  return format.value.seo.description.replaceAll('{{cityPrepositional}}', cityPrepositional.value);
+  return resolveSeoValue(format.value.seo?.description).replaceAll(
+    '{{cityPrepositional}}',
+    cityPrepositional.value,
+  );
 });
+
+const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://example.kz');
+const canonicalUrl = computed(() => new URL(route.path || '/', baseUrl.value).toString());
 
 useHead(() => ({
   title: metaTitle.value,
@@ -40,6 +65,20 @@ useHead(() => ({
     { name: 'description', content: metaDescription.value },
     { property: 'og:title', content: metaTitle.value },
     { property: 'og:description', content: metaDescription.value },
+    { name: 'twitter:title', content: metaTitle.value },
+    { name: 'twitter:description', content: metaDescription.value },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      children: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: metaTitle.value,
+        description: metaDescription.value,
+        url: canonicalUrl.value,
+      }),
+    },
   ],
 }));
 </script>
@@ -68,8 +107,8 @@ useHead(() => ({
       <h2 class="text-xl font-semibold text-slate-900">Оставить заявку</h2>
       <p class="text-slate-700">Поможем выбрать программу и запустим обучение в нужные сроки.</p>
       <div class="flex justify-center gap-3">
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="/contacts">Оставить заявку</a>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">Позвонить</a>
+        <NuxtLink :to="localePath('/contacts')" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">{{ t('cta.apply') }}</NuxtLink>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">{{ t('cta.call') }}</a>
       </div>
     </section>
   </article>

@@ -1,5 +1,7 @@
 <script setup>
-import { useHead } from '#imports';
+import { useHead, useI18n } from '#imports';
+
+const { t } = useI18n();
 
 useHead({
   title: 'Контакты учебного центра',
@@ -39,7 +41,7 @@ useHead({
           <textarea name="comment" placeholder="Комментарий" rows="3" class="md:col-span-2 rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent"></textarea>
           <div class="md:col-span-2 flex flex-wrap gap-3">
             <button type="submit" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">Отправить</button>
-            <a href="tel:+77000000000" class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition">Позвонить</a>
+            <a href="tel:+77000000000" class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition">{{ t('cta.call') }}</a>
           </div>
         </form>
       </section>

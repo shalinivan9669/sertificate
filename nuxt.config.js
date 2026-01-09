@@ -1,4 +1,4 @@
-import { cities } from './config/cities';
+﻿import { cities } from './config/cities';
 import { courses } from './config/courses';
 import { formats } from './config/formats';
 import { blogPosts } from './config/blog';
@@ -16,23 +16,29 @@ const buildCourseRoutes = () =>
 const buildFormatRoutes = () =>
   cities.flatMap((city) => formats.map((format) => `/${city.slug}/${format.slug}`));
 
+const localePrefixes = ['kk'];
+const prefixRoutes = (routes, locale) =>
+  routes.map((route) => (route === '/' ? `/${locale}` : `/${locale}${route}`));
+
 const staticRoutes = () => {
   const baseRoutes = [
     '/',
     '/blog',
+    '/contacts',
     '/licenses',
     '/public-offer',
     '/privacy',
     ...courses.map((course) => `/${course.slug}`),
     ...formats.map((format) => `/${format.slug}`),
   ];
-  return [
+  const allRoutes = [
     ...baseRoutes,
     ...getBlogRoutes(),
     ...buildCityRoutes(),
     ...buildCourseRoutes(),
     ...buildFormatRoutes(),
   ];
+  return [...allRoutes, ...localePrefixes.flatMap((locale) => prefixRoutes(allRoutes, locale))];
 };
 
 const organizationLd = {
@@ -72,6 +78,12 @@ export default defineNuxtConfig({
   ssr: true,
   compatibilityDate,
   devtools: { enabled: false },
+  runtimeConfig: {
+    public: {
+      siteUrl,
+      siteName,
+    },
+  },
   devServer: {
     host: 'localhost',
     port: 3000,
@@ -93,23 +105,26 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      htmlAttrs: { lang: 'ru' },
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
       title: siteName,
       titleTemplate: (titleChunk) =>
-        titleChunk ? `Учебный центр по охране труда – ${titleChunk}` : siteName,
+        titleChunk ? `Учебный центр по охране труда - ${titleChunk}` : siteName,
       meta: [
         {
           name: 'description',
           content:
-            'Лицензированный учебный центр: охрана труда, промышленная безопасность, ПТМ, электробезопасность, работы на высоте по всей РК. Онлайн, очно и выездные программы.',
+            'Обучение по охране труда, ТБ, БИОТ и промышленной безопасности по всему Казахстану. Онлайн/дистанционно, очно и выездно. Удостоверения, сертификаты, аттестация и проверка знаний.',
         },
         { property: 'og:site_name', content: siteName },
         { property: 'og:type', content: 'website' },
-        { property: 'og:locale', content: 'ru_KZ' },
+        { name: 'twitter:card', content: 'summary_large_image' },
       ],
-      link: [{ rel: 'canonical', href: siteUrl }],
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/logo.png' },
+        { rel: 'apple-touch-icon', sizes: '512x512', href: '/logo.png' },
+      ],
       script: [
         {
           type: 'application/ld+json',
@@ -125,6 +140,7 @@ export default defineNuxtConfig({
     strategy: 'prefix_except_default',
     defaultLocale: 'ru',
     detectBrowserLanguage: false,
+    restructureDir: '.',
     vueI18n: './i18n.config.js',
     baseUrl: siteUrl,
     locales: [
@@ -163,3 +179,9 @@ export default defineNuxtConfig({
     },
   },
 });
+
+
+
+
+
+

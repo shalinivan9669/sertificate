@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import { useHead, useI18n } from '#imports';
+import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
+import { getCityName, getCityPrepositional } from '~/composables/useCity';
 
 const props = defineProps({
   course: {
@@ -17,11 +18,20 @@ const resolvedCity = computed(() =>
   props.city && 'value' in props.city ? props.city.value : props.city,
 );
 
-const { locale } = useI18n();
+const { locale, t } = useI18n();
+const localePath = useLocalePath();
+const route = useRoute();
+const runtimeConfig = useRuntimeConfig();
+
 const courseName = computed(() => props.course.name[locale.value] || props.course.name.ru);
-const cityName = computed(() => resolvedCity.value?.nameRu || 'любой город');
+const cityName = computed(() =>
+  getCityName(resolvedCity.value, locale.value) ||
+  (locale.value === 'kk' ? 'Сіздің қалаңыз' : 'В вашем городе'),
+);
 const cityPrepositional = computed(
-  () => resolvedCity.value?.nameRuPrepositional || 'в любом городе',
+  () =>
+    getCityPrepositional(resolvedCity.value, locale.value) ||
+    (locale.value === 'kk' ? 'сіздің қалаңызда' : 'в вашем городе'),
 );
 
 const fillTemplate = (template) =>
@@ -29,15 +39,95 @@ const fillTemplate = (template) =>
     .replaceAll('{{city}}', cityName.value)
     .replaceAll('{{cityPrepositional}}', cityPrepositional.value);
 
-const metaTitle = computed(() => fillTemplate(props.course.seo?.title || courseName.value));
+const resolveSeoValue = (value, fallback) => {
+  if (!value) return fallback;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    return value[locale.value] || value.ru || value.kk || fallback;
+  }
+  return fallback;
+};
+
+const fallbackDescription = computed(() => {
+  if (locale.value === 'kk') {
+    return `Еңбекті қорғау және еңбек қауіпсіздігі бойынша оқыту ${cityPrepositional.value}: білімді тексеру, аттестация, куәлік/сертификат.`;
+  }
+  return `Обучение по охране труда и ТБ ${cityPrepositional.value}: проверка знаний, аттестация, удостоверение/сертификат.`;
+});
+
+const metaTitle = computed(() =>
+  fillTemplate(resolveSeoValue(props.course.seo?.title, courseName.value)),
+);
 const metaDescription = computed(() =>
-  fillTemplate(
-    props.course.seo?.description ||
-      `Обучение «${courseName.value}» ${cityPrepositional.value}: программа, требования, выдача удостоверений.`,
-  ),
+  fillTemplate(resolveSeoValue(props.course.seo?.description, fallbackDescription.value)),
 );
 
 const courseContentHtml = computed(() => props.course.contentHtml || '');
+
+const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://example.kz');
+const canonicalUrl = computed(() => new URL(route.path || '/', baseUrl.value).toString());
+
+const courseSchema = computed(() => ({
+  '@context': 'https://schema.org',
+  '@type': 'Course',
+  name: courseName.value,
+  description: metaDescription.value,
+  url: canonicalUrl.value,
+  provider: {
+    '@type': 'EducationalOrganization',
+    name: runtimeConfig.public.siteName || 'Учебный центр',
+    url: baseUrl.value,
+  },
+  educationalCredentialAwarded:
+    locale.value === 'kk' ? 'Куәлік/сертификат' : 'Удостоверение/сертификат',
+  courseMode: ['online', 'in-person'],
+  areaServed: resolvedCity.value
+    ? [
+        {
+          '@type': 'City',
+          name: getCityName(resolvedCity.value, locale.value),
+        },
+      ]
+    : [
+        {
+          '@type': 'Country',
+          name: 'Kazakhstan',
+        },
+      ],
+}));
+
+const breadcrumbSchema = computed(() => {
+  const items = [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: t('nav.home'),
+      item: new URL(localePath('/'), baseUrl.value).toString(),
+    },
+  ];
+
+  if (resolvedCity.value?.slug) {
+    items.push({
+      '@type': 'ListItem',
+      position: items.length + 1,
+      name: getCityName(resolvedCity.value, locale.value),
+      item: new URL(localePath(`/${resolvedCity.value.slug}`), baseUrl.value).toString(),
+    });
+  }
+
+  items.push({
+    '@type': 'ListItem',
+    position: items.length + 1,
+    name: courseName.value,
+    item: canonicalUrl.value,
+  });
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items,
+  };
+});
 
 useHead(() => ({
   title: metaTitle.value,
@@ -46,34 +136,17 @@ useHead(() => ({
     { property: 'og:title', content: metaTitle.value },
     { property: 'og:description', content: metaDescription.value },
     { property: 'og:type', content: 'article' },
+    { name: 'twitter:title', content: metaTitle.value },
+    { name: 'twitter:description', content: metaDescription.value },
   ],
   script: [
     {
       type: 'application/ld+json',
-      children: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'Course',
-        name: courseName.value,
-        description: metaDescription.value,
-        provider: {
-          '@type': 'EducationalOrganization',
-          name: 'Учебный центр по охране труда и промышленной безопасности',
-          url: 'https://example.kz',
-        },
-        areaServed: resolvedCity.value
-          ? [
-              {
-                '@type': 'City',
-                name: resolvedCity.value.nameRu,
-              },
-            ]
-          : [
-              {
-                '@type': 'Country',
-                name: 'Kazakhstan',
-              },
-            ],
-      }),
+      children: JSON.stringify(courseSchema.value),
+    },
+    {
+      type: 'application/ld+json',
+      children: JSON.stringify(breadcrumbSchema.value),
     },
   ],
 }));
@@ -83,7 +156,7 @@ useHead(() => ({
   <article class="space-y-10">
     <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm space-y-4">
       <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Курс</p>
-      <h1 class="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">{{ courseName }}</h1>
+      <h1 class="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">{{ metaTitle }}</h1>
       <p class="text-lg text-slate-700">
         {{ metaDescription }}
       </p>
@@ -97,7 +170,7 @@ useHead(() => ({
         </span>
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
           <strong class="font-semibold text-slate-900">Город:</strong>
-          {{ resolvedCity?.nameRu || 'Любой регион' }}
+          {{ getCityName(resolvedCity, locale) || 'Любой регион' }}
         </span>
       </div>
     </header>
@@ -146,7 +219,7 @@ useHead(() => ({
       </p>
       <div class="flex flex-wrap gap-3">
         <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">Получить консультацию</a>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">Позвонить</a>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">{{ t('cta.call') }}</a>
       </div>
     </section>
 

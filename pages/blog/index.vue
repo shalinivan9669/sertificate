@@ -1,9 +1,10 @@
 <script setup>
 import { computed } from 'vue';
-import { useHead, useRoute } from '#imports';
+import { useHead, useRoute, useLocalePath } from '#imports';
 import { getSortedBlogPosts } from '~/config/blog';
 
 const route = useRoute();
+const localePath = useLocalePath();
 const pageSize = 10;
 const page = computed(() => Number(route.query.page) || 1);
 
@@ -44,7 +45,7 @@ useHead({
       >
         <header class="flex items-start justify-between gap-2">
           <h2 class="text-lg font-semibold text-slate-900">
-            <NuxtLink :to="post._path" class="hover:text-brand">{{ post.title }}</NuxtLink>
+            <NuxtLink :to="localePath(post._path)" class="hover:text-brand">{{ post.title }}</NuxtLink>
           </h2>
           <time :datetime="post.date" class="text-xs text-slate-500">{{ post.date }}</time>
         </header>
@@ -56,7 +57,7 @@ useHead({
     <nav class="flex items-center gap-4 text-sm text-slate-700" aria-label="Постраничная навигация блога">
       <NuxtLink
         v-if="page > 1"
-        :to="`/blog?page=${page - 1}`"
+        :to="`${localePath('/blog')}?page=${page - 1}`"
         class="px-3 py-2 rounded border border-slate-200 bg-white hover:border-brand"
       >
         Назад
@@ -64,7 +65,7 @@ useHead({
       <span>Страница {{ page }} из {{ totalPages }}</span>
       <NuxtLink
         v-if="page < totalPages"
-        :to="`/blog?page=${page + 1}`"
+        :to="`${localePath('/blog')}?page=${page + 1}`"
         class="px-3 py-2 rounded border border-slate-200 bg-white hover:border-brand"
       >
         Вперед

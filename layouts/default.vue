@@ -1,32 +1,51 @@
 <script setup>
-import { useHead, useLocalePath, useSwitchLocalePath, useI18n } from '#imports';
+import { computed } from 'vue';
+import {
+  useHead,
+  useLocaleHead,
+  useLocalePath,
+  useRoute,
+  useRuntimeConfig,
+  useSwitchLocalePath,
+  useI18n,
+} from '#imports';
 import CitySwitcher from '~/components/CitySwitcher.vue';
 
 const localePath = useLocalePath();
 const switchLocalePath = useSwitchLocalePath();
-const { locale } = useI18n();
+const route = useRoute();
+const runtimeConfig = useRuntimeConfig();
+const { locale, t } = useI18n();
 
-useHead({
-  titleTemplate: (chunk) =>
-    chunk ? `Учебный центр по охране труда — ${chunk}` : 'Учебный центр по охране труда и промышленной безопасности',
-  meta: [
-    {
-      name: 'description',
-      content:
-        'Учебный центр: охрана труда, промышленная безопасность, пожарно-технический минимум, электробезопасность, работы на высоте. Онлайн, очно и выездно по Казахстану.',
-    },
-    { property: 'og:site_name', content: 'Учебный центр по охране труда и промышленной безопасности' },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:locale', content: 'ru_KZ' },
-  ],
+const localeHead = useLocaleHead({
+  addDirAttribute: true,
+  identifierAttribute: 'id',
+  addSeoAttributes: true,
 });
+
+const canonicalUrl = computed(() => {
+  const baseUrl = runtimeConfig.public.siteUrl || 'https://example.kz';
+  return new URL(route.path || '/', baseUrl).toString();
+});
+
+useHead(() => ({
+  htmlAttrs: localeHead.value.htmlAttrs,
+  link: [
+    ...(localeHead.value.link || []),
+    { rel: 'canonical', href: canonicalUrl.value },
+  ],
+  meta: [
+    ...(localeHead.value.meta || []),
+    { property: 'og:url', content: canonicalUrl.value },
+  ],
+}));
 </script>
 
 <template>
   <div class="min-h-screen flex flex-col bg-slate-50 text-slate-900">
     <header class="border-b border-slate-200 bg-white/70 backdrop-blur">
       <div class="container flex items-center justify-between py-4 gap-4">
-        <NuxtLink to="/" class="text-lg font-semibold text-brand">UC Safety</NuxtLink>
+        <NuxtLink :to="localePath('/')" class="text-lg font-semibold text-brand">UC Safety</NuxtLink>
         <div class="flex items-center gap-3">
           <CitySwitcher />
           <div class="flex items-center gap-1 text-sm text-slate-600">
@@ -54,11 +73,11 @@ useHead({
       </div>
       <nav class="border-t border-slate-200 bg-white">
         <div class="container flex flex-wrap items-center gap-4 py-3 text-sm font-medium text-slate-700">
-          <NuxtLink :to="localePath('/')" class="hover:text-brand">Главная</NuxtLink>
-          <NuxtLink :to="`${localePath('/') }#courses`" class="hover:text-brand">Курсы</NuxtLink>
-          <NuxtLink :to="`${localePath('/') }#formats`" class="hover:text-brand">Форматы обучения</NuxtLink>
-          <NuxtLink :to="localePath('/blog')" class="hover:text-brand">Блог</NuxtLink>
-          <NuxtLink :to="localePath('/contacts')" class="hover:text-brand">Контакты</NuxtLink>
+          <NuxtLink :to="localePath('/')" class="hover:text-brand">{{ t('nav.home') }}</NuxtLink>
+          <NuxtLink :to="`${localePath('/') }#courses`" class="hover:text-brand">{{ t('nav.courses') }}</NuxtLink>
+          <NuxtLink :to="`${localePath('/') }#formats`" class="hover:text-brand">{{ t('nav.formats') }}</NuxtLink>
+          <NuxtLink :to="localePath('/blog')" class="hover:text-brand">{{ t('nav.blog') }}</NuxtLink>
+          <NuxtLink :to="localePath('/contacts')" class="hover:text-brand">{{ t('nav.contacts') }}</NuxtLink>
         </div>
       </nav>
     </header>
@@ -80,17 +99,17 @@ useHead({
         <section>
           <h3 class="font-semibold text-slate-900 mb-3">Документы</h3>
           <ul class="space-y-2">
-            <li><NuxtLink to="/licenses">Лицензии</NuxtLink></li>
-            <li><NuxtLink to="/public-offer">Договор оферты</NuxtLink></li>
-            <li><NuxtLink to="/privacy">Политика конфиденциальности</NuxtLink></li>
+            <li><NuxtLink :to="localePath('/licenses')">Лицензии</NuxtLink></li>
+            <li><NuxtLink :to="localePath('/public-offer')">Договор оферты</NuxtLink></li>
+            <li><NuxtLink :to="localePath('/privacy')">Политика конфиденциальности</NuxtLink></li>
           </ul>
         </section>
         <section>
           <h3 class="font-semibold text-slate-900 mb-3">Навигация</h3>
           <ul class="space-y-2">
-            <li><NuxtLink to="/">Главная</NuxtLink></li>
-            <li><NuxtLink to="/blog">Блог</NuxtLink></li>
-            <li><NuxtLink to="/contacts">Контакты</NuxtLink></li>
+            <li><NuxtLink :to="localePath('/')">{{ t('nav.home') }}</NuxtLink></li>
+            <li><NuxtLink :to="localePath('/blog')">{{ t('nav.blog') }}</NuxtLink></li>
+            <li><NuxtLink :to="localePath('/contacts')">{{ t('nav.contacts') }}</NuxtLink></li>
           </ul>
         </section>
         <section>

@@ -4,6 +4,20 @@ import { cities } from '../config/cities';
 
 const getCityBySlug = (slug) => cities.find((city) => city.slug === slug) || null;
 const isValidCitySlug = (slug) => Boolean(getCityBySlug(slug));
+const getCityName = (city, locale = 'ru') => {
+  if (!city) return null;
+  if (locale === 'kk') {
+    return city.nameKk || city.nameRu;
+  }
+  return city.nameRu;
+};
+const getCityPrepositional = (city, locale = 'ru') => {
+  if (!city) return null;
+  if (locale === 'kk') {
+    return city.nameKkPrepositional || city.nameKk || city.nameRuPrepositional || city.nameRu;
+  }
+  return city.nameRuPrepositional || city.nameRu;
+};
 
 export default function useCity() {
   const route = useRoute();
@@ -21,7 +35,9 @@ export default function useCity() {
     allCities: computed(() => cities),
     getCityBySlug,
     isValidCitySlug,
+    getCityName,
+    getCityPrepositional,
   };
 }
 
-export { getCityBySlug, isValidCitySlug };
+export { getCityBySlug, isValidCitySlug, getCityName, getCityPrepositional };

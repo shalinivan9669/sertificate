@@ -1,6 +1,9 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n, useLocalePath } from '#imports';
 import { getSortedBlogPosts } from '~/config/blog';
+import { cities } from '~/config/cities';
+import { getCityName, getCityPrepositional } from '~/composables/useCity';
 
 const props = defineProps({
   city: {
@@ -11,6 +14,11 @@ const props = defineProps({
 
 const resolvedCity = computed(() =>
   props.city && 'value' in props.city ? props.city.value : props.city,
+);
+const { locale, t, tm } = useI18n();
+const localePath = useLocalePath();
+const cityPrepositional = computed(() =>
+  resolvedCity.value ? getCityPrepositional(resolvedCity.value, locale.value) : null,
 );
 
 const directions = [
@@ -34,15 +42,20 @@ const formatCards = [
   { title: 'Продление удостоверений', slug: 'prodlenie-udostovereniy', description: 'Актуализация знаний и выдача новых удостоверений.' },
 ];
 
+const asList = (value) => (Array.isArray(value) ? value : []);
+const seoFormats = computed(() => asList(tm('home.seoFormats')));
+const seoRoles = computed(() => asList(tm('home.seoRoles')));
+const seoSynonyms = computed(() => asList(tm('home.seoSynonyms')));
+
 const heroTitle = computed(() =>
-  resolvedCity.value
-    ? `Учебный центр по охране труда и промышленной безопасности ${resolvedCity.value.nameRuPrepositional}`
-    : 'Учебный центр по охране труда и промышленной безопасности в Казахстане',
+  cityPrepositional.value
+    ? t('home.heroTitleCity', { city: cityPrepositional.value })
+    : t('home.heroTitleDefault'),
 );
 
 const withCityPath = (slug) => {
-  const prefix = resolvedCity.value?.slug ? `/${resolvedCity.value.slug}` : '';
-  return `${prefix}/${slug}`;
+  const base = resolvedCity.value?.slug ? `/${resolvedCity.value.slug}/${slug}` : `/${slug}`;
+  return localePath(base);
 };
 
 const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
@@ -54,17 +67,17 @@ const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
       <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div class="space-y-4 max-w-3xl">
           <p class="text-sm uppercase tracking-wide text-brand-accent font-semibold">
-            Лицензированный учебный центр
+            {{ t('home.heroBadge') }}
           </p>
           <h1 class="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">
             {{ heroTitle }}
           </h1>
           <p class="text-lg text-slate-700">
-            Обучение по охране труда, промышленной безопасности, ПТМ, электробезопасности. Онлайн, очно и выездно. Удостоверения гос. образца.
+            {{ t('home.heroDescription') }}
           </p>
           <div class="flex flex-wrap gap-3">
-            <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">Оставить заявку</a>
-            <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="#courses">Посмотреть курсы</a>
+            <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">{{ t('cta.apply') }}</a>
+            <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="#courses">{{ t('cta.viewCourses') }}</a>
           </div>
         </div>
         <div class="hidden md:block w-64 h-40 rounded-xl bg-gradient-to-br from-brand-soft to-white border border-slate-200" />
@@ -166,7 +179,7 @@ const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
         >
           <header class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-slate-900">
-              <NuxtLink :to="post._path" class="hover:text-brand">{{ post.title }}</NuxtLink>
+              <NuxtLink :to="localePath(post._path)" class="hover:text-brand">{{ post.title }}</NuxtLink>
             </h3>
             <time :datetime="post.date" class="text-xs text-slate-500">{{ post.date }}</time>
           </header>
@@ -176,13 +189,59 @@ const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
       </div>
     </section>
 
+
+    <section class="space-y-6" id="seo">
+      <header class="space-y-2">
+        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.seoTitle') }}</h2>
+        <p class="text-slate-700">{{ t('home.seoDescription') }}</p>
+      </header>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">
+          <h3 class="font-semibold text-slate-900">{{ t('home.seoFormatsTitle') }}</h3>
+          <ul class="mt-2 grid gap-2 list-disc ml-4">
+            <li v-for="item in seoFormats" :key="item">{{ item }}</li>
+          </ul>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">
+          <h3 class="font-semibold text-slate-900">{{ t('home.seoRolesTitle') }}</h3>
+          <ul class="mt-2 grid gap-2 list-disc ml-4">
+            <li v-for="item in seoRoles" :key="item">{{ item }}</li>
+          </ul>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700 md:col-span-2">
+          <h3 class="font-semibold text-slate-900">{{ t('home.seoSynonymsTitle') }}</h3>
+          <ul class="mt-2 grid gap-2 list-disc ml-4">
+            <li v-for="item in seoSynonyms" :key="item">{{ item }}</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-4" id="cities">
+      <header class="space-y-2">
+        <p class="text-sm font-semibold text-brand-accent">{{ t('nav.cities') }}</p>
+        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.seoGeoTitle') }}</h2>
+        <p class="text-slate-700">{{ t('home.seoGeoDescription') }}</p>
+      </header>
+      <div class="flex flex-wrap gap-2">
+        <NuxtLink
+          v-for="city in cities"
+          :key="city.slug"
+          :to="localePath(`/${city.slug}`)"
+          class="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 hover:border-brand hover:text-brand transition"
+        >
+          {{ getCityName(city, locale) }}
+        </NuxtLink>
+      </div>
+    </section>
+
     <section id="contact" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-3">
       <p class="text-sm font-semibold text-brand-accent">Готовы обсудить</p>
       <h2 class="text-2xl font-bold text-slate-900">Получите консультацию по обучению</h2>
       <p class="text-slate-700">Оставьте заявку, чтобы подобрать программу и формат под вашу компанию.</p>
       <div class="flex justify-center gap-3">
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="/contacts">Оставить заявку</a>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">Позвонить</a>
+        <NuxtLink :to="localePath('/contacts')" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">{{ t('cta.apply') }}</NuxtLink>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">{{ t('cta.call') }}</a>
       </div>
     </section>
   </div>
