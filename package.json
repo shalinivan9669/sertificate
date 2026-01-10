@@ -8,7 +8,8 @@
     "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "lint": "nuxt lint"
+    "lint": "nuxt lint",
+    "sitemap": "node scripts/generate-sitemap.mjs"
   },
   "dependencies": {
     "@nuxtjs/i18n": "latest",

@@ -94,8 +94,14 @@ useHead(() => ({
       <div class="container py-10 grid gap-8 md:grid-cols-4 text-sm text-slate-700">
         <section>
           <h3 class="font-semibold text-slate-900 mb-3">{{ t('footer.contactsTitle') }}</h3>
-          <p>{{ t('footer.phoneLabel') }}: +77470966900</p>
-          <p>{{ t('footer.emailLabel') }}: otcenter@proton.me</p>
+          <p>
+            {{ t('footer.phoneLabel') }}:
+            <a href="tel:+77470966900" class="text-brand">+77470966900</a>
+          </p>
+          <p>
+            {{ t('footer.emailLabel') }}:
+            <a href="mailto:otcenter@proton.me" class="text-brand">otcenter@proton.me</a>
+          </p>
           <p>{{ t('footer.scheduleLabel') }}: {{ t('footer.scheduleValue') }}</p>
         </section>
         <section>
