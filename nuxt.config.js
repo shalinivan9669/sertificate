@@ -4,7 +4,7 @@ import { formats } from './config/formats';
 import { blogPosts } from './config/blog';
 
 const siteUrl = 'https://otcenter.kz';
-const siteName = 'Учебный центр по охране труда и промышленной безопасности';
+const siteName = 'OT Center';
 const defaultLocale = 'ru-KZ';
 const compatibilityDate = '2025-11-20';
 
@@ -108,8 +108,7 @@ export default defineNuxtConfig({
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
       title: siteName,
-      titleTemplate: (titleChunk) =>
-        titleChunk ? `Учебный центр по охране труда - ${titleChunk}` : siteName,
+      titleTemplate: (titleChunk) => (titleChunk ? `OT Center — ${titleChunk}` : siteName),
       meta: [
         {
           name: 'description',

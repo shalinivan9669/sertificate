@@ -46,7 +46,7 @@ useHead(() => ({
     <header class="border-b border-slate-200 bg-white/70 backdrop-blur">
       <div class="container flex items-center justify-between py-4 gap-4">
         <NuxtLink :to="localePath('/')" class="flex items-center text-lg font-semibold text-brand">
-          <img src="/logo.png" alt="UC Safety" class="h-20 w-auto" />
+          <img src="/logo.png" alt="OT Center" class="h-20 w-auto" />
         </NuxtLink>
         <div class="flex items-center gap-3">
           <CitySwitcher />

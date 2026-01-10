@@ -34,7 +34,7 @@ export default defineI18nConfig(() => ({
         privacy: 'Политика конфиденциальности',
         navigationTitle: 'Навигация',
         citiesTitle: 'Города',
-        rights: 'Учебный центр. Все права защищены.',
+        rights: 'OT Center. Все права защищены.',
       },
       home: {
         heroBadge: 'Лицензированный учебный центр',
@@ -363,7 +363,7 @@ export default defineI18nConfig(() => ({
         privacy: 'Құпиялылық саясаты',
         navigationTitle: 'Навигация',
         citiesTitle: 'Қалалар',
-        rights: 'Оқу орталығы. Барлық құқықтар қорғалған.',
+        rights: 'OT Center. Барлық құқықтар қорғалған.',
       },
       home: {
         heroBadge: 'Лицензияланған оқу орталығы',

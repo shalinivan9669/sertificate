@@ -92,7 +92,7 @@ const courseSchema = computed(() => ({
     '@type': 'EducationalOrganization',
     name:
       runtimeConfig.public.siteName ||
-      (locale.value === 'kk' ? 'Оқу орталығы' : 'Учебный центр'),
+      'OT Center',
     url: baseUrl.value,
   },
   educationalCredentialAwarded:
