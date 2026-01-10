@@ -21,28 +21,12 @@ const cityPrepositional = computed(() =>
   resolvedCity.value ? getCityPrepositional(resolvedCity.value, locale.value) : null,
 );
 
-const directions = [
-  { title: 'Охрана труда', slug: 'ohrana-truda', description: 'Требования охраны труда и ответственность руководителей.' },
-  { title: 'Промышленная безопасность', slug: 'promyshlennaya-bezopasnost', description: 'Безопасная эксплуатация производственных объектов и оборудования.' },
-  { title: 'Пожарно-технический минимум (ПТМ)', slug: 'ptm', description: 'Действия персонала при пожаре, инструкции и эвакуация.' },
-  { title: 'Электробезопасность', slug: 'elektrobezopasnost', description: 'Группы допуска IV/V, оформление наряд-допусков, первая помощь.' },
-  { title: 'Работы на высоте', slug: 'raboty-na-vysote', description: 'СИЗ, работа на лестницах и лесах, спасение пострадавших.' },
-  { title: 'ГПМ / стропальщики', slug: 'gpm-stropalschiki', description: 'Строповка, сигналы, устойчивость груза и контроль.' },
-  { title: 'Газоопасные работы', slug: 'gazoopasnye-raboty', description: 'Наряды-допуски, контроль атмосферы, действия при ЧС.' },
-  { title: 'Экологическая безопасность', slug: 'ekologicheskaya-bezopasnost', description: 'Отчётность, выбросы, обращение с отходами.' },
-  { title: 'Первая помощь', slug: 'pervaya-pomoshch', description: 'Базовые алгоритмы, СЛР, остановка кровотечения.' },
-];
-
-const formatCards = [
-  { title: 'Очное обучение', slug: 'ochnoe-obuchenie', description: 'Занятия в классе, практика, экзамен на месте.' },
-  { title: 'Онлайн', slug: 'online-obuchenie', description: 'Дистанционно из любого города Казахстана.' },
-  { title: 'Выездное', slug: 'vyezdnoe-obuchenie', description: 'Преподаватель приезжает на ваш объект.' },
-  { title: 'Срочное', slug: 'srochnoe-obuchenie', description: 'Быстрое оформление документов и допусков.' },
-  { title: 'Для тендера', slug: 'obuchenie-dlya-tendera', description: 'Готовим персонал и пакеты документов под тендер.' },
-  { title: 'Продление удостоверений', slug: 'prodlenie-udostovereniy', description: 'Актуализация знаний и выдача новых удостоверений.' },
-];
-
 const asList = (value) => (Array.isArray(value) ? value : []);
+const directions = computed(() => asList(tm('home.directions')));
+const formatCards = computed(() => asList(tm('home.formatCards')));
+const whyItems = computed(() => asList(tm('home.whyItems')));
+const licensesItems = computed(() => asList(tm('home.licensesItems')));
+const testimonialsItems = computed(() => asList(tm('home.testimonialsItems')));
 const seoFormats = computed(() => asList(tm('home.seoFormats')));
 const seoRoles = computed(() => asList(tm('home.seoRoles')));
 const seoSynonyms = computed(() => asList(tm('home.seoSynonyms')));
@@ -58,7 +42,13 @@ const withCityPath = (slug) => {
   return localePath(base);
 };
 
-const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
+const localizePost = (post) => ({
+  ...post,
+  title: post.title?.[locale.value] || post.title?.ru || post.title,
+  description: post.description?.[locale.value] || post.description?.ru || post.description,
+});
+
+const blogArticles = computed(() => getSortedBlogPosts().map(localizePost).slice(0, 4));
 </script>
 
 <template>
@@ -86,9 +76,9 @@ const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
 
     <section id="courses" class="space-y-6">
       <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">Направления обучения</p>
-        <h2 class="text-2xl font-bold text-slate-900">Ключевые курсы</h2>
-        <p class="text-slate-700">Подготовка персонала с учётом требований законодательства и отраслевых стандартов.</p>
+        <p class="text-sm font-semibold text-brand-accent">{{ t('home.directionsBadge') }}</p>
+        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.directionsTitle') }}</h2>
+        <p class="text-slate-700">{{ t('home.directionsSubtitle') }}</p>
       </header>
       <div class="grid gap-4 md:grid-cols-3">
         <NuxtLink
@@ -105,9 +95,9 @@ const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
 
     <section id="formats" class="space-y-6">
       <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">Форматы</p>
-        <h2 class="text-2xl font-bold text-slate-900">Форматы обучения</h2>
-        <p class="text-slate-700">Подберём удобный формат под график, территорию и задачи вашего предприятия.</p>
+        <p class="text-sm font-semibold text-brand-accent">{{ t('home.formatsBadge') }}</p>
+        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.formatsTitle') }}</h2>
+        <p class="text-slate-700">{{ t('home.formatsSubtitle') }}</p>
       </header>
       <div class="grid gap-4 md:grid-cols-3">
         <NuxtLink
@@ -124,52 +114,59 @@ const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
 
     <section class="space-y-4">
       <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">Почему мы</p>
-        <h2 class="text-2xl font-bold text-slate-900">Почему выбирают нас</h2>
+        <p class="text-sm font-semibold text-brand-accent">{{ t('home.whyBadge') }}</p>
+        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.whyTitle') }}</h2>
       </header>
       <div class="grid gap-3 md:grid-cols-2">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Лицензия и опыт преподавателей. Программы по требованиям ТК и отраслевых стандартов.</div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Срочные группы, онлайн и выезд по Казахстану. Поддержка на всех этапах.</div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Документы: удостоверения, протоколы, приказы. Готовность к проверкам.</div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Гибкое расписание под график производства и смен.</div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">Консультации по требованиям заказчиков и тендеров.</div>
+        <div
+          v-for="item in whyItems"
+          :key="item"
+          class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700"
+        >
+          {{ item }}
+        </div>
       </div>
     </section>
 
     <section class="space-y-4">
       <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">Лицензии</p>
-        <h2 class="text-2xl font-bold text-slate-900">Лицензии и сертификаты</h2>
-        <p class="text-slate-700">Готовы предоставить копии лицензии, аккредитации и документов по запросу.</p>
+        <p class="text-sm font-semibold text-brand-accent">{{ t('home.licensesBadge') }}</p>
+        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.licensesTitle') }}</h2>
+        <p class="text-slate-700">{{ t('home.licensesSubtitle') }}</p>
       </header>
       <div class="grid gap-4 sm:grid-cols-3">
-        <div class="h-28 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500">Лицензия</div>
-        <div class="h-28 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500">Сертификат</div>
-        <div class="h-28 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500">Аккредитация</div>
+        <div
+          v-for="item in licensesItems"
+          :key="item"
+          class="h-28 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500"
+        >
+          {{ item }}
+        </div>
       </div>
     </section>
 
     <section class="space-y-4">
       <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">Отзывы</p>
-        <h2 class="text-2xl font-bold text-slate-900">Отзывы и клиенты</h2>
+        <p class="text-sm font-semibold text-brand-accent">{{ t('home.testimonialsBadge') }}</p>
+        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.testimonialsTitle') }}</h2>
       </header>
       <div class="grid gap-4 md:grid-cols-2">
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 class="font-semibold text-slate-900">Опыт и экспертиза</h3>
-          <p class="mt-2 text-slate-700">Работаем с крупными предприятиями, готовим персонал под требования заказчиков и проверок.</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 class="font-semibold text-slate-900">Широкая география</h3>
-          <p class="mt-2 text-slate-700">Проводим обучение по всей Республике Казахстан: онлайн, очно и на выезде.</p>
+        <div
+          v-for="item in testimonialsItems"
+          :key="item.title"
+          class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+        >
+          <h3 class="font-semibold text-slate-900">{{ item.title }}</h3>
+          <p class="mt-2 text-slate-700">{{ item.description }}</p>
         </div>
       </div>
     </section>
 
     <section class="space-y-4">
       <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">Статьи</p>
-        <h2 class="text-2xl font-bold text-slate-900">Полезные материалы</h2>
+        <p class="text-sm font-semibold text-brand-accent">{{ t('home.blogBadge') }}</p>
+        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.blogTitle') }}</h2>
+        <p class="text-slate-700">{{ t('home.blogSubtitle') }}</p>
       </header>
       <div class="grid gap-4 md:grid-cols-2">
         <article
@@ -185,10 +182,11 @@ const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
           </header>
           <p class="mt-2 text-sm text-slate-700">{{ post.description }}</p>
         </article>
-        <p v-if="!blogArticles || blogArticles.length === 0" class="text-slate-600 col-span-full">Публикации появятся скоро.</p>
+        <p v-if="!blogArticles || blogArticles.length === 0" class="text-slate-600 col-span-full">
+          {{ t('home.blogEmpty') }}
+        </p>
       </div>
     </section>
-
 
     <section class="space-y-6" id="seo">
       <header class="space-y-2">
@@ -236,12 +234,12 @@ const blogArticles = computed(() => getSortedBlogPosts().slice(0, 4));
     </section>
 
     <section id="contact" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-3">
-      <p class="text-sm font-semibold text-brand-accent">Готовы обсудить</p>
-      <h2 class="text-2xl font-bold text-slate-900">Получите консультацию по обучению</h2>
-      <p class="text-slate-700">Оставьте заявку, чтобы подобрать программу и формат под вашу компанию.</p>
+      <p class="text-sm font-semibold text-brand-accent">{{ t('home.contactBadge') }}</p>
+      <h2 class="text-2xl font-bold text-slate-900">{{ t('home.contactTitle') }}</h2>
+      <p class="text-slate-700">{{ t('home.contactDescription') }}</p>
       <div class="flex justify-center gap-3">
         <NuxtLink :to="localePath('/contacts')" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">{{ t('cta.apply') }}</NuxtLink>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">{{ t('cta.call') }}</a>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77470966900">{{ t('cta.call') }}</a>
       </div>
     </section>
   </div>

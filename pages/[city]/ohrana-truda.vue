@@ -10,5 +10,5 @@ const course = computed(() => courses.find((item) => item.slug === 'ohrana-truda
 
 <template>
   <CoursePage v-if="course" :course="course" :city="city" />
-  <p v-else>Курс не найден.</p>
+  <p v-else>{{ $t('course.notFound') }}</p>
 </template>

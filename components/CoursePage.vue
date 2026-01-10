@@ -18,20 +18,21 @@ const resolvedCity = computed(() =>
   props.city && 'value' in props.city ? props.city.value : props.city,
 );
 
-const { locale, t } = useI18n();
+const { locale, t, tm } = useI18n();
 const localePath = useLocalePath();
 const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
 
 const courseName = computed(() => props.course.name[locale.value] || props.course.name.ru);
-const cityName = computed(() =>
-  getCityName(resolvedCity.value, locale.value) ||
-  (locale.value === 'kk' ? 'Сіздің қалаңыз' : 'В вашем городе'),
+const cityName = computed(
+  () =>
+    getCityName(resolvedCity.value, locale.value) ||
+    (locale.value === 'kk' ? 'Қазақстан бойынша' : 'по Казахстану'),
 );
 const cityPrepositional = computed(
   () =>
     getCityPrepositional(resolvedCity.value, locale.value) ||
-    (locale.value === 'kk' ? 'сіздің қалаңызда' : 'в вашем городе'),
+    (locale.value === 'kk' ? 'Қазақстанда' : 'в Казахстане'),
 );
 
 const fillTemplate = (template) =>
@@ -50,9 +51,9 @@ const resolveSeoValue = (value, fallback) => {
 
 const fallbackDescription = computed(() => {
   if (locale.value === 'kk') {
-    return `Еңбекті қорғау және еңбек қауіпсіздігі бойынша оқыту ${cityPrepositional.value}: білімді тексеру, аттестация, куәлік/сертификат.`;
+    return `Еңбекті қорғау және ТБ бойынша оқу ${cityPrepositional.value}: куәлік беру, білімді тексеру, аттестаттау.`;
   }
-  return `Обучение по охране труда и ТБ ${cityPrepositional.value}: проверка знаний, аттестация, удостоверение/сертификат.`;
+  return `Обучение по охране труда и ТБ ${cityPrepositional.value}: выдача удостоверений, проверка знаний, аттестация.`;
 });
 
 const metaTitle = computed(() =>
@@ -67,6 +68,20 @@ const courseContentHtml = computed(() => props.course.contentHtml || '');
 const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://example.kz');
 const canonicalUrl = computed(() => new URL(route.path || '/', baseUrl.value).toString());
 
+const asList = (value) => (Array.isArray(value) ? value : []);
+const includesItems = computed(() => asList(tm('course.includesItems')));
+const benefitsItems = computed(() => asList(tm('course.benefitsItems')));
+const processItems = computed(() => asList(tm('course.processItems')));
+const requirementsItems = computed(() => asList(tm('course.requirementsItems')));
+const whyItems = computed(() => asList(tm('course.whyItems')));
+const faqItems = computed(() => {
+  const items = asList(tm('course.faqItems'));
+  return items.map((item, index) => ({
+    q: item.q,
+    a: t(`course.faqItems.${index}.a`, { hours: course.durationHours }),
+  }));
+});
+
 const courseSchema = computed(() => ({
   '@context': 'https://schema.org',
   '@type': 'Course',
@@ -75,7 +90,9 @@ const courseSchema = computed(() => ({
   url: canonicalUrl.value,
   provider: {
     '@type': 'EducationalOrganization',
-    name: runtimeConfig.public.siteName || 'Учебный центр',
+    name:
+      runtimeConfig.public.siteName ||
+      (locale.value === 'kk' ? 'Оқу орталығы' : 'Учебный центр'),
     url: baseUrl.value,
   },
   educationalCredentialAwarded:
@@ -155,107 +172,87 @@ useHead(() => ({
 <template>
   <article class="space-y-10">
     <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm space-y-4">
-      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Курс</p>
+      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">{{ t('course.badge') }}</p>
       <h1 class="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">{{ metaTitle }}</h1>
       <p class="text-lg text-slate-700">
         {{ metaDescription }}
       </p>
       <div class="flex flex-wrap gap-3 text-sm text-slate-700">
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">Длительность:</strong> {{ course.durationHours }} акад. часов
+          <strong class="font-semibold text-slate-900">{{ t('course.durationLabel') }}:</strong>
+          {{ course.durationHours }} {{ t('course.durationUnit') }}
         </span>
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">Обязательность:</strong>
-          {{ course.mandatoryByLaw ? 'Требуется по законодательству' : 'По запросу компании' }}
+          <strong class="font-semibold text-slate-900">{{ t('course.mandatoryLabel') }}:</strong>
+          {{ course.mandatoryByLaw ? t('course.mandatoryYes') : t('course.mandatoryNo') }}
         </span>
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">Город:</strong>
-          {{ getCityName(resolvedCity, locale) || 'Любой регион' }}
+          <strong class="font-semibold text-slate-900">{{ t('course.cityLabel') }}:</strong>
+          {{ getCityName(resolvedCity, locale) || t('course.anyRegion') }}
         </span>
       </div>
     </header>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">Что разберём на курсе</h2>
+      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.includesTitle') }}</h2>
       <ul class="grid gap-2 text-slate-700 list-disc ml-4">
-        <li>Нормативные требования и ответственность работодателя.</li>
-        <li>Практика безопасной работы и алгоритмы действий в нештатных ситуациях.</li>
-        <li>Документирование обучения и подготовка к проверкам.</li>
-        <li>Ответы на вопросы сотрудников и разбор кейсов из вашей отрасли.</li>
+        <li v-for="item in includesItems" :key="item">{{ item }}</li>
       </ul>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">Программа курса</h2>
+      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.programTitle') }}</h2>
       <div v-if="courseContentHtml" class="prose max-w-none prose-slate" v-html="courseContentHtml" />
       <div v-else class="text-slate-700">
-        Программа скоро появится в онлайн-формате. Если нужен подробный план прямо сейчас, напишите нам — отправим
-        расписание и содержание модулей.
+        {{ t('course.programFallback', { courseName, cityPrepositional }) }}
       </div>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">Выгоды для компании</h2>
+      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.benefitsTitle') }}</h2>
       <ul class="grid gap-2 text-slate-700 list-disc ml-4">
-        <li>Снижаете штрафные риски и упорядочиваете документы.</li>
-        <li>Повышаете осознанность сотрудников в вопросах безопасности.</li>
-        <li>Минимизируете простои за счёт готовых чек-листов и регламентов.</li>
-        <li>Получаете консультации по адаптации программы под ваши условия {{ cityPrepositional }}.</li>
+        <li v-for="item in benefitsItems" :key="item">{{ item }}</li>
       </ul>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">Как проходит обучение</h2>
-      <p class="text-slate-700">
-        Теория и практика идут блоками: дистанционно или очно, по удобному графику. По завершении — тестирование и
-        оформление удостоверений, протоколов комиссии и приказов.
-      </p>
+      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.processTitle') }}</h2>
+      <ul class="grid gap-2 text-slate-700 list-disc ml-4">
+        <li v-for="item in processItems" :key="item">{{ item }}</li>
+      </ul>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-      <h2 class="text-xl font-semibold text-slate-900">Записаться на обучение</h2>
+      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.signupTitle') }}</h2>
       <p class="text-slate-700">
-        Первая консультация бесплатна: подберём формат, согласуем график, подготовим пакет документов.
+        {{ t('course.signupText') }}
       </p>
       <div class="flex flex-wrap gap-3">
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">Получить консультацию</a>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">{{ t('cta.call') }}</a>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">{{ t('course.signupCta') }}</a>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77470966900">{{ t('cta.call') }}</a>
       </div>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">Почему выбирают нас</h2>
+      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.whyTitle') }}</h2>
       <ul class="grid gap-2 text-slate-700 list-disc ml-4">
-        <li>Работаем по всей стране, организуем выездные и онлайн-группы.</li>
-        <li>Преподаватели с практическим опытом и актуальными методиками.</li>
-        <li>Готовые шаблоны приказов, журналы и чек-листы.</li>
-        <li>Помогаем подготовиться к проверкам и аудиту.</li>
+        <li v-for="item in whyItems" :key="item">{{ item }}</li>
       </ul>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">FAQ</h2>
+      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.requirementsTitle') }}</h2>
+      <ul class="grid gap-2 text-slate-700 list-disc ml-4">
+        <li v-for="item in requirementsItems" :key="item">{{ item }}</li>
+      </ul>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.faqTitle') }}</h2>
       <div class="divide-y divide-slate-200">
-        <details class="py-3">
-          <summary class="cursor-pointer font-semibold text-slate-900">Можно ли обучаться онлайн?</summary>
-          <p class="mt-2 text-slate-700">
-            Да, все лекции и тесты доступны дистанционно. Практика и итоговая проверка проходят в удобном формате по
-            согласованию.
-          </p>
-        </details>
-        <details class="py-3">
-          <summary class="cursor-pointer font-semibold text-slate-900">Сколько длится курс?</summary>
-          <p class="mt-2 text-slate-700">
-            Средняя продолжительность — {{ course.durationHours }} академических часов. График можем уплотнить или
-            разбить на несколько недель.
-          </p>
-        </details>
-        <details class="py-3">
-          <summary class="cursor-pointer font-semibold text-slate-900">Когда выдаётся удостоверение?</summary>
-          <p class="mt-2 text-slate-700">
-            Сразу после успешного тестирования и оформления протокола комиссии. Документы высылаем в электронном
-            виде и передаём оригиналы.
-          </p>
+        <details v-for="item in faqItems" :key="item.q" class="py-3">
+          <summary class="cursor-pointer font-semibold text-slate-900">{{ item.q }}</summary>
+          <p class="mt-2 text-slate-700">{{ item.a }}</p>
         </details>
       </div>
     </section>

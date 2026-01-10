@@ -40,6 +40,24 @@ const resolveSeoValue = (value, fallback = '') => {
   return fallback;
 };
 
+const resolveLocalized = (value, fallback = '') => {
+  if (!value) return fallback;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    return value[locale.value] || value.ru || value.kk || fallback;
+  }
+  return fallback;
+};
+
+const resolveList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'object') {
+    return value[locale.value] || value.ru || value.kk || [];
+  }
+  return [];
+};
+
 const metaTitle = computed(() => {
   if (!format.value) return '';
   return resolveSeoValue(format.value.seo?.title).replaceAll(
@@ -86,7 +104,7 @@ useHead(() => ({
 <template>
   <article v-if="format" class="space-y-8">
     <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm space-y-3">
-      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">Формат обучения</p>
+      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">{{ t('home.formatsBadge') }}</p>
       <h1 class="text-3xl font-bold text-slate-900">{{ metaTitle }}</h1>
       <p class="text-lg text-slate-700">{{ metaDescription }}</p>
     </header>
@@ -96,21 +114,21 @@ useHead(() => ({
       :key="section.id"
       class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3"
     >
-      <h2 class="text-xl font-semibold text-slate-900">{{ section.title }}</h2>
-      <p class="text-slate-700">{{ section.subtitle }}</p>
+      <h2 class="text-xl font-semibold text-slate-900">{{ resolveLocalized(section.title) }}</h2>
+      <p class="text-slate-700">{{ resolveLocalized(section.subtitle) }}</p>
       <ul class="grid gap-2 text-slate-700 list-disc pl-5">
-        <li v-for="item in section.bullets" :key="item">{{ item }}</li>
+        <li v-for="item in resolveList(section.bullets)" :key="item">{{ item }}</li>
       </ul>
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">Оставить заявку</h2>
-      <p class="text-slate-700">Поможем выбрать программу и запустим обучение в нужные сроки.</p>
+      <h2 class="text-xl font-semibold text-slate-900">{{ t('formatLanding.ctaTitle') }}</h2>
+      <p class="text-slate-700">{{ t('formatLanding.ctaDescription') }}</p>
       <div class="flex justify-center gap-3">
         <NuxtLink :to="localePath('/contacts')" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">{{ t('cta.apply') }}</NuxtLink>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77000000000">{{ t('cta.call') }}</a>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77470966900">{{ t('cta.call') }}</a>
       </div>
     </section>
   </article>
-  <p v-else>Формат не найден.</p>
+  <p v-else>{{ t('formatLanding.empty') }}</p>
 </template>

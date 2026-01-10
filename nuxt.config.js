@@ -121,7 +121,7 @@ export default defineNuxtConfig({
         { name: 'twitter:card', content: 'summary_large_image' },
       ],
       link: [
-        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/logo.png' },
         { rel: 'apple-touch-icon', sizes: '512x512', href: '/logo.png' },
       ],
