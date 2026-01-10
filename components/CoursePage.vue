@@ -78,7 +78,7 @@ const faqItems = computed(() => {
   const items = asList(tm('course.faqItems'));
   return items.map((item, index) => ({
     q: item.q,
-    a: t(`course.faqItems.${index}.a`, { hours: course.durationHours }),
+    a: t(`course.faqItems.${index}.a`, { hours: props.course.durationHours }),
   }));
 });
 
