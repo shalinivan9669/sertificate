@@ -1,11 +1,11 @@
 <script setup>
 import { computed } from 'vue';
-import { useRoute, createError } from '#imports';
-import { courses } from '~/config/courses';
+import { createError, useHead, useRoute } from '#imports';
 import { formats } from '~/config/formats';
 import { getCityBySlug } from '~/composables/useCity';
-import CoursePage from '~/components/CoursePage.vue';
+import SeoUniqueBlocks from '~/components/SeoUniqueBlocks.vue';
 import FormatLanding from '~/components/FormatLanding.vue';
+import { getCityContentBySlug, getCourseContentBySlug, useSeoContent } from '~/composables/useSeoContent';
 
 const route = useRoute();
 
@@ -16,20 +16,35 @@ const pageSlug = computed(() =>
   Array.isArray(route.params.slug) ? route.params.slug[0] : route.params.slug,
 );
 
-const city = computed(() => getCityBySlug(citySlug.value));
-const course = computed(() => courses.find((item) => item.slug === pageSlug.value) || null);
+const cityContent = computed(() => getCityContentBySlug(citySlug.value));
+const courseContent = computed(() => getCourseContentBySlug(pageSlug.value));
 const format = computed(() => formats.find((item) => item.slug === pageSlug.value) || null);
+const formatCity = computed(() => getCityBySlug(citySlug.value));
 
-if (!city.value) {
+if (!cityContent.value) {
   throw createError({ statusCode: 404, statusMessage: 'City not found' });
 }
 
-if (!course.value && !format.value) {
+if (!courseContent.value && !format.value) {
   throw createError({ statusCode: 404, statusMessage: 'Page not found' });
 }
+
+const seoContent = courseContent.value ? useSeoContent(cityContent, courseContent) : null;
+
+useHead(() => {
+  if (!seoContent?.value) return {};
+  return {
+    title: seoContent.value.meta.title,
+    meta: [
+      { name: 'description', content: seoContent.value.meta.description },
+      { property: 'og:title', content: seoContent.value.meta.title },
+      { property: 'og:description', content: seoContent.value.meta.description },
+    ],
+  };
+});
 </script>
 
 <template>
-  <CoursePage v-if="course" :course="course" :city="city" />
-  <FormatLanding v-else :type="format.type" :city="city" />
+  <SeoUniqueBlocks v-if="seoContent" :content="seoContent" />
+  <FormatLanding v-else :type="format.type" :city="formatCity" />
 </template>

@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
-    "build": "nuxt build",
-    "generate": "nuxt generate",
+    "build": "nuxt build && npm run seo:check",
+    "generate": "nuxt generate && npm run seo:check",
     "preview": "nuxt preview",
     "lint": "nuxt lint",
-    "sitemap": "node scripts/generate-sitemap.mjs"
+    "sitemap": "node scripts/generate-sitemap.mjs",
+    "seo:check": "tsx scripts/seo-uniqueness-check.ts"
   },
   "dependencies": {
     "@nuxtjs/i18n": "latest",
@@ -24,5 +25,8 @@
   "engines": {
     "node": ">=18.18.0"
   },
-  "packageManager": "npm@11.6.3"
+  "packageManager": "npm@11.6.3",
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
 }
