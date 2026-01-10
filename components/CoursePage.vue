@@ -65,7 +65,7 @@ const metaDescription = computed(() =>
 
 const courseContentHtml = computed(() => props.course.contentHtml || '');
 
-const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://example.kz');
+const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://otcenter.kz');
 const canonicalUrl = computed(() => new URL(route.path || '/', baseUrl.value).toString());
 
 const asList = (value) => (Array.isArray(value) ? value : []);

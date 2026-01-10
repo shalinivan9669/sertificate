@@ -74,7 +74,7 @@ const metaDescription = computed(() => {
   );
 });
 
-const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://example.kz');
+const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://otcenter.kz');
 const canonicalUrl = computed(() => new URL(route.path || '/', baseUrl.value).toString());
 
 useHead(() => ({

@@ -4,7 +4,7 @@ import { courses } from '../config/courses.js';
 import { formats } from '../config/formats.js';
 import { blogPosts } from '../config/blog.js';
 
-const siteUrl = 'https://example.kz';
+const siteUrl = 'https://otcenter.kz';
 
 const baseRoutes = [
   '/',

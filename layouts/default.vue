@@ -24,7 +24,7 @@ const localeHead = useLocaleHead({
 });
 
 const canonicalUrl = computed(() => {
-  const baseUrl = runtimeConfig.public.siteUrl || 'https://example.kz';
+  const baseUrl = runtimeConfig.public.siteUrl || 'https://otcenter.kz';
   return new URL(route.path || '/', baseUrl).toString();
 });
 

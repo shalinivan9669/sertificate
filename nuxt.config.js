@@ -3,7 +3,7 @@ import { courses } from './config/courses';
 import { formats } from './config/formats';
 import { blogPosts } from './config/blog';
 
-const siteUrl = 'https://example.kz';
+const siteUrl = 'https://otcenter.kz';
 const siteName = 'Учебный центр по охране труда и промышленной безопасности';
 const defaultLocale = 'ru-KZ';
 const compatibilityDate = '2025-11-20';
