@@ -113,6 +113,15 @@ const buildEntries = async () => {
 };
 
 const run = async () => {
+  try {
+    await fs.access(OUTPUT_DIR);
+  } catch {
+    console.log(
+      `Uniqueness check skipped: ${OUTPUT_DIR} not found. Run after static generate.`,
+    );
+    return;
+  }
+
   const entries = await buildEntries();
   const groups = new Map<string, PageEntry[]>();
 
