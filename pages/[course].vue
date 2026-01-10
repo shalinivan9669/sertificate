@@ -13,9 +13,7 @@ const courseSlug = computed(() =>
 
 const course = computed(() => courses.find((item) => item.slug === courseSlug.value) || null);
 const cityContent = computed(() => getCityContentBySlug(courseSlug.value));
-const seoContent = computed(() =>
-  cityContent.value && !course.value ? useSeoContent(cityContent, null).value : null,
-);
+const seoContent = useSeoContent(cityContent, null);
 
 if (!course.value && !cityContent.value) {
   throw createError({ statusCode: 404, statusMessage: 'Course not found' });
@@ -35,6 +33,6 @@ useHead(() => {
 </script>
 
 <template>
-  <SeoUniqueBlocks v-if="seoContent" :content="seoContent" />
+  <SeoUniqueBlocks v-if="seoContent && !course" :content="seoContent" />
   <CoursePage v-else :course="course" />
 </template>

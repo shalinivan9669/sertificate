@@ -29,7 +29,7 @@ if (!courseContent.value && !format.value) {
   throw createError({ statusCode: 404, statusMessage: 'Page not found' });
 }
 
-const seoContent = courseContent.value ? useSeoContent(cityContent, courseContent) : null;
+const seoContent = useSeoContent(cityContent, courseContent);
 
 useHead(() => {
   if (!seoContent?.value) return {};
@@ -45,6 +45,6 @@ useHead(() => {
 </script>
 
 <template>
-  <SeoUniqueBlocks v-if="seoContent" :content="seoContent" />
+  <SeoUniqueBlocks v-if="seoContent && courseContent" :content="seoContent" />
   <FormatLanding v-else :type="format.type" :city="formatCity" />
 </template>
