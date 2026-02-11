@@ -79,6 +79,8 @@ export default defineNuxtConfig({
   compatibilityDate,
   devtools: { enabled: false },
   runtimeConfig: {
+    amoSubdomain: process.env.AMO_SUBDOMAIN,
+    amoLongToken: process.env.AMO_LONG_TOKEN,
     public: {
       siteUrl,
       siteName,
