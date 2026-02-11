@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n, useLocalePath } from '#imports';
 import { getSortedBlogPosts } from '~/config/blog';
 import { cities } from '~/config/cities';
+import { licenseDownloadFiles } from '~/config/licenses-files';
 import { getCityName, getCityPrepositional } from '~/composables/useCity';
 
 const props = defineProps({
@@ -26,6 +27,32 @@ const directions = computed(() => asList(tm('home.directions')));
 const formatCards = computed(() => asList(tm('home.formatCards')));
 const whyItems = computed(() => asList(tm('home.whyItems')));
 const licensesItems = computed(() => asList(tm('home.licensesItems')));
+const licensesCards = computed(() =>
+  licensesItems.value.map((label, index) => {
+    const source = licenseDownloadFiles[index] || null;
+    const file =
+      typeof source === 'string' ? source : source && typeof source === 'object' ? source.file : null;
+    const fileName =
+      typeof file === 'string' && file.trim().length > 0 ? file.split('/').pop() : null;
+    const preview =
+      source && typeof source === 'object' && typeof source.preview === 'string'
+        ? source.preview
+        : null;
+    const previewAlt =
+      source && typeof source === 'object' && typeof source.previewAlt === 'string'
+        ? source.previewAlt
+        : label;
+
+    return {
+      label,
+      file,
+      fileName,
+      preview,
+      previewAlt,
+      hasFile: Boolean(fileName),
+    };
+  }),
+);
 const testimonialsItems = computed(() => asList(tm('home.testimonialsItems')));
 const seoFormats = computed(() => asList(tm('home.seoFormats')));
 const seoRoles = computed(() => asList(tm('home.seoRoles')));
@@ -134,14 +161,32 @@ const blogArticles = computed(() => getSortedBlogPosts().map(localizePost).slice
         <h2 class="text-2xl font-bold text-slate-900">{{ t('home.licensesTitle') }}</h2>
         <p class="text-slate-700">{{ t('home.licensesSubtitle') }}</p>
       </header>
-      <div class="grid gap-4 sm:grid-cols-3">
-        <div
-          v-for="item in licensesItems"
-          :key="item"
-          class="h-28 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500"
+      <div
+        class="grid gap-4"
+        :class="licensesCards.length === 1 ? 'sm:grid-cols-1 max-w-2xl mx-auto' : 'sm:grid-cols-3'"
+      >
+        <component
+          :is="item.hasFile ? 'a' : 'div'"
+          v-for="item in licensesCards"
+          :key="item.label"
+          :href="item.hasFile ? item.file : undefined"
+          :download="item.hasFile ? item.fileName : undefined"
+          :aria-disabled="!item.hasFile"
+          class="h-280 rounded-xl border border-dashed border-slate-300 bg-white flex flex-col items-center justify-center text-slate-500 transition"
+          :class="item.hasFile ? 'hover:border-brand hover:text-brand cursor-pointer' : 'cursor-default'"
         >
-          {{ item }}
-        </div>
+          <img
+            v-if="item.preview"
+            :src="item.preview"
+            :alt="item.previewAlt"
+            class="mb-2 h-244 w-auto max-w-full rounded object-contain"
+            loading="lazy"
+          >
+          <span>{{ item.label }}</span>
+          <span v-if="item.hasFile" class="mt-1 text-xs text-slate-400">
+            {{ item.fileName }}
+          </span>
+        </component>
       </div>
     </section>
 

@@ -146,7 +146,11 @@ export default defineI18nConfig(() => ({
         licensesBadge: 'Лицензии',
         licensesTitle: 'Лицензии и сертификаты',
         licensesSubtitle: 'Готовы предоставить копии лицензии и документов по запросу.',
-        licensesItems: ['Лицензия', 'Сертификат', 'Аккредитация'],
+        licensesItems: [
+          'Лицензия',
+          // 'Сертификат',
+          // 'Аккредитация',
+        ],
         testimonialsBadge: 'Отзывы',
         testimonialsTitle: 'Отзывы и клиенты',
         testimonialsItems: [
@@ -476,7 +480,11 @@ export default defineI18nConfig(() => ({
         licensesBadge: 'Лицензиялар',
         licensesTitle: 'Лицензиялар мен сертификаттар',
         licensesSubtitle: 'Сұраныс бойынша құжаттардың көшірмесін береміз.',
-        licensesItems: ['Лицензия', 'Сертификат', 'Аккредитация'],
+        licensesItems: [
+          'Лицензия',
+          // 'Сертификат',
+          // 'Аккредитация',
+        ],
         testimonialsBadge: 'Пікірлер',
         testimonialsTitle: 'Пікірлер мен клиенттер',
         testimonialsItems: [
