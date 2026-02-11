@@ -11,6 +11,13 @@ AMO_LEAD_CITY_FIELD_ID=
 AMO_LEAD_COMMENT_FIELD_ID=
 ```
 
+Supported fallback env names:
+
+```env
+AMO_SUBDOMAIN=your-subdomain
+AMO_LONG_TOKEN=your_long_lived_access_token
+```
+
 ## Test with curl
 
 ```bash

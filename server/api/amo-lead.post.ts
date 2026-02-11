@@ -25,7 +25,18 @@ const trimValue = (value: unknown) => (typeof value === 'string' ? value.trim() 
 const normalizeBaseUrl = (value: unknown) => {
   const url = trimValue(value);
   if (!url) return '';
-  return url.endsWith('/') ? url.slice(0, -1) : url;
+
+  const withProtocol = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  return withProtocol.endsWith('/') ? withProtocol.slice(0, -1) : withProtocol;
+};
+
+const resolveBaseUrl = (baseUrlValue: unknown, subdomainValue: unknown) => {
+  const baseUrl = normalizeBaseUrl(baseUrlValue);
+  if (baseUrl) return baseUrl;
+
+  const subdomain = trimValue(subdomainValue);
+  if (!subdomain) return '';
+  return `https://${subdomain}.amocrm.ru`;
 };
 
 const toPositiveIntOrNull = (value: unknown) => {
@@ -102,15 +113,22 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig(event);
-  const amoBaseUrl = normalizeBaseUrl(config.amoBaseUrl);
-  const amoAccessToken = trimValue(config.amoAccessToken);
+  const amoBaseUrl = resolveBaseUrl(config.amoBaseUrl, config.amoSubdomain);
+  const amoAccessToken = trimValue(config.amoAccessToken || config.amoLongToken);
   const leadCityFieldId = toPositiveIntOrNull(config.amoLeadCityFieldId);
   const leadCommentFieldId = toPositiveIntOrNull(config.amoLeadCommentFieldId);
 
   if (!amoBaseUrl || !amoAccessToken) {
+    const missing = [
+      !amoBaseUrl ? 'AMO_BASE_URL (or AMO_SUBDOMAIN)' : null,
+      !amoAccessToken ? 'AMO_ACCESS_TOKEN (or AMO_LONG_TOKEN)' : null,
+    ]
+      .filter(Boolean)
+      .join(', ');
+
     throw createError({
       statusCode: 500,
-      statusMessage: 'amoCRM is not configured',
+      statusMessage: `amoCRM is not configured: missing ${missing}`,
     });
   }
 
