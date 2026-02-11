@@ -20,6 +20,8 @@ const handleSubmit = async (event) => {
     name: String(formData.get('name') || '').trim(),
     phone: String(formData.get('phone') || '').trim(),
     email: String(formData.get('email') || '').trim(),
+    city,
+    comment,
     message,
     company: String(formData.get('company') || '').trim(),
   };
