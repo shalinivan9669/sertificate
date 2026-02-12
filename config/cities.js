@@ -8,7 +8,7 @@ export const cities = [
     nameKkPrepositional: 'Алматыда',
     phone: '+77470966900',
     address: 'г. Алматы, ул. Примерная, 1',
-    email: 'otcenter@proton.me',
+    email: 'otcenterkz@proton.me',
   },
   {
     code: 'astana',

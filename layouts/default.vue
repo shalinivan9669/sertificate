@@ -100,7 +100,7 @@ useHead(() => ({
           </p>
           <p>
             {{ t('footer.emailLabel') }}:
-            <a href="mailto:otcenter@proton.me" class="text-brand">otcenter@proton.me</a>
+            <a href="mailto:otcenterkz@proton.me" class="text-brand">otcenterkz@proton.me</a>
           </p>
           <p>{{ t('footer.scheduleLabel') }}: {{ t('footer.scheduleValue') }}</p>
         </section>

@@ -71,7 +71,7 @@ useHead(() => ({
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
         <h2 class="text-xl font-semibold text-slate-900">{{ t('contacts.detailsTitle') }}</h2>
         <p class="text-slate-700">{{ t('footer.phoneLabel') }}: <a href="tel:+77470966900" class="text-brand">+77470966900</a></p>
-        <p class="text-slate-700">{{ t('footer.emailLabel') }}: <a href="mailto:otcenter@proton.me" class="text-brand">otcenter@proton.me</a></p>
+        <p class="text-slate-700">{{ t('footer.emailLabel') }}: <a href="mailto:otcenterkz@proton.me" class="text-brand">otcenterkz@proton.me</a></p>
         <p class="text-slate-700">{{ t('contacts.scheduleLabel') }}: {{ t('contacts.scheduleValue') }}</p>
       </section>
 
