@@ -96,7 +96,7 @@ useHead(() => ({
           <h3 class="font-semibold text-slate-900 mb-3">{{ t('footer.contactsTitle') }}</h3>
           <p>
             {{ t('footer.phoneLabel') }}:
-            <a href="tel:+77470966900" class="text-brand">+77470966900</a>
+            <a href="tel:+77755619871" class="text-brand">+77755619871</a>
           </p>
           <p>
             {{ t('footer.emailLabel') }}:
