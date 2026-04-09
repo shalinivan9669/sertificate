@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sertificat.kz | Personal Cabinet</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#003e73",
+                        "tertiary-container": "#161d1f",
+                        "outline": "#75777e",
+                        "outline-variant": "#c5c6cd",
+                        "on-tertiary-fixed-variant": "#41484a",
+                        "tertiary-fixed-dim": "#c1c8ca",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed-variant": "#39475f",
+                        "on-primary-container": "#76849f",
+                        "secondary-container": "#68abff",
+                        "surface-dim": "#d9dadb",
+                        "surface": "#f8f9fa",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-tint": "#515f78",
+                        "secondary-fixed-dim": "#a4c9ff",
+                        "tertiary": "#000000",
+                        "on-surface": "#191c1d",
+                        "error": "#ba1a1a",
+                        "on-background": "#191c1d",
+                        "inverse-primary": "#b9c7e4",
+                        "secondary-fixed": "#d4e3ff",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#b9c7e4",
+                        "surface-container-low": "#f3f4f5",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#7e8587",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-secondary-fixed": "#001c39",
+                        "on-tertiary-fixed": "#161d1f",
+                        "surface-variant": "#e1e3e4",
+                        "background": "#f8f9fa",
+                        "on-secondary-fixed-variant": "#004883",
+                        "primary-fixed": "#d6e3ff",
+                        "tertiary-fixed": "#dde4e6",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#44474d",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#0060ac",
+                        "primary-container": "#0d1c32",
+                        "inverse-on-surface": "#f0f1f2",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed": "#0d1c32",
+                        "surface-bright": "#f8f9fa",
+                        "inverse-surface": "#2e3132",
+                        "primary": "#000000",
+                        "surface-container": "#edeeef"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-headline { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased">
+<div class="flex min-h-screen">
+<!-- SideNavBar Component -->
+<aside class="hidden md:flex flex-col h-screen w-64 border-r border-[#0A192F]/15 bg-[#0A192F] dark:bg-[#0A192F] py-6 px-4 shrink-0 sticky top-0">
+<div class="mb-10 px-2">
+<div class="text-lg font-bold text-white uppercase tracking-tight">Sertificat.kz</div>
+<div class="text-[10px] text-slate-400 font-semibold uppercase tracking-[0.2em] mt-1">Industrial Portal</div>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Overview: Active State -->
+<a class="flex items-center gap-3 px-3 py-2.5 bg-[#4A90E2] text-white rounded-md shadow-lg transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span class="text-sm font-semibold uppercase tracking-wider">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="school">school</span>
+<span class="text-sm font-semibold uppercase tracking-wider">My Training</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="verified_user">verified_user</span>
+<span class="text-sm font-semibold uppercase tracking-wider">My Documents</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="receipt_long">receipt_long</span>
+<span class="text-sm font-semibold uppercase tracking-wider">Invoices</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span class="text-sm font-semibold uppercase tracking-wider">Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-slate-800 px-2">
+<button class="w-full py-3 bg-[#4A90E2] text-white rounded-md font-bold text-xs uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+                    New Training
+                </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 min-w-0 bg-surface-container-low overflow-y-auto">
+<!-- Top Header Section (Task-specific) -->
+<header class="w-full px-8 py-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="text-4xl font-headline font-extrabold text-primary tracking-tight">Hello, Arman!</h1>
+<p class="text-on-surface-variant font-medium mt-1">Welcome back to your industrial safety dashboard.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-5 py-2.5 bg-surface-container-lowest text-primary text-sm font-bold border-b-2 border-primary/10 hover:border-secondary transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+                        Export Report
+                    </button>
+<button class="px-5 py-2.5 bg-[#0A192F] text-white text-sm font-bold shadow-md hover:bg-secondary transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="bolt">bolt</span>
+                        Quick Renew
+                    </button>
+</div>
+</header>
+<!-- Alert Banner -->
+<section class="px-8 mb-8">
+<div class="bg-error-container text-on-error-container p-4 flex items-center justify-between border-l-4 border-error shadow-sm">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-error" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div>
+<p class="font-bold text-sm">Critical Renewal Required</p>
+<p class="text-xs opacity-90">Your B-1 cert expires in 12 days. Start renewal now to avoid workplace suspension.</p>
+</div>
+</div>
+<button class="px-4 py-1.5 bg-on-error-container text-white text-[10px] font-black uppercase tracking-tighter hover:opacity-90 transition-opacity">
+                        Start Renewal
+                    </button>
+</div>
+</section>
+<!-- Bento Grid Dashboard -->
+<section class="px-8 pb-12 grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Active Training Widget -->
+<div class="md:col-span-8 bg-surface-container-lowest p-6 shadow-[0_40px_40px_rgba(10,25,47,0.03)] flex flex-col">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-xs font-black uppercase tracking-[0.15em] text-on-surface-variant">Active training</h2>
+<span class="material-symbols-outlined text-outline-variant" data-icon="more_horiz">more_horiz</span>
+</div>
+<div class="space-y-6">
+<!-- Training Item 1 -->
+<div class="group">
+<div class="flex justify-between items-end mb-2">
+<div>
+<h3 class="text-sm font-bold text-primary">Industrial Safety: High-Altitude Works</h3>
+<p class="text-[11px] text-on-surface-variant uppercase font-medium">Module 4 of 6: Equipment Safety</p>
+</div>
+<span class="text-xs font-black text-secondary">65%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[65%] group-hover:brightness-110 transition-all"></div>
+</div>
+</div>
+<!-- Training Item 2 -->
+<div class="group">
+<div class="flex justify-between items-end mb-2">
+<div>
+<h3 class="text-sm font-bold text-primary">Electrical Grid Maintenance Level II</h3>
+<p class="text-[11px] text-on-surface-variant uppercase font-medium">Final Assessment Preparation</p>
+</div>
+<span class="text-xs font-black text-secondary">92%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[92%] group-hover:brightness-110 transition-all"></div>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-6">
+<a class="text-xs font-bold text-secondary hover:underline flex items-center gap-1" href="#">
+                            Continue Learning
+                            <span class="material-symbols-outlined text-[14px]" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</div>
+</div>
+<!-- Certificates Summary -->
+<div class="md:col-span-4 bg-[#0A192F] text-white p-6 shadow-xl flex flex-col relative overflow-hidden">
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full blur-3xl"></div>
+<h2 class="text-xs font-black uppercase tracking-[0.15em] text-slate-400 mb-8 z-10">Certificates</h2>
+<div class="mt-auto z-10">
+<div class="text-6xl font-headline font-extrabold mb-2">08</div>
+<p class="text-xs text-slate-300 font-medium uppercase tracking-wider mb-6">Total Active Certifications</p>
+<div class="bg-white/10 p-4 border-l-2 border-secondary">
+<p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Next Renewal</p>
+<p class="text-sm font-bold text-white">24 Nov 2024</p>
+<p class="text-[11px] text-slate-300 mt-0.5">B-1 Structural Engineering</p>
+</div>
+</div>
+</div>
+<!-- Recent Activity Table -->
+<div class="md:col-span-12 bg-surface-container-lowest shadow-[0_40px_40px_rgba(10,25,47,0.03)] overflow-hidden">
+<div class="px-6 py-5 flex items-center justify-between border-b border-surface-container">
+<h2 class="text-xs font-black uppercase tracking-[0.15em] text-on-surface-variant">Recent activity</h2>
+<button class="text-xs font-bold text-secondary">View History</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Action</th>
+<th class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Subject</th>
+<th class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Status</th>
+<th class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Date</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-secondary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="file_download">file_download</span>
+</div>
+<span class="text-sm font-bold text-primary">Certificate Download</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Fire Safety Compliance III</td>
+<td class="px-6 py-4">
+<span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 text-[10px] font-black uppercase tracking-tighter">Success</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-outline">Today, 14:32</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-on-tertiary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-tertiary-container text-[18px]" data-icon="credit_card">credit_card</span>
+</div>
+<span class="text-sm font-bold text-primary">Payment Processed</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Inv #SC-99021</td>
+<td class="px-6 py-4">
+<span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 text-[10px] font-black uppercase tracking-tighter">Completed</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-outline">Yesterday, 09:15</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-error/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-error text-[18px]" data-icon="assignment_late">assignment_late</span>
+</div>
+<span class="text-sm font-bold text-primary">Expiration Alert</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">B-1 Structural Engineering</td>
+<td class="px-6 py-4">
+<span class="bg-error-container text-on-error-container px-2 py-0.5 text-[10px] font-black uppercase tracking-tighter">Urgent</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-outline">Oct 22, 2024</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Industrial Promotion Card (Asymmetric Layout) -->
+<div class="md:col-span-12 mt-4 relative group overflow-hidden h-48 flex items-center px-12 bg-[#162a4a]">
+<div class="absolute inset-0 z-0">
+<img alt="industrial construction site with crane and steel beams under a clear sky" class="w-full h-full object-cover opacity-30 grayscale group-hover:grayscale-0 transition-all duration-700" data-alt="industrial construction site with large yellow crane and steel beams against a clear blue sky during daylight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-E2lKbDbU6lw2dD4xHXtRGc_9dfNJNIdHTaHIgvoROIOdcQvrHnHPCZAE5HAmBT2OmU8LogmyQMFrFVjXXftOwbsHP7mlPeQtF6_gIfjidsZbLb2PeGouzYpUpJ2eqo6NmDl9oveE2j_tl9HL6gU7BeSAHAeldJBzwgIj0xtaXe1fH7V2HnjNyMFZnuvpWeBd2Tu3PjWHpI_FSIaXtU2zEW0JHz5-sb2J23mmnYlqmFo8Nbz_BsO5FbWAhwUN7HxiI8YBwuW4oK9G"/>
+<div class="absolute inset-0 bg-gradient-to-r from-[#0A192F] via-[#0A192F]/80 to-transparent"></div>
+</div>
+<div class="relative z-10 max-w-lg">
+<h3 class="text-2xl font-headline font-extrabold text-white mb-2 leading-tight">Upskill for Global Accreditation</h3>
+<p class="text-slate-300 text-sm mb-4">New ISO-9001 certification modules are now available for all technical specialists.</p>
+<button class="bg-[#4A90E2] text-white px-6 py-2 text-xs font-black uppercase tracking-widest shadow-lg hover:translate-y-[-2px] transition-transform">Explore Courses</button>
+</div>
+</div>
+</section>
+<!-- Footer Component -->
+<footer class="bg-[#0A192F] text-white py-12 px-8">
+<div class="max-w-screen-2xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+<div>
+<div class="text-xl font-black text-white mb-4">Sertificat.kz</div>
+<p class="text-slate-400 text-xs leading-relaxed max-w-sm mb-6">
+                            Kazakhstan's leading industrial safety certification platform. Ensuring compliance, safety, and excellence across the national energy and manufacturing sectors.
+                        </p>
+<p class="text-slate-500 text-[10px] font-medium">© 2024 Industrial Safety Certification Center Kazakhstan. All rights reserved.</p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<span class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Legal</span>
+<a class="text-slate-400 text-xs hover:underline hover:text-[#4A90E2] transition-colors" href="#">Privacy Policy</a>
+<a class="text-slate-400 text-xs hover:underline hover:text-[#4A90E2] transition-colors" href="#">Terms of Service</a>
+</div>
+<div class="flex flex-col gap-2">
+<span class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Resources</span>
+<a class="text-slate-400 text-xs hover:underline hover:text-[#4A90E2] transition-colors" href="#">Accreditation Details</a>
+<a class="text-slate-400 text-xs hover:underline hover:text-[#4A90E2] transition-colors" href="#">Contact Support</a>
+</div>
+</div>
+</div>
+</footer>
+</main>
+</div>
+<script src="../shared/mock-flow.js"></script>
+</body></html>

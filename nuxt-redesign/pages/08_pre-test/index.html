@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Правила тестирования | Sertificat.kz</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#003e73",
+                        "tertiary-container": "#161d1f",
+                        "outline": "#75777e",
+                        "outline-variant": "#c5c6cd",
+                        "on-tertiary-fixed-variant": "#41484a",
+                        "tertiary-fixed-dim": "#c1c8ca",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed-variant": "#39475f",
+                        "on-primary-container": "#76849f",
+                        "secondary-container": "#68abff",
+                        "surface-dim": "#d9dadb",
+                        "surface": "#f8f9fa",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-tint": "#515f78",
+                        "secondary-fixed-dim": "#a4c9ff",
+                        "tertiary": "#2D3436",
+                        "on-surface": "#191c1d",
+                        "error": "#ba1a1a",
+                        "on-background": "#191c1d",
+                        "inverse-primary": "#b9c7e4",
+                        "secondary-fixed": "#d4e3ff",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#b9c7e4",
+                        "surface-container-low": "#f3f4f5",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#7e8587",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-secondary-fixed": "#001c39",
+                        "on-tertiary-fixed": "#161d1f",
+                        "surface-variant": "#e1e3e4",
+                        "background": "#f8f9fa",
+                        "on-secondary-fixed-variant": "#004883",
+                        "primary-fixed": "#d6e3ff",
+                        "tertiary-fixed": "#dde4e6",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#44474d",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#4A90E2",
+                        "primary-container": "#0d1c32",
+                        "inverse-on-surface": "#f0f1f2",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed": "#0d1c32",
+                        "surface-bright": "#f8f9fa",
+                        "inverse-surface": "#2e3132",
+                        "primary": "#0A192F"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .industrial-glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- TopNavBar -->
+<header class="bg-[#0A192F] dark:bg-[#0A192F] shadow-[0_40px_40px_rgba(10,25,47,0.06)] fixed top-0 w-full z-50">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
+<div class="text-2xl font-extrabold tracking-tighter text-white font-headline">Sertificat.kz</div>
+<nav class="hidden md:flex items-center space-x-8">
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">Catalog</a>
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">Accreditation</a>
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">Check Certificate</a>
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">About</a>
+</nav>
+<div class="flex items-center space-x-6">
+<div class="hidden md:flex items-center text-white space-x-2">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="text-sm font-medium">Login</span>
+</div>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-20 px-6 min-h-screen max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Header Section -->
+<div class="lg:col-span-12 mb-4">
+<nav class="flex items-center text-on-primary-container text-sm mb-4 space-x-2">
+<span class="hover:text-secondary cursor-pointer transition-colors">Industrial Portal</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="hover:text-secondary cursor-pointer transition-colors">My Training</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="font-semibold text-primary">Rules</span>
+</nav>
+<h1 class="text-4xl md:text-5xl font-extrabold font-headline text-primary tracking-tight">Правила тестирования</h1>
+<p class="mt-4 text-on-surface-variant max-w-2xl leading-relaxed">
+                Пожалуйста, внимательно ознакомьтесь с регламентом прохождения аттестации. Результаты будут занесены в реестр промышленной безопасности Республики Казахстан.
+            </p>
+</div>
+<!-- Bento Grid Content -->
+<div class="lg:col-span-8 space-y-6">
+<!-- Main Metrics Bento Card -->
+<div class="bg-surface-container-low rounded-xl p-8 grid grid-cols-1 md:grid-cols-2 gap-6 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+<span class="material-symbols-outlined text-9xl">verified_user</span>
+</div>
+<div class="flex flex-col space-y-2 border-l-4 border-secondary pl-6">
+<span class="text-xs font-bold uppercase tracking-widest text-on-primary-container font-label">Объем</span>
+<div class="flex items-baseline space-x-2">
+<span class="text-4xl font-extrabold font-headline">20</span>
+<span class="text-lg font-medium text-on-surface-variant">Вопросов</span>
+</div>
+</div>
+<div class="flex flex-col space-y-2 border-l-4 border-secondary pl-6">
+<span class="text-xs font-bold uppercase tracking-widest text-on-primary-container font-label">Тайминг</span>
+<div class="flex items-baseline space-x-2">
+<span class="text-4xl font-extrabold font-headline">40</span>
+<span class="text-lg font-medium text-on-surface-variant">Минут</span>
+</div>
+</div>
+<div class="flex flex-col space-y-2 border-l-4 border-secondary pl-6">
+<span class="text-xs font-bold uppercase tracking-widest text-on-primary-container font-label">Порог</span>
+<div class="flex items-baseline space-x-2">
+<span class="text-4xl font-extrabold font-headline text-secondary">80%</span>
+<span class="text-lg font-medium text-on-surface-variant">Минимум</span>
+</div>
+</div>
+<div class="flex flex-col space-y-2 border-l-4 border-secondary pl-6">
+<span class="text-xs font-bold uppercase tracking-widest text-on-primary-container font-label">Попытки</span>
+<div class="flex items-baseline space-x-2">
+<span class="text-4xl font-extrabold font-headline">3</span>
+<span class="text-lg font-medium text-on-surface-variant">Доступно</span>
+</div>
+</div>
+</div>
+<!-- Detailed Rules Section -->
+<div class="bg-[#2D3436] text-white rounded-xl p-8 shadow-xl">
+<h3 class="text-xl font-bold font-headline mb-6 flex items-center">
+<span class="material-symbols-outlined mr-3 text-secondary" style="font-variation-settings: 'FILL' 1;">gavel</span>
+                    Регламент прохождения
+                </h3>
+<ul class="space-y-4">
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-3 mt-1 text-sm">check_circle</span>
+<p class="text-sm text-slate-300 leading-relaxed">Система автоматически завершит тест по истечении 40 минут. Сохранены будут только отвеченные вопросы.</p>
+</li>
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-3 mt-1 text-sm">check_circle</span>
+<p class="text-sm text-slate-300 leading-relaxed">Запрещается использование сторонних ресурсов, справочников и мобильных устройств во время аттестации.</p>
+</li>
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-3 mt-1 text-sm">check_circle</span>
+<p class="text-sm text-slate-300 leading-relaxed">При обнаружении подозрительной активности система может аннулировать результат без права на возврат оплаты.</p>
+</li>
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-3 mt-1 text-sm">check_circle</span>
+<p class="text-sm text-slate-300 leading-relaxed">Результат в 80% (16 верных ответов) является минимально допустимым для получения сертификата.</p>
+</li>
+</ul>
+</div>
+<!-- Warning Panel -->
+<div class="bg-error-container/30 border-l-4 border-error p-6 rounded-r-xl">
+<div class="flex items-center mb-2">
+<span class="material-symbols-outlined text-error mr-2" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="text-error font-bold uppercase tracking-wide text-xs">Внимание</span>
+</div>
+<p class="text-on-error-container text-sm font-medium">
+                    У вас есть 1 бесплатная попытка. Последующие 2 попытки являются платными согласно тарифу учебного центра. Пожалуйста, убедитесь в стабильности интернет-соединения перед началом.
+                </p>
+</div>
+</div>
+<!-- Sidebar / Contextual Actions -->
+<div class="lg:col-span-4 space-y-6">
+<div class="bg-surface-container-highest rounded-xl p-6 sticky top-28">
+<div class="aspect-video mb-6 rounded-lg overflow-hidden bg-primary-container flex items-center justify-center relative">
+<img class="absolute inset-0 w-full h-full object-cover opacity-60" data-alt="industrial engineer wearing high-visibility vest and hard hat working on technical equipment in a factory setting with dramatic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXFbnrbqfa_e5s6hHoBSOjxIChwQVGVzhU4pZH8PKFAUFUUJM8RjwHBquvTfJpSQJML12SN1-Ofr9QCeBk8x49iOJISl32afLDwj8B3TxSZ3jjrM69cm_axwEoXAyXJbbnU4x47JLYUA_t0MRCsoOGJZCSzOnlvXupNyTWdCrOTlsS87ZClZePnL8yft6aafWHuEm4IQBT3cciimuQlTXRovMH-Pfh9BPq6r5s1WJuNKl4jd3wI_4FTWc_FyWOohg0633-bVJBah_p"/>
+<div class="relative z-10 text-center px-4">
+<span class="material-symbols-outlined text-white text-5xl mb-2">verified</span>
+<p class="text-white font-bold text-xs uppercase tracking-widest">Official Certification</p>
+</div>
+</div>
+<div class="space-y-4">
+<button class="w-full bg-[#0A192F] text-white py-4 px-6 rounded-md font-bold flex items-center justify-center space-x-2 shadow-[0_4px_12px_rgba(10,25,47,0.2)] hover:bg-[#162a4a] transition-all duration-200">
+<span>Start Test</span>
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+<button class="w-full border border-outline-variant text-primary py-4 px-6 rounded-md font-semibold flex items-center justify-center space-x-2 hover:bg-surface-container-high transition-all duration-200">
+<span class="material-symbols-outlined">menu_book</span>
+<span>Back to material</span>
+</button>
+</div>
+<div class="mt-8 pt-6 border-t border-outline-variant/30">
+<p class="text-xs text-on-surface-variant font-medium uppercase tracking-tighter mb-4">Support &amp; Help</p>
+<div class="flex items-center space-x-3 text-sm text-primary mb-3 cursor-pointer hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-lg">contact_support</span>
+<span>Техническая поддержка</span>
+</div>
+<div class="flex items-center space-x-3 text-sm text-primary cursor-pointer hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-lg">description</span>
+<span>Инструкция по системе</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-[#0A192F] text-white">
+<div class="w-full py-12 px-8 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-screen-2xl mx-auto">
+<div class="flex flex-col justify-center">
+<div class="text-xl font-black text-white mb-4">Sertificat.kz</div>
+<p class="text-slate-400 text-xs max-w-sm">
+                    © 2024 Industrial Safety Certification Center Kazakhstan. All rights reserved.
+                </p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col space-y-2">
+<a class="text-slate-400 text-xs hover:underline" href="#">Privacy Policy</a>
+<a class="text-slate-400 text-xs hover:underline" href="#">Terms of Service</a>
+</div>
+<div class="flex flex-col space-y-2">
+<a class="text-slate-400 text-xs hover:underline" href="#">Accreditation Details</a>
+<a class="text-slate-400 text-xs hover:underline" href="#">Contact Support</a>
+</div>
+</div>
+</div>
+</footer>
+<script src="../shared/mock-flow.js"></script>
+</body></html>

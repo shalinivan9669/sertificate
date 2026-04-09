@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
+import { useHead, useI18n, useRoute, useRuntimeConfig } from '#imports';
 import { getFormatByType } from '~/config/formats';
 import { getCityPrepositional } from '~/composables/useCity';
 
@@ -21,7 +21,6 @@ const resolvedCity = computed(() =>
 
 const format = computed(() => getFormatByType(props.type));
 const { locale, t } = useI18n();
-const localePath = useLocalePath();
 const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
 
@@ -74,6 +73,15 @@ const metaDescription = computed(() => {
   );
 });
 
+const programSelectionRoute = computed(() => ({
+  path: '/program-selection',
+  query: {
+    source: 'format',
+    slug: props.type,
+    city: resolvedCity.value?.slug || '',
+  },
+}));
+
 const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://otcenter.kz');
 const canonicalUrl = computed(() => new URL(route.path || '/', baseUrl.value).toString());
 
@@ -125,7 +133,7 @@ useHead(() => ({
       <h2 class="text-xl font-semibold text-slate-900">{{ t('formatLanding.ctaTitle') }}</h2>
       <p class="text-slate-700">{{ t('formatLanding.ctaDescription') }}</p>
       <div class="flex justify-center gap-3">
-        <NuxtLink :to="localePath('/contacts')" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">{{ t('cta.apply') }}</NuxtLink>
+        <NuxtLink :to="programSelectionRoute" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">Подобрать программу</NuxtLink>
         <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871">{{ t('cta.call') }}</a>
       </div>
     </section>

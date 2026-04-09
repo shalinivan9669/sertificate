@@ -33,6 +33,10 @@ useHead(() => {
 </script>
 
 <template>
-  <SeoUniqueBlocks v-if="seoContent && !course" :content="seoContent" />
+  <SeoUniqueBlocks
+    v-if="seoContent && !course"
+    :content="seoContent"
+    :cta-query="{ source: 'seo-city', slug: courseSlug }"
+  />
   <CoursePage v-else :course="course" />
 </template>

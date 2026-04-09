@@ -20,14 +20,37 @@ const localePrefixes = ['kk'];
 const prefixRoutes = (routes, locale) =>
   routes.map((route) => (route === '/' ? `/${locale}` : `/${locale}${route}`));
 
+const redesignCourseIds = ['industrial-safety', 'labor-safety', 'fire-safety'];
+
+const buildRedesignRoutes = () => [
+  '/',
+  '/categories',
+  '/wizard',
+  '/courses',
+  '/cabinet',
+  '/b2b',
+  '/payment/pending',
+  '/contacts',
+  '/licenses',
+  '/privacy',
+  '/public-offer',
+  ...redesignCourseIds.flatMap((courseId) => [
+    `/courses/${courseId}`,
+    `/learn/${courseId}`,
+    `/learn/${courseId}/confirm`,
+    `/learn/${courseId}/pre-test`,
+    `/learn/${courseId}/exam`,
+    `/learn/${courseId}/failed`,
+    `/learn/${courseId}/success`,
+    `/payment/${courseId}`,
+    `/certificates/${courseId}`,
+  ]),
+];
+
 const staticRoutes = () => {
   const baseRoutes = [
-    '/',
+    ...buildRedesignRoutes(),
     '/blog',
-    '/contacts',
-    '/licenses',
-    '/public-offer',
-    '/privacy',
     ...courses.map((course) => `/${course.slug}`),
     ...formats.map((format) => `/${format.slug}`),
   ];
@@ -77,7 +100,7 @@ const locationsLd = cities.map((city) => ({
 export default defineNuxtConfig({
   ssr: true,
   compatibilityDate,
-  devtools: { enabled: false },
+  devtools: { enabled: true },
   runtimeConfig: {
     amoBaseUrl: process.env.AMO_BASE_URL,
     amoAccessToken: process.env.AMO_ACCESS_TOKEN,
@@ -130,6 +153,10 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/logo.png' },
         { rel: 'apple-touch-icon', sizes: '512x512', href: '/logo.png' },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0' },
       ],
       script: [
         {
@@ -185,8 +212,6 @@ export default defineNuxtConfig({
     },
   },
 });
-
-
 
 
 

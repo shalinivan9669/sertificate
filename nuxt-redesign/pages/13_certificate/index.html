@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Оплата обучения - Sertificat.kz</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1, h2, h3 {
+            font-family: 'Manrope', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+        }
+        .industrial-gradient {
+            background: linear-gradient(135deg, #0A192F 0%, #162a4a 100%);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#003e73",
+                        "tertiary-container": "#161d1f",
+                        "outline": "#75777e",
+                        "outline-variant": "#c5c6cd",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#76849f",
+                        "secondary-container": "#68abff",
+                        "surface": "#f8f9fa",
+                        "surface-container-low": "#f3f4f5",
+                        "primary-container": "#0d1c32",
+                        "secondary": "#0060ac",
+                        "primary": "#000000"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-background min-h-screen flex flex-col">
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-[#0A192F] dark:bg-[#0A192F] shadow-[0_40px_40px_rgba(10,25,47,0.06)] sticky top-0 z-50">
+<nav class="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
+<div class="text-2xl font-extrabold tracking-tighter text-white">Sertificat.kz</div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">Catalog</a>
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">Accreditation</a>
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">Check Certificate</a>
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">About</a>
+</div>
+<div class="flex items-center space-x-6">
+<button class="text-slate-400 hover:text-[#4A90E2] transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+<button class="bg-[#4A90E2] text-white px-6 py-2 rounded-lg font-bold text-sm tracking-wide transform hover:scale-105 transition-transform">
+                    Login
+                </button>
+</div>
+</nav>
+</header>
+<main class="flex-grow max-w-screen-2xl mx-auto w-full px-8 py-12">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+<!-- Left Column: Invoice Details -->
+<div class="lg:col-span-7">
+<div class="mb-10">
+<h1 class="text-4xl md:text-5xl font-extrabold text-primary tracking-tight mb-4">Оплата обучения и оформления документа</h1>
+<p class="text-on-surface-variant font-medium opacity-70">Industrial Safety Certification Center Kazakhstan</p>
+</div>
+<div class="bg-surface-container-low rounded-xl p-8 border-l-4 border-secondary shadow-sm mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-outline mb-2">Название курса</p>
+<p class="text-lg font-semibold text-primary">Промышленная безопасность на нефтегазовых объектах</p>
+</div>
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-outline mb-2">Участник</p>
+<p class="text-lg font-semibold text-primary">Александр Владимирович Кузнецов</p>
+</div>
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-outline mb-2">Дата выставления</p>
+<p class="text-lg font-semibold text-primary">24 Мая, 2024</p>
+</div>
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-outline mb-2">Номер инвойса</p>
+<p class="text-lg font-semibold text-primary">#INV-2024-8842</p>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<h3 class="text-xl font-bold text-primary px-2">Сведения об услугах</h3>
+<div class="overflow-hidden bg-white rounded-xl shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-high">
+<tr>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-outline">Описание</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-outline text-right">Сумма</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<p class="font-medium text-primary">Теоретический курс (40 часов)</p>
+<p class="text-xs text-outline">Дистанционное обучение с инструктором</p>
+</td>
+<td class="px-6 py-4 text-right font-semibold">45 000 ₸</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<p class="font-medium text-primary">Оформление государственного сертификата</p>
+<p class="text-xs text-outline">Внесение в реестр и печать документа</p>
+</td>
+<td class="px-6 py-4 text-right font-semibold">12 500 ₸</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Column: Payment & Summary -->
+<div class="lg:col-span-5">
+<div class="sticky top-28 space-y-6">
+<!-- Total Amount Card -->
+<div class="industrial-gradient text-white rounded-xl p-8 shadow-xl relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-8xl" data-icon="receipt_long">receipt_long</span>
+</div>
+<div class="relative z-10">
+<p class="text-sm font-medium opacity-80 mb-1">Итого к оплате</p>
+<h2 class="text-5xl font-black tracking-tighter mb-4">57 500 ₸</h2>
+<div class="flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-white/10 w-fit px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-sm" data-icon="verified_user" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+                                Безопасный платеж
+                            </div>
+</div>
+</div>
+<!-- Payment Methods -->
+<div class="bg-white rounded-xl p-8 shadow-sm space-y-6">
+<h3 class="text-lg font-bold text-primary">Метод оплаты</h3>
+<div class="space-y-3">
+<!-- Card Option -->
+<label class="group relative flex items-center p-4 border-2 border-surface-container-high rounded-xl cursor-pointer hover:border-secondary transition-all has-[:checked]:border-secondary has-[:checked]:bg-secondary/5">
+<input checked="" class="hidden" name="payment" type="radio"/>
+<span class="material-symbols-outlined text-secondary mr-4" data-icon="credit_card">credit_card</span>
+<div class="flex-grow">
+<p class="font-bold text-sm">Банковская карта</p>
+<p class="text-xs text-outline">Visa, Mastercard, Kaspi</p>
+</div>
+<span class="material-symbols-outlined text-secondary opacity-0 group-has-[:checked]:opacity-100" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</label>
+<!-- QR Option -->
+<label class="group relative flex items-center p-4 border-2 border-surface-container-high rounded-xl cursor-pointer hover:border-secondary transition-all has-[:checked]:border-secondary has-[:checked]:bg-secondary/5">
+<input class="hidden" name="payment" type="radio"/>
+<span class="material-symbols-outlined text-secondary mr-4" data-icon="qr_code_2">qr_code_2</span>
+<div class="flex-grow">
+<p class="font-bold text-sm">Оплата по QR-коду</p>
+<p class="text-xs text-outline">Мгновенное сканирование</p>
+</div>
+<span class="material-symbols-outlined text-secondary opacity-0 group-has-[:checked]:opacity-100" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</label>
+<!-- Invoice Option -->
+<label class="group relative flex items-center p-4 border-2 border-surface-container-high rounded-xl cursor-pointer hover:border-secondary transition-all has-[:checked]:border-secondary has-[:checked]:bg-secondary/5">
+<input class="hidden" name="payment" type="radio"/>
+<span class="material-symbols-outlined text-secondary mr-4" data-icon="business">business</span>
+<div class="flex-grow">
+<p class="font-bold text-sm">Счет для компании</p>
+<p class="text-xs text-outline">Безналичный расчет для юр. лиц</p>
+</div>
+<span class="material-symbols-outlined text-secondary opacity-0 group-has-[:checked]:opacity-100" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</label>
+</div>
+<button class="w-full bg-[#0A192F] text-white py-5 rounded-lg font-extrabold text-lg uppercase tracking-widest shadow-lg hover:shadow-secondary/20 transform hover:-translate-y-1 transition-all active:scale-95 flex justify-center items-center gap-3">
+                            Confirm Payment
+                            <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<p class="text-center text-[10px] text-outline px-6">
+                            Нажимая кнопку, вы соглашаетесь с условиями публичной оферты и обработки персональных данных.
+                        </p>
+</div>
+<!-- Security Badge -->
+<div class="flex items-center justify-center gap-6 opacity-40 grayscale contrast-125">
+<img alt="Visa Logo" class="h-6 object-contain" data-alt="visa payment card system logo in high contrast professional style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkST7X-yRmlrXBaL9QplDRjQmc05kK7jYSGEv0dTYB2FFHcRc5nym4dtfjvY8gGIE6iE_qVOD3W3oFEYT7tkdkjRSJhPqf2qDnFZDqSoAfhihGY-NnobzOdnfBwCP8QRjZNXlTT4YPoG4TCYn2cwvkEQFvP3Ti37l7Rja7HxyuQHWXBhEkgfwMppQKnEOq8UBkKpNPWog9WPK2f-66c3p1vpLDO86zp9QS9Fc12Z5clp1uktTm1TsW2p_aY8rMX9y_5Cu6kEIpwXnc"/>
+<img alt="Mastercard Logo" class="h-6 object-contain" data-alt="mastercard payment network logo simple and clean" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhlOcMzxomGCH-Y4s_l0MNh_1K_uVDeHvEasVALZuUs5VbPp1kEr5w1cy-PzTOi8eW0EsemdWY8cDDh0LUvS9MMXInSUa9rWqD9LfDHNRqI_wiEv2a37_O3RadcTRONZHIyaZphlXBNA15-u2ZfkU-hY83rBGUcCNtOndM31m9PabqftleOUvoF0nNKy-v0BCnsbuoC0KeDAPxzosewWv2tkBxWE9QLOqq7jzFOvQpfLTfqLcdFDjTfT-3sTk0WI-0qYC4-GDJF4dj"/>
+<img alt="PCI DSS" class="h-8 object-contain" data-alt="pci dss security standard logo for secure transactions" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWT_4JyeeCNZ_2JeJgPRSbrI95zk25I30ImZwqZ0Pi-Ty0JEpXQ1M22Hr3MpJ14mhQpRD4Snn-ktqaeqKc1NaeQW07Y4bojoBJ2iLThuLKdPuY_hdb1U1X8Wz80uQ6vycgXwagV-XRd6SAqQnjVCcUL6oIpDV_t-WAQY4mmaWFwW0TPMouUQ3G4GU0vWA8nS-q9BL8vCBQoK3P5dzC2aiQMMKTbaVyLsl41tyd7g2qPdB9OEcrbWtDLcODBRkCpEH2FR1-hKpN6cWr"/>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="bg-[#0A192F] text-white mt-20">
+<div class="w-full py-12 px-8 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-screen-2xl mx-auto">
+<div class="space-y-6">
+<div class="text-xl font-black text-white uppercase tracking-tighter">Sertificat.kz</div>
+<p class="text-slate-400 text-xs leading-relaxed max-w-md">
+                    © 2024 Industrial Safety Certification Center Kazakhstan. All rights reserved. 
+                    Официальный аккредитованный центр по подготовке специалистов промышленного сектора.
+                </p>
+</div>
+<div class="flex flex-col md:items-end space-y-4">
+<div class="flex flex-wrap gap-x-8 gap-y-4 md:justify-end">
+<a class="text-slate-400 text-xs hover:underline transition-all" href="#">Privacy Policy</a>
+<a class="text-slate-400 text-xs hover:underline transition-all" href="#">Terms of Service</a>
+<a class="text-slate-400 text-xs hover:underline transition-all" href="#">Accreditation Details</a>
+<a class="text-slate-400 text-xs hover:underline transition-all" href="#">Contact Support</a>
+</div>
+<div class="flex items-center gap-4 text-slate-400">
+<span class="material-symbols-outlined text-sm" data-icon="language">language</span>
+<span class="text-[10px] font-bold tracking-widest uppercase">KAZ | RUS | ENG</span>
+</div>
+</div>
+</div>
+</footer>
+<script src="../shared/mock-flow.js"></script>
+</body></html>

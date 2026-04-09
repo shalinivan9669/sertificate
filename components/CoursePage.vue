@@ -2,6 +2,10 @@
 import { computed } from 'vue';
 import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
 import { getCityName, getCityPrepositional } from '~/composables/useCity';
+import {
+  buildProgramSelectionQuery,
+  getSelectionPresetFromCourse,
+} from '~/composables/useProgramFlowMock';
 
 const props = defineProps({
   course: {
@@ -64,6 +68,12 @@ const metaDescription = computed(() =>
 );
 
 const courseContentHtml = computed(() => props.course.contentHtml || '');
+const programSelectionRoute = computed(() => ({
+  path: '/program-selection',
+  query: buildProgramSelectionQuery(
+    getSelectionPresetFromCourse(props.course.slug, resolvedCity.value?.slug || ''),
+  ),
+}));
 
 const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://otcenter.kz');
 const canonicalUrl = computed(() => new URL(route.path || '/', baseUrl.value).toString());
@@ -228,7 +238,12 @@ useHead(() => ({
         {{ t('course.signupText') }}
       </p>
       <div class="flex flex-wrap gap-3">
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">{{ t('course.signupCta') }}</a>
+        <NuxtLink
+          class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition"
+          :to="programSelectionRoute"
+        >
+          Подобрать программу
+        </NuxtLink>
         <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871">{{ t('cta.call') }}</a>
       </div>
     </section>

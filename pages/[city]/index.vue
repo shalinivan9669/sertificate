@@ -28,5 +28,9 @@ useHead(() => ({
 </script>
 
 <template>
-  <SeoUniqueBlocks v-if="seoContent" :content="seoContent" />
+  <SeoUniqueBlocks
+    v-if="seoContent"
+    :content="seoContent"
+    :cta-query="{ source: 'seo-city', slug: citySlug }"
+  />
 </template>

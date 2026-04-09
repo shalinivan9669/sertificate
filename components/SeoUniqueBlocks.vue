@@ -6,6 +6,14 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  ctaQuery: {
+    type: Object,
+    default: () => ({}),
+  },
+  ctaLabel: {
+    type: String,
+    default: 'Подобрать программу',
+  },
 });
 
 const localePath = useLocalePath();
@@ -15,6 +23,11 @@ const relatedLinks = computed(() =>
     to: localePath(link.to),
   })),
 );
+
+const programSelectionRoute = computed(() => ({
+  path: '/program-selection',
+  query: props.ctaQuery,
+}));
 </script>
 
 <template>
@@ -95,6 +108,20 @@ const relatedLinks = computed(() =>
           {{ link.label }}
         </NuxtLink>
       </div>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-[#0A192F] p-6 text-white shadow-sm space-y-3">
+      <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#8ec1ff]">New flow entry</p>
+      <h2 class="text-2xl font-bold">Перейти в новый подбор программы</h2>
+      <p class="text-sm leading-relaxed text-slate-300">
+        SEO-страница остаётся доступной для индексации, а следующий шаг уводит пользователя в новый runtime-flow.
+      </p>
+      <NuxtLink
+        class="inline-flex items-center justify-center rounded-lg bg-[#4A90E2] px-5 py-3 text-sm font-bold text-white transition hover:brightness-110"
+        :to="programSelectionRoute"
+      >
+        {{ ctaLabel }}
+      </NuxtLink>
     </section>
   </article>
 </template>

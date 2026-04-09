@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { useHead, useI18n } from '#imports';
 import HomePage from '~/components/HomePage.vue';
 
+definePageMeta({ layout: 'fullwidth' });
+
 const { t } = useI18n();
 
 const metaTitle = computed(() => t('home.metaTitle'));

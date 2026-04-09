@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<html lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#003e73",
+                    "tertiary-container": "#161d1f",
+                    "outline": "#75777e",
+                    "outline-variant": "#c5c6cd",
+                    "on-tertiary-fixed-variant": "#41484a",
+                    "tertiary-fixed-dim": "#c1c8ca",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#39475f",
+                    "on-primary-container": "#76849f",
+                    "secondary-container": "#68abff",
+                    "surface-dim": "#d9dadb",
+                    "surface": "#f8f9fa",
+                    "surface-container-high": "#e7e8e9",
+                    "surface-tint": "#515f78",
+                    "secondary-fixed-dim": "#a4c9ff",
+                    "tertiary": "#000000",
+                    "on-surface": "#191c1d",
+                    "error": "#ba1a1a",
+                    "on-background": "#191c1d",
+                    "inverse-primary": "#b9c7e4",
+                    "secondary-fixed": "#d4e3ff",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#b9c7e4",
+                    "surface-container-low": "#f3f4f5",
+                    "on-error": "#ffffff",
+                    "on-tertiary-container": "#7e8587",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-secondary-fixed": "#001c39",
+                    "on-tertiary-fixed": "#161d1f",
+                    "surface-variant": "#e1e3e4",
+                    "background": "#f8f9fa",
+                    "on-secondary-fixed-variant": "#004883",
+                    "primary-fixed": "#d6e3ff",
+                    "tertiary-fixed": "#dde4e6",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#44474d",
+                    "on-secondary": "#ffffff",
+                    "secondary": "#0060ac",
+                    "primary-container": "#0d1c32",
+                    "inverse-on-surface": "#f0f1f2",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed": "#0d1c32",
+                    "surface-bright": "#f8f9fa",
+                    "inverse-surface": "#2e3132",
+                    "primary": "#000000",
+                    "surface-container": "#edeeef"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .industrial-gradient {
+        background: linear-gradient(135deg, #0A192F 0%, #162a4a 100%);
+      }
+    </script>
+</head>
+<body class="bg-surface font-body text-on-surface min-h-screen flex flex-col">
+
+    <!-- TopNavBar Suppression Check: This is a Task-Focused sub-page with a "Back" intent. Shell suppressed to focus on confirmation. -->
+    
+    <main class="flex-grow flex items-center justify-center p-4 md:p-8">
+        <!-- Center Confirmation Modal-like Card -->
+        <div class="max-w-2xl w-full bg-surface-container-lowest shadow-[0_40px_40px_rgba(10,25,47,0.06)] rounded-lg overflow-hidden border border-outline-variant/10">
+            
+            <!-- Header Section -->
+            <div class="industrial-gradient p-8 text-white relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-10">
+                    <span class="material-symbols-outlined text-9xl">task_alt</span>
+                </div>
+                <div class="relative z-10">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="h-1 w-12 bg-[#4A90E2]"></div>
+                        <span class="font-label text-xs font-semibold tracking-widest uppercase text-secondary-container">INDUSTRIAL COMPLIANCE</span>
+                    </div>
+                    <h1 class="font-headline text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+                        Изучение материала завершено
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="p-8 md:p-10">
+                <p class="text-on-surface-variant font-medium mb-8 leading-relaxed">
+                    Вы успешно прошли все образовательные модули текущего курса. Для перехода к итоговому тестированию необходимо подтвердить ознакомление с материалами.
+                </p>
+
+                <!-- Completed Modules Checklist -->
+                <div class="space-y-4 mb-10">
+                    <h3 class="font-label text-sm font-bold uppercase tracking-wider text-on-surface mb-4">Пройденные модули:</h3>
+                    
+                    <div class="flex items-center gap-4 p-4 bg-surface-container-low rounded-md transition-colors hover:bg-surface-container">
+                        <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        <div>
+                            <p class="font-semibold text-sm">Модуль 1: Основы промышленной безопасности</p>
+                            <p class="text-xs text-on-surface-variant">Продолжительность: 45 минут</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 p-4 bg-surface-container-low rounded-md transition-colors hover:bg-surface-container">
+                        <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        <div>
+                            <p class="font-semibold text-sm">Модуль 2: Регламенты и стандарты РК</p>
+                            <p class="text-xs text-on-surface-variant">Продолжительность: 60 минут</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 p-4 bg-surface-container-low rounded-md transition-colors hover:bg-surface-container">
+                        <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        <div>
+                            <p class="font-semibold text-sm">Модуль 3: Техника безопасности при высотных работах</p>
+                            <p class="text-xs text-on-surface-variant">Продолжительность: 30 минут</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legal and Consent -->
+                <div class="border-t border-outline-variant/20 pt-8 space-y-6">
+                    <div class="bg-error-container/10 border-l-4 border-error p-4">
+                        <div class="flex gap-3">
+                            <span class="material-symbols-outlined text-error">gavel</span>
+                            <p class="text-xs text-on-surface-variant leading-relaxed">
+                                <span class="font-bold text-on-surface">Юридическое уведомление:</span> Нажимая кнопку «Перейти к тестированию», вы подтверждаете полную ответственность за достоверность предоставленных данных и осознаете последствия нарушения правил промышленной безопасности.
+                            </p>
+                        </div>
+                    </div>
+
+                    <label class="flex items-start gap-3 cursor-pointer group">
+                        <div class="relative flex items-center mt-1">
+                            <input type="checkbox" class="peer h-5 w-5 rounded border-outline-variant bg-surface-container-highest text-secondary focus:ring-secondary/30 transition-all">
+                        </div>
+                        <span class="text-sm font-semibold text-on-surface select-none">
+                            С материалами ознакомлен(а) и готов(а) к тестированию
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-10 flex flex-col sm:flex-row gap-4">
+                    <button class="flex-1 industrial-gradient text-white py-4 px-6 rounded-md font-bold tracking-wide flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-[#0A192F]/20">
+                        <span>Перейти к тестированию</span>
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    </button>
+                    <button class="flex-1 bg-surface-container-high text-on-surface-variant py-4 px-6 rounded-md font-bold tracking-wide flex items-center justify-center gap-2 border border-outline-variant/30 hover:bg-surface-container-highest transition-colors">
+                        <span class="material-symbols-outlined">menu_book</span>
+                        <span>Вернуться к модулям</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer-like Meta Info -->
+            <div class="bg-surface-container-low px-8 py-4 flex flex-col sm:flex-row justify-between items-center text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">verified</span>
+                    <span>ID ПРОТОКОЛА: CERT-7729-KZ</span>
+                </div>
+                <div class="mt-2 sm:mt-0">
+                    СИСТЕМА СЕРТИФИКАЦИИ SERTIFICAT.KZ
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Background Decorative Elements -->
+    <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] opacity-[0.03]">
+            <img src="image-placeholder-industrial-blueprint.jpg" data-alt="Technical architectural blueprint of a refinery plant with complex pipelines and engineering schematics on a dark grid background" class="w-full h-full object-contain filter invert">
+        </div>
+        <div class="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] opacity-[0.05]">
+            <img src="image-placeholder-kazakhstan-map.jpg" data-alt="Stylized map of Kazakhstan with industrial icons representing mining and energy sectors in a clean vector style" data-location="Kazakhstan" class="w-full h-full object-contain filter grayscale">
+        </div>
+    </div>
+
+<script src="../shared/mock-flow.js"></script></body>
+</html></style></head><body></body></html>

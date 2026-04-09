@@ -1,291 +1,281 @@
 <script setup>
-import { computed } from 'vue';
-import { useI18n, useLocalePath } from '#imports';
-import { getSortedBlogPosts } from '~/config/blog';
-import { cities } from '~/config/cities';
-import { licenseDownloadFiles } from '~/config/licenses-files';
-import { getCityName, getCityPrepositional } from '~/composables/useCity';
+const { paths, syncCourseId } = useRedesignRoutes();
 
-const props = defineProps({
-  city: {
-    type: [Object, null],
-    default: null,
-  },
-});
+syncCourseId();
 
-const resolvedCity = computed(() =>
-  props.city && 'value' in props.city ? props.city.value : props.city,
-);
-const { locale, t, tm } = useI18n();
-const localePath = useLocalePath();
-const cityPrepositional = computed(() =>
-  resolvedCity.value ? getCityPrepositional(resolvedCity.value, locale.value) : null,
-);
-
-const asList = (value) => (Array.isArray(value) ? value : []);
-const directions = computed(() => asList(tm('home.directions')));
-const formatCards = computed(() => asList(tm('home.formatCards')));
-const whyItems = computed(() => asList(tm('home.whyItems')));
-const licensesItems = computed(() => asList(tm('home.licensesItems')));
-const licensesCards = computed(() =>
-  licensesItems.value.map((label, index) => {
-    const source = licenseDownloadFiles[index] || null;
-    const file =
-      typeof source === 'string' ? source : source && typeof source === 'object' ? source.file : null;
-    const fileName =
-      typeof file === 'string' && file.trim().length > 0 ? file.split('/').pop() : null;
-    const preview =
-      source && typeof source === 'object' && typeof source.preview === 'string'
-        ? source.preview
-        : null;
-    const previewAlt =
-      source && typeof source === 'object' && typeof source.previewAlt === 'string'
-        ? source.previewAlt
-        : label;
-
-    return {
-      label,
-      file,
-      fileName,
-      preview,
-      previewAlt,
-      hasFile: Boolean(fileName),
-    };
-  }),
-);
-const testimonialsItems = computed(() => asList(tm('home.testimonialsItems')));
-const seoFormats = computed(() => asList(tm('home.seoFormats')));
-const seoRoles = computed(() => asList(tm('home.seoRoles')));
-const seoSynonyms = computed(() => asList(tm('home.seoSynonyms')));
-
-const heroTitle = computed(() =>
-  cityPrepositional.value
-    ? t('home.heroTitleCity', { city: cityPrepositional.value })
-    : t('home.heroTitleDefault'),
-);
-
-const withCityPath = (slug) => {
-  const base = resolvedCity.value?.slug ? `/${resolvedCity.value.slug}/${slug}` : `/${slug}`;
-  return localePath(base);
-};
-
-const localizePost = (post) => ({
-  ...post,
-  title: post.title?.[locale.value] || post.title?.ru || post.title,
-  description: post.description?.[locale.value] || post.description?.ru || post.description,
-});
-
-const blogArticles = computed(() => getSortedBlogPosts().map(localizePost).slice(0, 4));
+const goToProgramSelection = () => navigateTo(paths.value.programSelection);
+const goToContacts = () => navigateTo(paths.value.contacts);
+const goToCabinet = () => navigateTo(paths.value.cabinet);
+const goToB2b = () => navigateTo(paths.value.b2b);
 </script>
 
 <template>
-  <div class="space-y-16">
-    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 md:p-10">
-      <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div class="space-y-4 max-w-3xl">
-          <p class="text-sm uppercase tracking-wide text-brand-accent font-semibold">
-            {{ t('home.heroBadge') }}
-          </p>
-          <h1 class="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">
-            {{ heroTitle }}
-          </h1>
-          <p class="text-lg text-slate-700">
-            {{ t('home.heroDescription') }}
-          </p>
-          <div class="flex flex-wrap gap-3">
-            <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition" href="#contact">{{ t('cta.apply') }}</a>
-            <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="#courses">{{ t('cta.viewCourses') }}</a>
-          </div>
-        </div>
-        <div class="hidden md:block w-64 h-40 rounded-xl bg-gradient-to-br from-brand-soft to-white border border-slate-200" />
-      </div>
-    </section>
-
-    <section id="courses" class="space-y-6">
-      <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">{{ t('home.directionsBadge') }}</p>
-        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.directionsTitle') }}</h2>
-        <p class="text-slate-700">{{ t('home.directionsSubtitle') }}</p>
-      </header>
-      <div class="grid gap-4 md:grid-cols-3">
-        <NuxtLink
-          v-for="direction in directions"
-          :key="direction.slug"
-          :to="withCityPath(direction.slug)"
-          class="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition"
-        >
-          <h3 class="text-lg font-semibold text-slate-900 group-hover:text-brand">{{ direction.title }}</h3>
-          <p class="mt-2 text-sm text-slate-700">{{ direction.description }}</p>
-        </NuxtLink>
-      </div>
-    </section>
-
-    <section id="formats" class="space-y-6">
-      <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">{{ t('home.formatsBadge') }}</p>
-        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.formatsTitle') }}</h2>
-        <p class="text-slate-700">{{ t('home.formatsSubtitle') }}</p>
-      </header>
-      <div class="grid gap-4 md:grid-cols-3">
-        <NuxtLink
-          v-for="format in formatCards"
-          :key="format.slug"
-          :to="withCityPath(format.slug)"
-          class="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition"
-        >
-          <h3 class="text-lg font-semibold text-slate-900 group-hover:text-brand">{{ format.title }}</h3>
-          <p class="mt-2 text-sm text-slate-700">{{ format.description }}</p>
-        </NuxtLink>
-      </div>
-    </section>
-
-    <section class="space-y-4">
-      <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">{{ t('home.whyBadge') }}</p>
-        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.whyTitle') }}</h2>
-      </header>
-      <div class="grid gap-3 md:grid-cols-2">
-        <div
-          v-for="item in whyItems"
-          :key="item"
-          class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700"
-        >
-          {{ item }}
-        </div>
-      </div>
-    </section>
-
-    <section class="space-y-4">
-      <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">{{ t('home.licensesBadge') }}</p>
-        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.licensesTitle') }}</h2>
-        <p class="text-slate-700">{{ t('home.licensesSubtitle') }}</p>
-      </header>
-      <div
-        class="grid gap-4"
-        :class="licensesCards.length === 1 ? 'sm:grid-cols-1 max-w-2xl mx-auto' : 'sm:grid-cols-3'"
-      >
-        <component
-          :is="item.hasFile ? 'a' : 'div'"
-          v-for="item in licensesCards"
-          :key="item.label"
-          :href="item.hasFile ? item.file : undefined"
-          :download="item.hasFile ? item.fileName : undefined"
-          :aria-disabled="!item.hasFile"
-          class="h-280 rounded-xl border border-dashed border-slate-300 bg-white flex flex-col items-center justify-center text-slate-500 transition"
-          :class="item.hasFile ? 'hover:border-brand hover:text-brand cursor-pointer' : 'cursor-default'"
-        >
-          <img
-            v-if="item.preview"
-            :src="item.preview"
-            :alt="item.previewAlt"
-            class="mb-2 h-244 w-auto max-w-full rounded object-contain"
-            loading="lazy"
-          >
-          <span>{{ item.label }}</span>
-          <span v-if="item.hasFile" class="mt-1 text-xs text-slate-400">
-            {{ item.fileName }}
-          </span>
-        </component>
-      </div>
-    </section>
-
-    <section class="space-y-4">
-      <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">{{ t('home.testimonialsBadge') }}</p>
-        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.testimonialsTitle') }}</h2>
-      </header>
-      <div class="grid gap-4 md:grid-cols-2">
-        <div
-          v-for="item in testimonialsItems"
-          :key="item.title"
-          class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-        >
-          <h3 class="font-semibold text-slate-900">{{ item.title }}</h3>
-          <p class="mt-2 text-slate-700">{{ item.description }}</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="space-y-4">
-      <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">{{ t('home.blogBadge') }}</p>
-        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.blogTitle') }}</h2>
-        <p class="text-slate-700">{{ t('home.blogSubtitle') }}</p>
-      </header>
-      <div class="grid gap-4 md:grid-cols-2">
-        <article
-          v-for="post in blogArticles || []"
-          :key="post._path"
-          class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-        >
-          <header class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-slate-900">
-              <NuxtLink :to="localePath(post._path)" class="hover:text-brand">{{ post.title }}</NuxtLink>
-            </h3>
-            <time :datetime="post.date" class="text-xs text-slate-500">{{ post.date }}</time>
-          </header>
-          <p class="mt-2 text-sm text-slate-700">{{ post.description }}</p>
-        </article>
-        <p v-if="!blogArticles || blogArticles.length === 0" class="text-slate-600 col-span-full">
-          {{ t('home.blogEmpty') }}
-        </p>
-      </div>
-    </section>
-
-    <section class="space-y-6" id="seo">
-      <header class="space-y-2">
-        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.seoTitle') }}</h2>
-        <p class="text-slate-700">{{ t('home.seoDescription') }}</p>
-      </header>
-      <div class="grid gap-4 md:grid-cols-2">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">
-          <h3 class="font-semibold text-slate-900">{{ t('home.seoFormatsTitle') }}</h3>
-          <ul class="mt-2 grid gap-2 list-disc ml-4">
-            <li v-for="item in seoFormats" :key="item">{{ item }}</li>
-          </ul>
-        </div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700">
-          <h3 class="font-semibold text-slate-900">{{ t('home.seoRolesTitle') }}</h3>
-          <ul class="mt-2 grid gap-2 list-disc ml-4">
-            <li v-for="item in seoRoles" :key="item">{{ item }}</li>
-          </ul>
-        </div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-slate-700 md:col-span-2">
-          <h3 class="font-semibold text-slate-900">{{ t('home.seoSynonymsTitle') }}</h3>
-          <ul class="mt-2 grid gap-2 list-disc ml-4">
-            <li v-for="item in seoSynonyms" :key="item">{{ item }}</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section class="space-y-4" id="cities">
-      <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">{{ t('nav.cities') }}</p>
-        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.seoGeoTitle') }}</h2>
-        <p class="text-slate-700">{{ t('home.seoGeoDescription') }}</p>
-      </header>
-      <div class="flex flex-wrap gap-2">
-        <NuxtLink
-          v-for="city in cities"
-          :key="city.slug"
-          :to="localePath(`/${city.slug}`)"
-          class="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 hover:border-brand hover:text-brand transition"
-        >
-          {{ getCityName(city, locale) }}
-        </NuxtLink>
-      </div>
-    </section>
-
-    <section id="contact" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-3">
-      <p class="text-sm font-semibold text-brand-accent">{{ t('home.contactBadge') }}</p>
-      <h2 class="text-2xl font-bold text-slate-900">{{ t('home.contactTitle') }}</h2>
-      <p class="text-slate-700">{{ t('home.contactDescription') }}</p>
-      <div class="flex justify-center gap-3">
-        <NuxtLink :to="localePath('/contacts')" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">{{ t('cta.apply') }}</NuxtLink>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871">{{ t('cta.call') }}</a>
-      </div>
-    </section>
-  </div>
+<!-- TopNavBar -->
+<header class="bg-[#0A192F] sticky top-0 z-50 shadow-[0_40px_40px_rgba(10,25,47,0.06)]">
+<nav class="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-12">
+<NuxtLink class="text-2xl font-extrabold tracking-tighter text-white" :to="paths.home">Sertificat.kz</NuxtLink>
+<ul class="hidden md:flex gap-8 items-center">
+<li><NuxtLink class="text-white border-b-2 border-[#4A90E2] pb-1 font-medium" :to="paths.courses">Catalog</NuxtLink></li>
+<li><NuxtLink class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" :to="paths.categories">Accreditation</NuxtLink></li>
+<li><NuxtLink class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" :to="paths.cabinet">Check Certificate</NuxtLink></li>
+<li><NuxtLink class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" :to="paths.contacts">About</NuxtLink></li>
+</ul>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-white material-symbols-outlined hover:text-[#4A90E2] transition-colors" @click="goToCabinet">account_circle</button>
+<button class="bg-[#4A90E2] text-white px-6 py-2 font-bold tracking-tight hover:brightness-110 transition-all rounded-sm" @click="goToCabinet">Login</button>
+</div>
+</nav>
+</header>
+<main>
+<!-- Hero Section -->
+<section class="relative h-[870px] flex items-center overflow-hidden industrial-gradient">
+<div class="absolute inset-0 opacity-40">
+<img alt="Industrial Facility" class="w-full h-full object-cover grayscale mix-blend-overlay" data-alt="dramatic wide shot of a massive kazakhstan oil refinery and gas processing plant at dusk with industrial lights reflecting off steel surfaces" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZPdCt34fMs_xxcsyH0hiT41x3nczLYywaWmY1e-kPUmQgVGVqpn-BdHXdppMGZdu_ZCSEhFqtTAX7LR4WXFjVBea2mEpLS3ahN67xAzVyeMLhxpmE0Nx583DEGXoZ8St5X05OkmST728dhZuEofMrZeByG44GVZEpgT1J7srziIY-oQwzkzXjUnAbwmWGIkdbbFLTEpRE4bXsvxBX3C_wy2l8fuRrcM7zxhN0ffYRel5aEaxNsJK_LhlPlqkGcDaNwQh0dHBzN8Wy"/>
+</div>
+<div class="relative z-10 max-w-screen-2xl mx-auto px-8 w-full">
+<div class="max-w-4xl">
+<h1 class="text-white text-5xl md:text-7xl font-extrabold leading-[1.1] tracking-tight mb-6">
+                        Профессиональное обучение и аттестация в промышленной безопасности РК
+                    </h1>
+<p class="text-on-primary-container text-xl md:text-2xl mb-10 leading-relaxed max-w-2xl font-medium">
+                        Аккредитованный учебный центр для подготовки специалистов в области энергетического, горного и промышленного секторов с внесением в государственный реестр.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-4">
+<button class="bg-[#4A90E2] text-white px-10 py-5 text-lg font-extrabold tracking-tight hover:shadow-2xl hover:scale-105 transition-all cubic-bezier(0.2, 0, 0, 1)" @click="goToProgramSelection">
+                            Пройти обучение
+                        </button>
+<button class="bg-transparent border border-white/20 text-white px-10 py-5 text-lg font-extrabold tracking-tight hover:bg-white/10 transition-all" @click="goToContacts">
+                            Написать нам
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Training Directions: Bento Grid Style -->
+<section class="py-24 px-8 max-w-screen-2xl mx-auto">
+<div class="mb-16">
+<span class="text-[#4A90E2] font-bold tracking-widest uppercase text-sm mb-4 block">Направления обучения</span>
+<h2 class="text-4xl md:text-5xl font-extrabold text-primary-container">Специализированные программы</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="group p-8 bg-surface-container-low transition-all hover:bg-[#0A192F] hover:text-white relative overflow-hidden">
+<span class="material-symbols-outlined text-4xl mb-6 text-[#4A90E2]" data-icon="engineering">engineering</span>
+<h3 class="text-2xl font-bold mb-4">Промбез</h3>
+<p class="text-sm opacity-80 leading-relaxed">Промышленная безопасность на опасных производственных объектах.</p>
+<div class="mt-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="text-xs font-bold uppercase tracking-widest">Подробнее</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</div>
+</div>
+<div class="group p-8 bg-surface-container-low transition-all hover:bg-[#0A192F] hover:text-white relative overflow-hidden">
+<span class="material-symbols-outlined text-4xl mb-6 text-[#4A90E2]" data-icon="health_and_safety">health_and_safety</span>
+<h3 class="text-2xl font-bold mb-4">БиОТ</h3>
+<p class="text-sm opacity-80 leading-relaxed">Безопасность и охрана труда. Соответствие государственным стандартам РК.</p>
+<div class="mt-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="text-xs font-bold uppercase tracking-widest">Подробнее</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</div>
+</div>
+<div class="group p-8 bg-surface-container-low transition-all hover:bg-[#0A192F] hover:text-white relative overflow-hidden">
+<span class="material-symbols-outlined text-4xl mb-6 text-[#4A90E2]" data-icon="fire_truck">fire_truck</span>
+<h3 class="text-2xl font-bold mb-4">ПТМ</h3>
+<p class="text-sm opacity-80 leading-relaxed">Пожарно-технический минимум для руководителей и ответственных лиц.</p>
+<div class="mt-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="text-xs font-bold uppercase tracking-widest">Подробнее</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</div>
+</div>
+<div class="group p-8 bg-surface-container-low transition-all hover:bg-[#0A192F] hover:text-white relative overflow-hidden">
+<span class="material-symbols-outlined text-4xl mb-6 text-[#4A90E2]" data-icon="school">school</span>
+<h3 class="text-2xl font-bold mb-4">Квалификация</h3>
+<p class="text-sm opacity-80 leading-relaxed">Повышение профессиональной квалификации инженерно-технических работников.</p>
+<div class="mt-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="text-xs font-bold uppercase tracking-widest">Подробнее</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</div>
+</div>
+</div>
+</section>
+<!-- How it Works: Industrial Pipeline -->
+<section class="bg-surface-container-low py-24 px-8 overflow-hidden">
+<div class="max-w-screen-2xl mx-auto">
+<div class="text-center mb-20">
+<h2 class="text-4xl md:text-5xl font-extrabold text-primary-container mb-4">Процесс сертификации</h2>
+<p class="text-on-surface-variant max-w-xl mx-auto">От выбора курса до получения государственного свидетельства в 6 простых шагов.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-6 gap-0 relative">
+<!-- Steps with connecting lines in web view -->
+<div class="relative p-6 group">
+<div class="w-12 h-12 bg-white text-primary-container font-black flex items-center justify-center text-xl mb-6 rounded-sm shadow-sm ring-1 ring-primary/5">01</div>
+<h4 class="font-bold text-lg mb-2">Selection</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Выбор программы и подача заявки</p>
+</div>
+<div class="relative p-6 group border-t md:border-t-0 md:border-l border-primary/10">
+<div class="w-12 h-12 bg-white text-primary-container font-black flex items-center justify-center text-xl mb-6 rounded-sm shadow-sm ring-1 ring-primary/5">02</div>
+<h4 class="font-bold text-lg mb-2">Study</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Доступ к образовательным материалам</p>
+</div>
+<div class="relative p-6 group border-t md:border-t-0 md:border-l border-primary/10">
+<div class="w-12 h-12 bg-white text-primary-container font-black flex items-center justify-center text-xl mb-6 rounded-sm shadow-sm ring-1 ring-primary/5">03</div>
+<h4 class="font-bold text-lg mb-2">Confirmation</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Подтверждение практических навыков</p>
+</div>
+<div class="relative p-6 group border-t md:border-t-0 md:border-l border-primary/10">
+<div class="w-12 h-12 bg-white text-primary-container font-black flex items-center justify-center text-xl mb-6 rounded-sm shadow-sm ring-1 ring-primary/5">04</div>
+<h4 class="font-bold text-lg mb-2">Test</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Прохождение итогового тестирования</p>
+</div>
+<div class="relative p-6 group border-t md:border-t-0 md:border-l border-primary/10">
+<div class="w-12 h-12 bg-white text-primary-container font-black flex items-center justify-center text-xl mb-6 rounded-sm shadow-sm ring-1 ring-primary/5">05</div>
+<h4 class="font-bold text-lg mb-2">Payment</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Финальная оплата услуг сертификации</p>
+</div>
+<div class="relative p-6 group border-t md:border-t-0 md:border-l border-primary/10">
+<div class="w-12 h-12 bg-[#4A90E2] text-white font-black flex items-center justify-center text-xl mb-6 rounded-sm shadow-lg">06</div>
+<h4 class="font-bold text-lg mb-2">Cert</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Выдача сертификата с QR-кодом</p>
+</div>
+</div>
+</div>
+</section>
+<!-- B2B Block -->
+<section class="py-24 px-8 max-w-screen-2xl mx-auto">
+<div class="bg-[#0A192F] text-white flex flex-col md:flex-row overflow-hidden rounded-lg">
+<div class="md:w-1/2 p-12 md:p-20 flex flex-col justify-center">
+<span class="text-[#4A90E2] font-bold uppercase tracking-widest text-sm mb-6">Корпоративный сектор</span>
+<h2 class="text-4xl md:text-5xl font-extrabold leading-tight mb-8">Для корпоративных клиентов</h2>
+<p class="text-on-primary-container text-lg mb-10 max-w-md">Управляйте сертификацией всего штата сотрудников в одном окне. Контроль сроков, массовое обучение и полная аналитика.</p>
+<div>
+<button class="bg-[#4A90E2] text-white px-8 py-4 font-bold tracking-tight hover:brightness-110 transition-all flex items-center gap-3" @click="goToB2b">
+                            Открыть кабинет
+                            <span class="material-symbols-outlined">corporate_fare</span>
+</button>
+</div>
+</div>
+<div class="md:w-1/2 relative min-h-[400px]">
+<img alt="B2B Management" class="absolute inset-0 w-full h-full object-cover" data-alt="Modern high-tech industrial control room with multiple monitors showing data analytics and worker safety compliance dashboards" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8kdy-UoKGpB5g7ppSTh0XovI0gRidl60XFXmRbxSaXiZKLti1LWzmV7dchuxrQRowWXdoPzPmwIsIGL_QNfvqNC5ExOilY1HFWtQTJGfv2UhjK4Fzk75MdLRUbMwcQqp6FZrvK1k4sPtisUuIXEKS6fRRfMTW-OOBGoObH7Me8hFPKUXe7FpxgUuw0GAybN6yui53SSOY4Wx9bgsDYSBe_PmEwtdEwLO0K_HbpyitmHZPjwX-tM5YPg5NACl0TpXveget6XiZMZr6"/>
+<div class="absolute inset-0 bg-gradient-to-r from-[#0A192F] to-transparent"></div>
+</div>
+</div>
+</section>
+<!-- Verification Form -->
+<section class="py-24 px-8 max-w-screen-2xl mx-auto">
+<div class="bg-white p-12 shadow-[0_40px_40px_rgba(10,25,47,0.06)] max-w-4xl mx-auto">
+<div class="flex flex-col md:flex-row gap-12 items-center">
+<div class="md:w-1/3">
+<div class="w-16 h-16 bg-surface-container-high rounded-sm flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary-container text-3xl" data-icon="verified">verified</span>
+</div>
+<h3 class="text-2xl font-extrabold text-primary-container mb-2">Проверка подлинности</h3>
+<p class="text-sm text-on-surface-variant">Проверьте статус сертификата в официальном реестре.</p>
+</div>
+<div class="md:w-2/3 w-full">
+<form class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Номер сертификата</label>
+<input class="bg-surface-container-highest border-none p-4 focus:ring-0 focus:border-b-2 focus:border-[#4A90E2] transition-all font-mono" placeholder="SER-2024-XXXX" type="text"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">ИИН сотрудника</label>
+<input class="bg-surface-container-highest border-none p-4 focus:ring-0 focus:border-b-2 focus:border-[#4A90E2] transition-all font-mono" placeholder="12-значный номер" type="text"/>
+</div>
+<div class="md:col-span-2">
+<button class="w-full bg-[#0A192F] text-white font-extrabold py-5 hover:bg-[#162a4a] transition-all flex items-center justify-center gap-2" @click="goToCabinet">
+                                    Найти в базе данных
+                                    <span class="material-symbols-outlined text-sm">search</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Preview -->
+<section class="py-24 px-8 max-w-screen-2xl mx-auto">
+<div class="mb-12">
+<h2 class="text-4xl font-extrabold text-primary-container">Часто задаваемые вопросы</h2>
+</div>
+<div class="space-y-4 max-w-4xl">
+<div class="border-b border-outline-variant/30 py-6 group cursor-pointer">
+<div class="flex justify-between items-center">
+<h4 class="text-xl font-bold">Как долго длится процесс обучения?</h4>
+<span class="material-symbols-outlined group-hover:text-[#4A90E2] transition-colors">expand_more</span>
+</div>
+</div>
+<div class="border-b border-outline-variant/30 py-6 group cursor-pointer">
+<div class="flex justify-between items-center">
+<h4 class="text-xl font-bold">Вносятся ли данные в государственный реестр?</h4>
+<span class="material-symbols-outlined group-hover:text-[#4A90E2] transition-colors">expand_more</span>
+</div>
+</div>
+<div class="border-b border-outline-variant/30 py-6 group cursor-pointer">
+<div class="flex justify-between items-center">
+<h4 class="text-xl font-bold">Какие документы необходимы для юрлиц?</h4>
+<span class="material-symbols-outlined group-hover:text-[#4A90E2] transition-colors">expand_more</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-[#0A192F] text-white">
+<div class="w-full py-20 px-8 grid grid-cols-1 md:grid-cols-2 gap-12 max-w-screen-2xl mx-auto border-b border-white/5">
+<div class="space-y-8">
+<div class="text-3xl font-black">Sertificat.kz</div>
+<p class="text-slate-400 max-w-md text-sm leading-relaxed">
+                    Ведущий сертификационный центр Казахстана. Мы обеспечиваем соответствие вашего бизнеса самым высоким стандартам промышленной безопасности.
+                </p>
+<div class="flex gap-4">
+<NuxtLink class="w-10 h-10 rounded-sm bg-white/5 flex items-center justify-center hover:bg-[#4A90E2] transition-all" :to="paths.contacts">
+<span class="material-symbols-outlined text-sm">alternate_email</span>
+</NuxtLink>
+<NuxtLink class="w-10 h-10 rounded-sm bg-white/5 flex items-center justify-center hover:bg-[#4A90E2] transition-all" :to="paths.contacts">
+<span class="material-symbols-outlined text-sm">share</span>
+</NuxtLink>
+<NuxtLink class="w-10 h-10 rounded-sm bg-white/5 flex items-center justify-center hover:bg-[#4A90E2] transition-all" :to="paths.contacts">
+<span class="material-symbols-outlined text-sm">call</span>
+</NuxtLink>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-8">
+<div>
+<h5 class="font-bold mb-6 text-[#4A90E2] uppercase tracking-widest text-xs">Platform</h5>
+<ul class="space-y-4 text-xs text-slate-400">
+<li><NuxtLink class="hover:text-white transition-colors" :to="paths.courses">Catalog</NuxtLink></li>
+<li><NuxtLink class="hover:text-white transition-colors" :to="paths.cabinet">Verify Certificate</NuxtLink></li>
+<li><NuxtLink class="hover:text-white transition-colors" :to="paths.b2b">B2B Portal</NuxtLink></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold mb-6 text-[#4A90E2] uppercase tracking-widest text-xs">Company</h5>
+<ul class="space-y-4 text-xs text-slate-400">
+<li><NuxtLink class="hover:text-white transition-colors" :to="paths.contacts">About Us</NuxtLink></li>
+<li><NuxtLink class="hover:text-white transition-colors" :to="paths.categories">Accreditation</NuxtLink></li>
+<li><NuxtLink class="hover:text-white transition-colors" :to="paths.privacy">Privacy Policy</NuxtLink></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="max-w-screen-2xl mx-auto px-8 py-8 flex flex-col md:flex-row justify-between items-center text-[10px] text-slate-500 font-medium">
+<div>© 2024 Industrial Safety Certification Center Kazakhstan. All rights reserved.</div>
+<div class="flex gap-8 mt-4 md:mt-0 uppercase tracking-widest">
+<NuxtLink class="hover:underline" :to="paths.privacy">Privacy Policy</NuxtLink>
+<NuxtLink class="hover:underline" :to="paths.publicOffer">Terms of Service</NuxtLink>
+<NuxtLink class="hover:underline" :to="paths.licenses">Accreditation Details</NuxtLink>
+<NuxtLink class="hover:underline" :to="paths.contacts">Contact Support</NuxtLink>
+</div>
+</div>
+</footer>
 </template>
+
+<style scoped>
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+}
+details summary::-webkit-details-marker {
+  display: none;
+}
+</style>

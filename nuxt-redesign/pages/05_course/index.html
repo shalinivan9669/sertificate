@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#003e73",
+                    "tertiary-container": "#161d1f",
+                    "outline": "#75777e",
+                    "outline-variant": "#c5c6cd",
+                    "on-tertiary-fixed-variant": "#41484a",
+                    "tertiary-fixed-dim": "#c1c8ca",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#39475f",
+                    "on-primary-container": "#76849f",
+                    "secondary-container": "#68abff",
+                    "surface-dim": "#d9dadb",
+                    "surface": "#f8f9fa",
+                    "surface-container-high": "#e7e8e9",
+                    "surface-tint": "#515f78",
+                    "secondary-fixed-dim": "#a4c9ff",
+                    "tertiary": "#000000",
+                    "on-surface": "#191c1d",
+                    "error": "#ba1a1a",
+                    "on-background": "#191c1d",
+                    "inverse-primary": "#b9c7e4",
+                    "secondary-fixed": "#d4e3ff",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#b9c7e4",
+                    "surface-container-low": "#f3f4f5",
+                    "on-error": "#ffffff",
+                    "on-tertiary-container": "#7e8587",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-secondary-fixed": "#001c39",
+                    "on-tertiary-fixed": "#161d1f",
+                    "surface-variant": "#e1e3e4",
+                    "background": "#f8f9fa",
+                    "on-secondary-fixed-variant": "#004883",
+                    "primary-fixed": "#d6e3ff",
+                    "tertiary-fixed": "#dde4e6",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#44474d",
+                    "on-secondary": "#ffffff",
+                    "secondary": "#0060ac",
+                    "primary-container": "#0d1c32",
+                    "inverse-on-surface": "#f0f1f2",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed": "#0d1c32",
+                    "surface-bright": "#f8f9fa",
+                    "inverse-surface": "#2e3132",
+                    "primary": "#000000",
+                    "surface-container": "#edeeef"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #0A192F 0%, #162a4a 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- TopNavBar -->
+<header class="bg-[#0A192F] dark:bg-[#0A192F] shadow-[0_40px_40px_rgba(10,25,47,0.06)] sticky top-0 z-50">
+<nav class="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
+<div class="text-2xl font-extrabold tracking-tighter text-white">Sertificat.kz</div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-white border-b-2 border-[#4A90E2] pb-1 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">Catalog</a>
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">Accreditation</a>
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">Check Certificate</a>
+<a class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" href="#">About</a>
+</div>
+<div class="flex items-center space-x-6">
+<div class="flex items-center space-x-2 text-slate-400 hover:text-[#4A90E2] transition-colors duration-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="font-medium">Login</span>
+</div>
+</div>
+</nav>
+</header>
+<main>
+<!-- Hero Section -->
+<section class="hero-gradient py-24 px-8">
+<div class="max-w-screen-2xl mx-auto flex flex-col md:flex-row items-center gap-16">
+<div class="flex-1 space-y-8">
+<div class="inline-block px-4 py-1.5 bg-secondary/20 text-secondary-fixed rounded-full text-xs font-bold tracking-widest uppercase">
+                        Code: IS-2024-KAZ
+                    </div>
+<h1 class="font-headline font-extrabold text-5xl md:text-7xl text-white leading-[1.1] tracking-tight">
+                        Industrial Safety <br/>&amp; Emergency Response
+                    </h1>
+<p class="text-on-primary-container text-xl max-w-2xl leading-relaxed">
+                        State-accredited certification program for industrial personnel in Kazakhstan. Comprehensive training on safety protocols, risk management, and regulatory compliance.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-4 pt-4">
+<button class="bg-secondary hover:bg-secondary/90 text-white font-bold py-5 px-10 rounded-lg shadow-lg flex items-center justify-center gap-3 transition-transform active:scale-95 duration-200">
+                            Start Training
+                            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<button class="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold py-5 px-10 rounded-lg backdrop-blur-md transition-colors">
+                            Download Syllabus
+                        </button>
+</div>
+</div>
+<div class="flex-1 w-full relative">
+<div class="aspect-video rounded-xl overflow-hidden shadow-2xl relative">
+<img class="w-full h-full object-cover" data-alt="high-contrast wide angle shot of a massive oil and gas processing facility in Kazakhstan at twilight with industrial lights glowing" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5eomHovIDOx9IJFLdFeyhT7mNA1dDDKEGWeMVHx5MjvJiB6WbayngJD6p6esePgfF0dlnvFkea_W-ZiCM9Yd4L70VLxyABTwLplSkLC7-eYDmRL1oMJME87i7bKKQRIq34l-1ZFqCgyn71eMoe7KIbCuklGICtik83FjPLtgiJZ1w4B5HFAYec_lFz0fODyqy5kxA8TyEHZEAjFE5EK_klE9e6Y0lInsYwAUVKFPwEIF00fLNTAoEh7yoa5QsPGKWfrC6EGPm6B_p"/>
+<div class="absolute inset-0 bg-gradient-to-t from-[#0A192F]/80 to-transparent"></div>
+<div class="absolute bottom-6 left-6 flex items-center gap-4 bg-white/10 backdrop-blur-xl p-4 rounded-lg border border-white/10">
+<div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div>
+<div class="text-white font-bold">State Certified</div>
+<div class="text-white/60 text-xs">Accreditation #44829-K</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Who is it for? - Bento Layout -->
+<section class="py-24 px-8 bg-surface">
+<div class="max-w-screen-2xl mx-auto">
+<div class="mb-16">
+<h2 class="font-headline font-extrabold text-4xl text-primary mb-4">Who is this for?</h2>
+<div class="h-1.5 w-24 bg-secondary"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="md:col-span-2 bg-surface-container-low p-10 rounded-xl relative overflow-hidden flex flex-col justify-between min-h-[320px]">
+<div>
+<h3 class="text-2xl font-bold mb-4">Operational Leaders</h3>
+<p class="text-on-surface-variant text-lg max-w-md">Chief engineers, technical directors, and safety managers responsible for large-scale industrial compliance.</p>
+</div>
+<div class="flex items-center gap-4 text-secondary font-bold">
+<span>Compliance Management</span>
+<span class="material-symbols-outlined">engineering</span>
+</div>
+<img class="absolute right-0 bottom-0 w-1/3 opacity-20 grayscale" data-alt="professional industrial engineer in a white hard hat and safety vest looking at a digital tablet on site" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr8ubVkBUGrpERiRfsMoHmLpo9iNNVWQ4JbGnwR5YAKgz7hmR6JixZA2nJtugNGYkqyitvHm9dMe7obFHCZKBef7a8twB-nNxgf6pnObzjC9ukcu11bvY6vBg8Kj2DEQHW90cc7CHZ7O2a4uPgqq8LJTlfHOJsK0DlbbJByOwOZjOmAi68c6XoJMmiBn1xkkJLA9ln4eGKcotGQr-k1QtbnZwl59wdHul_ETh0o-HThyCDKQmbvKPN_HSDBc4DIWC0JnTvlrnneAN3"/>
+</div>
+<div class="bg-primary-container p-10 rounded-xl text-white flex flex-col justify-between">
+<span class="material-symbols-outlined text-4xl text-secondary-container">shield_person</span>
+<div>
+<h3 class="text-2xl font-bold mb-4">Safety Officers</h3>
+<p class="text-on-primary-container">Specialists dedicated to maintaining and inspecting safety standards on technical sites.</p>
+</div>
+</div>
+<div class="bg-white p-10 rounded-xl border border-outline-variant/20 shadow-sm flex flex-col justify-between">
+<h3 class="text-2xl font-bold mb-4">Field Technicians</h3>
+<p class="text-on-surface-variant">Front-line personnel working in hazardous environments requiring mandatory annual certification.</p>
+<div class="mt-6 flex -space-x-3">
+<div class="w-10 h-10 rounded-full border-2 border-white bg-slate-200"></div>
+<div class="w-10 h-10 rounded-full border-2 border-white bg-slate-300"></div>
+<div class="w-10 h-10 rounded-full border-2 border-white bg-slate-400"></div>
+<div class="w-10 h-10 rounded-full border-2 border-white bg-secondary flex items-center justify-center text-[10px] text-white">+5k</div>
+</div>
+</div>
+<div class="md:col-span-2 bg-surface-container-highest p-10 rounded-xl flex items-center gap-8">
+<div class="hidden sm:block w-48 h-32 bg-slate-300 rounded overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="close-up of a pressure gauge and industrial valves on a metallic pipeline with shallow depth of field" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVkbXZ6zh6MJgJ_WHHUPYkXk8t6vWUj43M6yiBNgBw9tqjCpA96ukaeVmf9UN5KpCVbIihcWKuParlpnUaZuLgRXL4QHB6br8QJdh3_HoGVIcfsI2apG4Iv5kXF7iW1xdhq8h2I0XM9A6A96kgoBCCpkezqNYV09qzfTH5U2WeD7mhvKGWISpvhm8BNNJXCxOE2ZTWTdvHQnzjphrOjSPhDhlBJUymCkG7vD_wUaWaC_PJJzjS-exAv5NO9uHWQfQ0TExAQnAcmZcn"/>
+</div>
+<div>
+<h3 class="text-2xl font-bold mb-2">Corporate Teams</h3>
+<p class="text-on-surface-variant">Bulk training solutions for organizations with 50+ employees, including custom dashboards and reporting.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Process Section -->
+<section class="py-24 px-8 bg-primary-container">
+<div class="max-w-screen-2xl mx-auto">
+<div class="text-center mb-20">
+<h2 class="font-headline font-extrabold text-4xl text-white mb-4">Certification Process</h2>
+<p class="text-on-primary-container text-lg">Four steps to industrial compliance</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
+<div class="hidden md:block absolute top-10 left-0 w-full h-0.5 bg-secondary/30 z-0"></div>
+<!-- Step 1 -->
+<div class="relative z-10 flex flex-col items-center text-center">
+<div class="w-20 h-20 bg-[#0A192F] border-4 border-secondary rounded-lg flex items-center justify-center text-white mb-6">
+<span class="material-symbols-outlined text-3xl">menu_book</span>
+</div>
+<h4 class="text-white font-bold text-xl mb-2">Read</h4>
+<p class="text-on-primary-container text-sm">Review 12 technical modules curated by industry experts.</p>
+</div>
+<!-- Step 2 -->
+<div class="relative z-10 flex flex-col items-center text-center">
+<div class="w-20 h-20 bg-[#0A192F] border-4 border-secondary rounded-lg flex items-center justify-center text-white mb-6">
+<span class="material-symbols-outlined text-3xl">fact_check</span>
+</div>
+<h4 class="text-white font-bold text-xl mb-2">Confirm</h4>
+<p class="text-on-primary-container text-sm">Verify your identity and workplace credentials via ECP.</p>
+</div>
+<!-- Step 3 -->
+<div class="relative z-10 flex flex-col items-center text-center">
+<div class="w-20 h-20 bg-[#0A192F] border-4 border-secondary rounded-lg flex items-center justify-center text-white mb-6">
+<span class="material-symbols-outlined text-3xl">quiz</span>
+</div>
+<h4 class="text-white font-bold text-xl mb-2">Test</h4>
+<p class="text-on-primary-container text-sm">Complete the final examination with a 85% pass rate.</p>
+</div>
+<!-- Step 4 -->
+<div class="relative z-10 flex flex-col items-center text-center">
+<div class="w-20 h-20 bg-secondary rounded-lg flex items-center justify-center text-white mb-6 shadow-[0_0_20px_rgba(74,144,226,0.4)]">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+</div>
+<h4 class="text-white font-bold text-xl mb-2">Get Cert</h4>
+<p class="text-on-primary-container text-sm">Instant digital delivery of your official certificate.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Training Program Accordion -->
+<section class="py-24 px-8">
+<div class="max-w-4xl mx-auto">
+<h2 class="font-headline font-extrabold text-4xl text-primary text-center mb-16">Training Program</h2>
+<div class="space-y-4">
+<!-- Accordion Item 1 -->
+<div class="bg-white border-l-4 border-secondary shadow-sm overflow-hidden">
+<button class="w-full px-8 py-6 flex justify-between items-center text-left hover:bg-surface-container-low transition-colors">
+<span class="font-bold text-xl">Module 01: Legal Framework in RK</span>
+<span class="material-symbols-outlined">expand_more</span>
+</button>
+<div class="px-8 pb-6 text-on-surface-variant">
+<p>Overview of the Law "On Civil Protection" and Republic of Kazakhstan industrial safety regulations. Understanding administrative and criminal liability.</p>
+</div>
+</div>
+<!-- Accordion Item 2 -->
+<div class="bg-white border-l-4 border-outline-variant shadow-sm overflow-hidden">
+<button class="w-full px-8 py-6 flex justify-between items-center text-left hover:bg-surface-container-low transition-colors">
+<span class="font-bold text-xl">Module 02: Risk Assessment &amp; Control</span>
+<span class="material-symbols-outlined">expand_more</span>
+</button>
+</div>
+<!-- Accordion Item 3 -->
+<div class="bg-white border-l-4 border-outline-variant shadow-sm overflow-hidden">
+<button class="w-full px-8 py-6 flex justify-between items-center text-left hover:bg-surface-container-low transition-colors">
+<span class="font-bold text-xl">Module 03: Emergency Response Protocols</span>
+<span class="material-symbols-outlined">expand_more</span>
+</button>
+</div>
+<!-- Accordion Item 4 -->
+<div class="bg-white border-l-4 border-outline-variant shadow-sm overflow-hidden">
+<button class="w-full px-8 py-6 flex justify-between items-center text-left hover:bg-surface-container-low transition-colors">
+<span class="font-bold text-xl">Module 04: Technical Documentation</span>
+<span class="material-symbols-outlined">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Certificate & Legality -->
+<section class="py-24 px-8 bg-surface-container-low">
+<div class="max-w-screen-2xl mx-auto flex flex-col lg:flex-row items-center gap-20">
+<div class="flex-1">
+<div class="relative group">
+<div class="absolute -inset-4 bg-secondary/10 rounded-xl blur-2xl group-hover:bg-secondary/20 transition-all"></div>
+<div class="relative bg-white p-8 rounded shadow-2xl border-t-[12px] border-secondary">
+<img class="w-full shadow-inner border" data-alt="clean professional industrial certificate layout with gold seals, signatures, and QR code on premium textured paper" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDytFQRW59mfbuV2E_5aKvn5HjC1-XYnAN5OBSumxDeUo8bv3Nx7N-22VVA9NCRkQch4X_5g7HhPoiPuk8Ip3h9ttU_EVwnZgqzbm4xaedKtQkia5MWKatO-utB6lzfdtjdDoTHLyqZoSmojjMJJXfxkj8GBGDClKtr-Z_5_3epM0BEbSfXhAczGmRlioqruLXEsALHVUVW3qcYJGMpECcYyDkT_XippncMO3JOXPhaHNVS4TcCF6-OldOW0IGgi1Jr7x3CbuQM0uM"/>
+</div>
+</div>
+</div>
+<div class="flex-1 space-y-8">
+<h2 class="font-headline font-extrabold text-4xl text-primary leading-tight">Legitimate, verifiable, <br/>and recognized nationwide.</h2>
+<p class="text-on-surface-variant text-lg">Every certificate issued by Sertificat.kz includes a unique QR code linked to our national database. Fully compliant with Ministry of Emergency Situations requirements.</p>
+<ul class="space-y-4">
+<li class="flex items-start gap-4">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-semibold">Valid for 3 years in the territory of Kazakhstan</span>
+</li>
+<li class="flex items-start gap-4">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-semibold">Accepted by all state audit bodies (GASK, etc.)</span>
+</li>
+<li class="flex items-start gap-4">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-semibold">Secure blockchain-backed verification</span>
+</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- Pricing Section -->
+<section class="py-24 px-8">
+<div class="max-w-screen-2xl mx-auto">
+<div class="text-center mb-16">
+<h2 class="font-headline font-extrabold text-4xl text-primary">Transparent Pricing</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+<!-- Single Plan -->
+<div class="bg-white p-12 rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between">
+<div>
+<div class="text-sm font-bold text-secondary mb-2">INDIVIDUAL</div>
+<h3 class="text-3xl font-headline font-extrabold mb-6">Standard Training</h3>
+<div class="text-5xl font-extrabold mb-8">45,000 <span class="text-lg text-on-surface-variant">₸</span></div>
+<ul class="space-y-4 text-on-surface-variant mb-12">
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-sm">check</span> 12 Educational Modules</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-sm">check</span> 3 Final Test Attempts</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-sm">check</span> Digital PDF Certificate</li>
+</ul>
+</div>
+<button class="w-full py-4 border-2 border-primary text-primary font-bold hover:bg-primary hover:text-white transition-all rounded-lg">Buy Individual</button>
+</div>
+<!-- Corporate Plan -->
+<div class="bg-[#0A192F] p-12 rounded-xl shadow-xl flex flex-col justify-between text-white relative overflow-hidden">
+<div class="absolute top-6 right-6 px-3 py-1 bg-secondary text-xs font-bold rounded">BEST VALUE</div>
+<div>
+<div class="text-sm font-bold text-secondary-container mb-2 uppercase">Enterprise</div>
+<h3 class="text-3xl font-headline font-extrabold mb-6">Corporate Plan</h3>
+<div class="text-5xl font-extrabold mb-2">Contact Us</div>
+<div class="text-on-primary-container text-sm mb-8">Custom pricing for groups of 10+</div>
+<ul class="space-y-4 text-on-primary-container mb-12">
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary-container text-sm">check</span> Manager Dashboard</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary-container text-sm">check</span> Progress Reports</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary-container text-sm">check</span> Priority Testing Support</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary-container text-sm">check</span> Invoiced Payment (Beznal)</li>
+</ul>
+</div>
+<button class="w-full py-4 bg-secondary text-white font-bold hover:bg-secondary/90 transition-all rounded-lg">Request Quote</button>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Section -->
+<section class="py-24 px-8 bg-surface-container-low">
+<div class="max-w-3xl mx-auto">
+<h2 class="font-headline font-extrabold text-3xl text-center mb-12">Frequently Asked Questions</h2>
+<div class="space-y-6">
+<div class="bg-white p-6 rounded-lg shadow-sm">
+<h4 class="font-bold mb-2">How long does the training take?</h4>
+<p class="text-on-surface-variant text-sm">The average completion time is 4-6 hours. However, you can study at your own pace; access is granted for 30 days.</p>
+</div>
+<div class="bg-white p-6 rounded-lg shadow-sm">
+<h4 class="font-bold mb-2">What happens if I fail the final test?</h4>
+<p class="text-on-surface-variant text-sm">You are granted 3 attempts. If you fail all three, you must re-enroll in the module, but our support team can provide additional guidance.</p>
+</div>
+<div class="bg-white p-6 rounded-lg shadow-sm">
+<h4 class="font-bold mb-2">Is the certificate valid for international projects?</h4>
+<p class="text-on-surface-variant text-sm">This specific certification is designed for the Republic of Kazakhstan state standards. For international OHSAS standards, please check our Global Catalog.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-[#0A192F] text-white">
+<div class="w-full py-12 px-8 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-screen-2xl mx-auto">
+<div class="space-y-6">
+<div class="text-xl font-black text-white">Sertificat.kz</div>
+<p class="text-slate-400 text-xs leading-relaxed max-w-md">
+                    © 2024 Industrial Safety Certification Center Kazakhstan. All rights reserved. <br/>
+                    Accreditation License No. IS-0092-2022 granted by the Ministry of Emergency Situations.
+                </p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<a class="block text-slate-400 text-xs hover:underline" href="#">Privacy Policy</a>
+<a class="block text-slate-400 text-xs hover:underline" href="#">Terms of Service</a>
+</div>
+<div class="space-y-2">
+<a class="block text-slate-400 text-xs hover:underline" href="#">Accreditation Details</a>
+<a class="block text-slate-400 text-xs hover:underline" href="#">Contact Support</a>
+</div>
+</div>
+</div>
+</footer>
+<script src="../shared/mock-flow.js"></script>
+</body></html>
