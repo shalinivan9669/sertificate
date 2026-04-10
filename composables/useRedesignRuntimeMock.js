@@ -22,7 +22,7 @@ const PCI_DSS_LOGO =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuAWT_4JyeeCNZ_2JeJgPRSbrI95zk25I30ImZwqZ0Pi-Ty0JEpXQ1M22Hr3MpJ14mhQpRD4Snn-ktqaeqKc1NaeQW07Y4bojoBJ2iLThuLKdPuY_hdb1U1X8Wz80uQ6vycgXwagV-XRd6SAqQnjVCcUL6oIpDV_t-WAQY4mmaWFwW0TPMouUQ3G4GU0vWA8nS-q9BL8vCBQoK3P5dzC2aiQMMKTbaVyLsl41tyd7g2qPdB9OEcrbWtDLcODBRkCpEH2FR1-hKpN6cWr';
 
 const LEARNING_MODULE_PROGRESS_START = 45;
-const RETRY_PAYMENT_AMOUNT = 5000;
+const RETRY_PAYMENT_AMOUNT = 7000;
 const FORCE_OPTION_A_AS_CORRECT = true;
 
 const createQuestion = (id, question, options, answerIndex, explanation) => ({
@@ -429,7 +429,7 @@ const createCheckoutMethods = () => [
 export const getRuntimeFlowFixture = (courseId) => {
   const program = getProgramFixture(courseId);
   const courseCode = buildCourseCode(program.courseId);
-  const totalAmount = parseCurrency(program.price) || 57500;
+  const totalAmount = parseCurrency(program.price) || 7000;
   const tuitionAmount = Math.round(totalAmount * 0.78 / 500) * 500;
   const documentAmount = totalAmount - tuitionAmount;
   const runtimeCourseTitle = buildRuntimeTitles(program.courseId, program.title);

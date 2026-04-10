@@ -127,7 +127,7 @@ const openCourse = (slug) => {
 <input class="w-full h-1 bg-outline-variant/30 appearance-none cursor-pointer accent-secondary" type="range"/>
 <div class="flex justify-between text-xs font-mono text-on-surface-variant">
 <span>0 ₸</span>
-<span>500,000 ₸</span>
+<span>7,000 ₸</span>
 </div>
 </div>
 </div>
@@ -188,7 +188,7 @@ const openCourse = (slug) => {
 <div class="mt-auto pt-6 border-t border-outline-variant/10 flex items-center justify-between">
 <div class="flex flex-col">
 <span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-tighter">Full Course Price</span>
-<span class="text-2xl font-black text-on-surface">125,000 ₸</span>
+<span class="text-2xl font-black text-on-surface">7,000 ₸</span>
 </div>
 <div class="flex gap-2">
 <button class="p-3 bg-surface-container border border-outline-variant/30 rounded-lg text-secondary hover:bg-secondary-container transition-colors" @click="openCourse('industrial-safety')">
@@ -225,7 +225,7 @@ const openCourse = (slug) => {
 <div class="mt-auto pt-6 border-t border-outline-variant/10 flex items-center justify-between">
 <div class="flex flex-col">
 <span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-tighter">Full Course Price</span>
-<span class="text-2xl font-black text-on-surface">85,000 ₸</span>
+<span class="text-2xl font-black text-on-surface">7,000 ₸</span>
 </div>
 <div class="flex gap-2">
 <button class="p-3 bg-surface-container border border-outline-variant/30 rounded-lg text-secondary hover:bg-secondary-container transition-colors" @click="openCourse('labor-safety')">
@@ -262,7 +262,7 @@ const openCourse = (slug) => {
 <div class="mt-auto pt-6 border-t border-outline-variant/10 flex items-center justify-between">
 <div class="flex flex-col">
 <span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-tighter">Full Course Price</span>
-<span class="text-2xl font-black text-on-surface">195,000 ₸</span>
+<span class="text-2xl font-black text-on-surface">7,000 ₸</span>
 </div>
 <div class="flex gap-2">
 <button class="p-3 bg-surface-container border border-outline-variant/30 rounded-lg text-secondary hover:bg-secondary-container transition-colors" @click="openCourse('industrial-safety')">
@@ -307,7 +307,7 @@ const openCourse = (slug) => {
 <div class="mt-auto pt-6 border-t border-outline-variant/10 flex items-center justify-between">
 <div class="flex flex-col">
 <span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-tighter">Full Course Price</span>
-<span class="text-2xl font-black text-on-surface">55,000 ₸</span>
+<span class="text-2xl font-black text-on-surface">7,000 ₸</span>
 </div>
 <div class="flex gap-2">
 <button class="p-3 bg-surface-container border border-outline-variant/30 rounded-lg text-secondary hover:bg-secondary-container transition-colors" @click="openCourse('fire-safety')">

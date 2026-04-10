@@ -1,7 +1,9 @@
 <script setup>
 import { computed } from 'vue';
 import { useHead, useI18n } from '#imports';
-import HomePageClassic from '~/components/HomePageClassic.vue';
+import HomePage from '~/components/HomePage.vue';
+
+definePageMeta({ layout: 'fullwidth' });
 
 const { t } = useI18n();
 
@@ -23,5 +25,5 @@ useHead(() => ({
 </script>
 
 <template>
-  <HomePageClassic />
+  <HomePage />
 </template>

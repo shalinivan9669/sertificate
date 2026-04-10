@@ -14,7 +14,7 @@ const goToB2b = () => navigateTo(paths.value.b2b);
 <header class="bg-[#0A192F] sticky top-0 z-50 shadow-[0_40px_40px_rgba(10,25,47,0.06)]">
 <nav class="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
 <div class="flex items-center gap-12">
-<NuxtLink class="text-2xl font-extrabold tracking-tighter text-white" :to="paths.home">Sertificat.kz</NuxtLink>
+<NuxtLink class="text-2xl font-extrabold tracking-tighter text-white" to="/second">Sertificat.kz</NuxtLink>
 <ul class="hidden md:flex gap-8 items-center">
 <li><NuxtLink class="text-white border-b-2 border-[#4A90E2] pb-1 font-medium" :to="paths.courses">Catalog</NuxtLink></li>
 <li><NuxtLink class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200" :to="paths.categories">Accreditation</NuxtLink></li>
