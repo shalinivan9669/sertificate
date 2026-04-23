@@ -9,12 +9,13 @@ import {
   useSwitchLocalePath,
   useI18n,
 } from '#imports';
+import CitySwitcher from '~/components/CitySwitcher.vue';
 
 const localePath = useLocalePath();
 const switchLocalePath = useSwitchLocalePath();
 const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 
 const localeHead = useLocaleHead({
   addDirAttribute: true,
@@ -42,76 +43,43 @@ useHead(() => ({
 
 <template>
   <div class="min-h-screen flex flex-col bg-surface text-on-surface">
-    <!-- Premium Industrial Header -->
-    <header class="bg-[#0A192F] sticky top-0 z-50 shadow-[0_4px_40px_rgba(10,25,47,0.3)]">
-      <nav class="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
-        <div class="flex items-center gap-10">
-          <NuxtLink :to="localePath('/')" class="flex items-center">
-            <img src="/logo.png" alt="OT Center" class="h-12 w-auto" />
-          </NuxtLink>
-          <ul class="hidden md:flex gap-8 items-center">
-            <li>
-              <NuxtLink
-                to="/courses"
-                class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200 text-sm"
-              >
-                Каталог
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink
-                :to="localePath('/licenses')"
-                class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200 text-sm"
-              >
-                Аккредитация
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink
-                :to="localePath('/contacts')"
-                class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200 text-sm"
-              >
-                Контакты
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink
-                to="/b2b"
-                class="text-slate-400 font-medium hover:text-[#4A90E2] transition-colors duration-200 text-sm"
-              >
-                B2B
-              </NuxtLink>
-            </li>
-          </ul>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-1 text-sm">
+    <header class="border-b border-slate-200 bg-white/70 backdrop-blur">
+      <div class="container flex items-center justify-between py-4 gap-4">
+        <NuxtLink :to="localePath('/')" class="flex items-center text-lg font-semibold text-brand">
+          <img src="/logo.png" alt="OT Center" class="h-20 w-auto" />
+        </NuxtLink>
+        <div class="flex items-center gap-3">
+          <CitySwitcher />
+          <div class="flex items-center gap-1 text-sm text-slate-600">
             <NuxtLink
               :class="[
-                'px-2 py-1 hover:text-[#4A90E2] transition-colors',
-                locale === 'ru' ? 'text-white font-semibold' : 'text-slate-400',
+                'px-2 py-1 rounded hover:text-brand',
+                locale === 'ru' ? 'bg-slate-100 text-brand font-medium' : '',
               ]"
               :to="switchLocalePath('ru')"
             >
               RU
             </NuxtLink>
-            <span class="text-slate-600">/</span>
+            <span>/</span>
             <NuxtLink
               :class="[
-                'px-2 py-1 hover:text-[#4A90E2] transition-colors',
-                locale === 'kk' ? 'text-white font-semibold' : 'text-slate-400',
+                'px-2 py-1 rounded hover:text-brand',
+                locale === 'kk' ? 'bg-slate-100 text-brand font-medium' : '',
               ]"
               :to="switchLocalePath('kk')"
             >
               KK
             </NuxtLink>
           </div>
-          <NuxtLink
-            to="/cabinet"
-            class="bg-[#4A90E2] text-white px-5 py-2 font-bold text-sm tracking-tight hover:brightness-110 transition-all"
-          >
-            Войти
-          </NuxtLink>
+        </div>
+      </div>
+      <nav class="border-t border-slate-200 bg-white">
+        <div class="container flex flex-wrap items-center gap-4 py-3 text-sm font-medium text-slate-700">
+          <NuxtLink :to="localePath('/')" class="hover:text-brand">{{ t('nav.home') }}</NuxtLink>
+          <NuxtLink :to="`${localePath('/') }#courses`" class="hover:text-brand">{{ t('nav.courses') }}</NuxtLink>
+          <NuxtLink :to="`${localePath('/') }#formats`" class="hover:text-brand">{{ t('nav.formats') }}</NuxtLink>
+          <NuxtLink :to="localePath('/blog')" class="hover:text-brand">{{ t('nav.blog') }}</NuxtLink>
+          <NuxtLink :to="localePath('/contacts')" class="hover:text-brand">{{ t('nav.contacts') }}</NuxtLink>
         </div>
       </nav>
     </header>
