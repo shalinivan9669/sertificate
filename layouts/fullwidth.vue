@@ -1,9 +1,10 @@
 <script setup>
 import { computed } from 'vue';
-import { useHead, useLocaleHead, useRoute, useRuntimeConfig } from '#imports';
+import { useHead, useLocaleHead, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
 
 const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
+const localePath = useLocalePath();
 
 const localeHead = useLocaleHead({
   addDirAttribute: true,
@@ -13,7 +14,9 @@ const localeHead = useLocaleHead({
 
 const canonicalUrl = computed(() => {
   const baseUrl = runtimeConfig.public.siteUrl || 'https://otcenter.kz';
-  return new URL(route.path || '/', baseUrl).toString();
+  const canonicalPath = route.meta?.canonicalPath || route.path || '/';
+  const resolvedPath = canonicalPath.startsWith('http') ? canonicalPath : localePath(canonicalPath);
+  return new URL(resolvedPath, baseUrl).toString();
 });
 
 useHead(() => ({
