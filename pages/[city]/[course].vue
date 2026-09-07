@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import useCity from '~/composables/useCity';
 import { courses } from '~/config/courses';
 import CoursePage from '~/components/CoursePage.vue';
+import ComplianceCourseNotice from '~/components/ComplianceCourseNotice.vue';
 import { useRoute, createError } from '#imports';
 
 const route = useRoute();
@@ -20,5 +21,8 @@ if (!course.value) {
 </script>
 
 <template>
-  <CoursePage :course="course" :city="city" />
+  <div>
+    <ComplianceCourseNotice :course="course" />
+    <CoursePage :course="course" :city="city" />
+  </div>
 </template>
