@@ -1,6 +1,6 @@
 # OT Center — статус реализации
 
-Обновлено: 2026-09-07. Реализация и браузерные проверки выполнены локально; проверка выпуска продолжается. Владелец отдельно разрешил production-деплой после обновлений и проверок. Реальные платежи и массовые уведомления отдельно не разрешены.
+Обновлено: 2026-09-07. Реализация запушена в GitHub, удалённый Quality прошёл, Vercel preview готов. Production ожидает настройки постоянного хранилища и почты. Владелец отдельно разрешил production-деплой после обновлений и проверок. Реальные платежи и массовые уведомления отдельно не разрешены.
 
 ## Исходное состояние и поручение
 
@@ -46,9 +46,10 @@
 | npm audit --json | passed | Последний повтор exit0, 0 vulnerabilities; dependency-audit-final.json |
 | npm run lint | passed | Полный запуск exit0; implementation-lint.log |
 | npm run typecheck | passed | Полный повтор exit0; strict app/server/shared/tests. Только artifacts/generated/local folders исключены из source scope |
-| npm test | passed | **91/91, 0 failed, 0 skipped**, 27.7s; implementation-tests.log |
+| npm test | passed | Последний полный запуск **93/93, 0 failed, 0 skipped**, exit 0; implementation-noindex-checker-tests.log. Добавлены 2 regression проверки index/noindex; предыдущие 91/91 также пройдены |
 | Cold build:vercel | passed | VERCEL=1/VERCEL_ENV=preview без DB secrets: 550 public HTML+GSC,15770 asset references,0missing, один buildId34a99837-1e71-4025-83a9-2414427497cf |
 | Vercel function artifact | passed | Node24,maxDuration60s;18.1MB/4.57MBgzip; remote path без native SQLite |
+| Отдельная noindex Vercel сборка | passed | OT_NOINDEX=true, VERCEL=1, preview/staging, новая scratch-копия: 550 HTML, sitemap 550, 15770 asset refs, 0 missing, build 84765834-4535-434d-a2f3-42766754a0eb; meta noindex/nofollow и robots Disallow:/ подтверждены. Default production проверка осталась строгой |
 | Node build + SEO/asset gates | passed | 550 public HTML+GSC,15770 refs,0missing, buildId6aa9fbb6-2c27-4ec9-bb12-8eb4f4fd60f9; сервер3101 |
 | Полные HTTP contracts | passed | 550 публичных страниц, 10 закрытых, 6 настоящих 404, sitemap 550; artifacts/seo/http-contract-all-report-6aa9fbb6.json, exit 0 |
 | Последние visual/a11y | passed | 52responsive,8home comparisons,6CSS zoom200%,2keyboard/form,0fail; artifacts/visual/design-after-6aa9fbb6/report.json. Screen reader not_run |
@@ -60,7 +61,10 @@
 | Backup/restore CLI | passed | 34tables/106rows,schema001–005,read-only snapshot6ms,backup395ms,restore424ms; exactdata/schema/FK/integrity/triggers,wrong-password/tamper/overwriteguards |
 | FK readiness CLI | passed | Новая восстановленная localcopy: schema/FK/negative insert сrollback,writesCommitted0; remote not_run |
 | Precommit privacy gate | passed | Срез144existing/new candidatesбез.serena, ставок/реквизитов/секретов/сырогоPDFнет; publicDTO/NodeHTML/payloadбезprivatefields/questionkeys |
-| GitHub/Vercel remote CI/deploy | not_run | Push пока не выполнен; git push --dry-run подтвердил доступ |
+| Полный аудит client bundles | passed | Node 6aa9fbb6 и Vercel 34a99837: по 84 JS и 5 CSS, path/SHA256 совпадают; maps нет; AST и 1199 публичных текстовых файлов на artifact проверены. Учебные/почтовые/session canaries, реквизиты и точные ценовые фразы не найдены. Staff editor содержит только форму авторинга, не встроенные ответы. Реальные provider secrets отсутствуют для exact comparison; hosted bundle отдельно не проверен |
+| GitHub remote CI | passed | Commit 1e23fc58a68af50917f0334b037a356c28de8fc4, PR #2; Quality run 34132591085: Linux npm ci/lint/typecheck/test/audit/Node build/SEO/assets/Vercel build — все success |
+| Vercel preview deploy | passed | 8ApeFvY61QTAmTCWS3SqJ4PKzJ4m, Ready за 1m32s. Через авторизованный браузер открыты прежняя главная, каталог 20 направлений и ISO 9001 RU/KK со стоимостью по запросу. Resources подтверждает Node 24/max 60s |
+| Полный HTTP smoke hosted preview | not_run | Vercel SSO возвращает внешнему HTTP-клиенту 302 и noindex. Прямой переход браузера на /api/ready блокируется клиентом; readiness не заявлен. Защита не обходилась |
 
 Промежуточные ошибки: первый одновременный dev/build дал Windows ESM/HTTP500 и невалидные screenshots — заменены корректным baseline. Работающий старый сервер блокировал native binary (EPERM) — остановлен и пересобран. Повтор Vercel смешивал stale HTML/assets — исправлен official Nuxt cleanup с проверкой результата и обязательным asset gate. Typecheck включал скачанные SDK research .ts — исключены artifacts/generated/local, не исходники приложения.
 
@@ -73,6 +77,10 @@ Nuxt/Nitro Vercel Functions + удалённый libSQL/Turso, native file DB т
 Доступен существующий Vercel `shalinivan9669s-projects/sertificate`, ID`prj_e5yFcuJHsGCwJguqx3dRVe04ZPHr`, production branch main, домены www.otcenter.kz и sertificate.vercel.app. Видны только Production AMO_* env, без DB/Auth/SMTP. Секреты не раскрывались. CLIlogin отменён: Allow Access оставался disabled; Git authentication работает.
 
 **Production разрешён владельцем.** Новая интеграция Turso пока не создана: принятие условий нового сервиса ожидает отдельного ответа; это не повторное разрешение на деплой. SMTP/служебный адрес также ожидают ответа. Платные тарифы, реальные платежи и массовые уведомления не подключались. Ограничение Hobby для личного некоммерческого использования было сообщено ранее; тариф автоматически не меняется.
+
+Результат публикации: [PR #2](https://github.com/shalinivan9669/sertificate/pull/2), [успешный Quality](https://github.com/shalinivan9669/sertificate/actions/runs/34132591085), [Vercel deployment](https://vercel.com/shalinivan9669s-projects/sertificate/8ApeFvY61QTAmTCWS3SqJ4PKzJ4m), [preview сайта](https://sertificate-qtcfln6fa-shalinivan9669s-projects.vercel.app/). Preview требует аккаунт Vercel. Ветка main и production остаются на исходном commit; PR draft до устранения зависимостей выпуска.
+
+В hosted preview `/kk/cabinet` отображает локализованную ошибку запроса и кнопку повтора; работа кабинета без подключённой БД не заявляется. Read-only проверка существующего production подтвердила прежний `otcenter.kz → 307 → www.otcenter.kz → 200`. Реальные заявки, письма, платежи и документы при этом не создавались.
 
 ## Конкретные оставшиеся зависимости
 

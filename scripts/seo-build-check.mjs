@@ -22,6 +22,6 @@ async function visit(folder) {
 await visit(output);
 for (const route of buildPublicRoutes()) {
   const html = await fs.readFile(path.join(output, route === '/' ? 'index.html' : `${route.slice(1)}/index.html`), 'utf8');
-  inspectPublicHtml(html, route, siteUrl);
+  inspectPublicHtml(html, route, siteUrl, { indexable: process.env.OT_NOINDEX !== 'true' });
 }
 console.log(`Build SEO contracts passed: ${buildPublicRoutes().length} public HTML pages checked; ${found.length} generated index files contain no private route.`);

@@ -2,7 +2,7 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 186
+Всего файлов: 189
 
 - `.env.example`
 - `.gitattributes`
@@ -74,6 +74,8 @@
 - `docs/LMS-BROWSER-QA.md`
 - `docs/PDF-CONTENT-AUDIT.md`
 - `docs/PERFORMANCE_LOCAL_LAB_2026-09-07.md`
+- `docs/PREVIEW-NOINDEX-QA.md`
+- `docs/PUBLIC_BUNDLE_AUDIT_2026-09-07.md`
 - `docs/RUNBOOK.md`
 - `docs/SEO-POLICY.md`
 - `docs/STATUS_MATRIX_METHOD.md`
@@ -187,6 +189,7 @@
 - `tests/prepare-performance-session.mjs`
 - `tests/public-content.test.ts`
 - `tests/public-route-policy.test.mjs`
+- `tests/seo-indexability.test.mjs`
 - `tests/source-products.test.ts`
 - `tsconfig.json`
 - `vercel.json`
