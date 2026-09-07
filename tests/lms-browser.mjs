@@ -8,7 +8,7 @@ if (!/^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(base))
     "Browser test only runs against an explicitly local test server",
   );
 const fixture = JSON.parse(
-  await readFile(new URL("../.data/e2e-fixture.json", import.meta.url), "utf8"),
+  await readFile(process.env.OT_E2E_FIXTURE_PATH || new URL("../.data/e2e-fixture.json", import.meta.url), "utf8"),
 );
 assert.equal(fixture.notice, "SYNTHETIC LOCAL TEST DATA ONLY");
 await mkdir("artifacts/lms-browser", { recursive: true });

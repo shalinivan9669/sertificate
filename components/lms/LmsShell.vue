@@ -11,7 +11,7 @@ const { tr } = useLmsApi();
 <template>
   <section class="lms mx-auto max-w-6xl space-y-7">
     <nav
-      class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm"
+      class="lms-nav grid grid-cols-1 items-center gap-x-5 gap-y-2 text-sm sm:flex sm:flex-wrap"
       :aria-label="tr('Навигация обучения', 'Оқу навигациясы')"
     >
       <NuxtLink :to="path(back || '/courses')"

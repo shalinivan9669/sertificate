@@ -5,6 +5,9 @@ import { deliverLead } from './leads';
 import { renderCredential } from './credentials';
 import { businessFail as fail, id, nowIso, parse } from '../utils/business';
 import { assertRole, type AppUser } from '../utils/auth';
+import { incrementOperationalCounter, recordIncident, scanOperationalIncidents } from './incidents';
+import { deliverLearningReminder, scheduleLearningReminders } from './reminders';
+import { expireDueAttempts } from './assessment';
 
 export function secretEquals(value: string, expected: string | undefined) {
   if (!expected || expected.length < 32) return false;
@@ -54,11 +57,26 @@ async function notification(job: any) {
 async function deliverAuthMail(job: any) {
   if (!process.env.SMTP_URL || !process.env.MAIL_FROM || process.env.OT_EMAIL_DELIVERY_ENABLED !== '1') fail(503, 'EMAIL_DELIVERY_NOT_CONFIGURED');
   const data = parse(z.object({ to: z.email(), subject: z.string().max(180), text: z.string().max(20000) }), JSON.parse(job.payload_json));
+  await sendMail(data, job.id);
+}
+async function sendMail(data: { to: string; subject: string; text: string }, jobId: string) {
+  if (!process.env.SMTP_URL || !process.env.MAIL_FROM) fail(503, 'EMAIL_DELIVERY_NOT_CONFIGURED');
   const { default: nodemailer } = await import('nodemailer');
   const transport = nodemailer.createTransport({ url: process.env.SMTP_URL, connectionTimeout: 8000, greetingTimeout: 8000, socketTimeout: 12000, disableFileAccess: true, disableUrlAccess: true });
   const timeout = setTimeout(() => transport.close(), 15000);
-  try { await transport.sendMail({ from: process.env.MAIL_FROM, to: data.to, subject: data.subject, text: data.text, messageId: `<${job.id}@otcenter.local>` }); }
+  try { await transport.sendMail({ from: process.env.MAIL_FROM, to: data.to, subject: data.subject, text: data.text, messageId: `<${jobId}@otcenter.local>` }); }
   finally { clearTimeout(timeout); transport.close(); }
+}
+async function deliverOperationalAlert(job: any): Promise<'delivered' | 'cancelled'> {
+  if (process.env.OT_OPERATIONAL_ALERTS_ENABLED !== '1') fail(503, 'OPERATIONAL_ALERT_DELIVERY_DISABLED');
+  const recipient = z.email().safeParse(process.env.OT_ALERT_EMAIL);
+  if (!recipient.success) fail(503, 'OPERATIONAL_ALERT_RECIPIENT_NOT_CONFIGURED');
+  const payload = parse(z.object({ cycle: z.number().int().positive() }).strict(), JSON.parse(job.payload_json));
+  const incident = await queryOne('SELECT id,kind,severity,status,cycle FROM operational_incidents WHERE id=?', [job.aggregate_id]);
+  if (!incident || incident.status === 'resolved' || incident.cycle !== payload.cycle) return 'cancelled';
+  await sendMail({ to: recipient.data, subject: `OT Center: ${incident.severity} operational incident`,
+    text: `Incident ${incident.id}\nType: ${incident.kind}\nSeverity: ${incident.severity}\nOpen the protected operations page and assign an owner. No learner or provider payload is included in this message.` }, job.id);
+  return 'delivered';
 }
 
 /** Leased, short batches fit serverless invocations; no process-local queue or perpetual worker. */
@@ -77,22 +95,46 @@ export async function processOutbox(options: { limit?: number; budgetMs?: number
     });
     if (!job) break;
     try {
+      let completionStatus = 'delivered';
       if (job.type === 'crm.lead') { if (!options.allowExternal || process.env.OT_CRM_DELIVERY_ENABLED !== '1') fail(503, 'EXTERNAL_DELIVERY_DISABLED'); await deliverLead(job.aggregate_id, fetch, undefined, Math.max(1, budget - (Date.now() - started))); }
       else if (job.type === 'auth.email') { if (!options.allowExternal) fail(503, 'EXTERNAL_DELIVERY_DISABLED'); await deliverAuthMail(job); }
+      else if (job.type === 'operations.alert') { if (!options.allowExternal) fail(503, 'EXTERNAL_DELIVERY_DISABLED'); completionStatus = await deliverOperationalAlert(job); }
       else if (job.type === 'credential.render') await renderCredential(job.aggregate_id);
+      else if (job.type === 'learning.reminder') completionStatus = await deliverLearningReminder(job);
       else if (job.type.startsWith('notification.') || ['learning.enrolled', 'assessment.graded'].includes(job.type)) await notification(job);
       else fail(409, 'JOB_HANDLER_NOT_CONFIGURED');
-      await execute('UPDATE outbox SET status=?,lease_token=NULL,lease_until=NULL,last_error=NULL,updated_at=?,payload_json=CASE WHEN type=? THEN ? ELSE payload_json END WHERE id=? AND lease_token=?', ['delivered', nowIso(), 'auth.email', '{}', job.id, job.lease_token]);
-      results.push({ id: job.id, status: 'delivered' });
+      await execute('UPDATE outbox SET status=?,lease_token=NULL,lease_until=NULL,last_error=NULL,updated_at=?,payload_json=CASE WHEN type=? THEN ? ELSE payload_json END WHERE id=? AND lease_token=?', [completionStatus, nowIso(), 'auth.email', '{}', job.id, job.lease_token]);
+      if (completionStatus === 'delivered') {
+        // A telemetry outage must never turn a completed delivery into a retry.
+        try { await incrementOperationalCounter('outbox_delivered'); }
+        catch { console.warn(JSON.stringify({ event: 'operational_observation_unavailable', code: 'COUNTER_WRITE_FAILED' })); }
+      }
+      results.push({ id: job.id, status: completionStatus });
     } catch (error: any) {
       const code = /^[A-Z0-9_]+$/.test(error?.statusMessage || '') ? error.statusMessage : 'DELIVERY_FAILED';
       const status = job.attempts >= 8 ? 'failed' : 'pending';
       const delay = Math.min(3600000, 30000 * 2 ** Math.min(job.attempts, 7));
       await execute('UPDATE outbox SET status=?,available_at=?,last_error=?,lease_token=NULL,lease_until=NULL,updated_at=? WHERE id=? AND lease_token=?', [status, new Date(Date.now() + delay).toISOString(), code, nowIso(), job.id, job.lease_token]);
+      try {
+        await incrementOperationalCounter('outbox_failed');
+        if (job.type === 'credential.render') await recordIncident({ kind: 'credential_pending', targetId: job.aggregate_id, severity: 'critical', code, attempts: job.attempts });
+        else if (job.type !== 'operations.alert' && (status === 'failed' || job.type === 'crm.lead' && options.allowExternal && process.env.OT_CRM_DELIVERY_ENABLED === '1')) {
+          await recordIncident({ kind: status === 'failed' ? 'outbox_failed' : 'outbox_stalled', targetId: job.id, severity: status === 'failed' ? 'critical' : 'warning', code, attempts: job.attempts });
+        }
+      } catch { console.warn(JSON.stringify({ event: 'operational_observation_unavailable', code: 'INCIDENT_WRITE_FAILED' })); }
       results.push({ id: job.id, status, code });
     }
   }
   return { processed: results.length, elapsedMs: Date.now() - started, results };
+}
+
+export async function runOperationalTick(options: { allowExternal?: boolean } = {}) {
+  const started = Date.now();
+  const attempts = await expireDueAttempts(20, Date.now(), 3000);
+  const reminders = await scheduleLearningReminders({ limit: 20, budgetMs: 3000 });
+  const queue = await processOutbox({ limit: 10, budgetMs: Math.max(100, 30000 - (Date.now() - started)), allowExternal: options.allowExternal });
+  const incidents = await scanOperationalIncidents({ limit: 20, budgetMs: Math.max(100, Math.min(5000, 40000 - (Date.now() - started))) });
+  return { ...queue, incidents, reminders, attempts, elapsedMs: Date.now() - started };
 }
 export async function updateConsent(userId: string, data: unknown) {
   const body = parse(z.object({ marketing: z.boolean(), version: z.string().min(1).max(50) }).strict(), data);
@@ -107,7 +149,15 @@ export async function updateConsent(userId: string, data: unknown) {
   });
 }
 export async function listNotifications(userId: string) {
-  return { notifications: await queryAll('SELECT id,purpose,template,CASE WHEN status=? THEN ? ELSE ? END AS status,created_at AS createdAt FROM notifications WHERE user_id=? AND status!=? ORDER BY created_at DESC LIMIT 100', ['read', 'read', 'unread', userId, 'cancelled']) };
+  const rows = await queryAll<{ id: string; purpose: string; template: string; payload_json: string; status: string; createdAt: string }>('SELECT id,purpose,template,payload_json,CASE WHEN status=? THEN ? ELSE ? END AS status,created_at AS createdAt FROM notifications WHERE user_id=? AND status!=? ORDER BY created_at DESC LIMIT 100', ['read', 'read', 'unread', userId, 'cancelled']);
+  const reminderPayload = z.object({ reminderId: z.string().max(100), enrollmentId: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/), kind: z.enum(['access_deadline', 'renewal']), dueAt: z.iso.datetime(), timezone: z.string().max(80) });
+  return { notifications: rows.map(({ payload_json, ...row }) => {
+    let payload = null;
+    if (row.template === 'learning.reminder') {
+      try { const checked = reminderPayload.safeParse(JSON.parse(payload_json)); if (checked.success) payload = checked.data; } catch { /* No private/unvalidated payload crosses the API. */ }
+    }
+    return { ...row, ...(payload ? { payload } : {}) };
+  }) };
 }
 export async function markNotificationRead(userId: string, notificationId: string) {
   const result = await execute('UPDATE notifications SET status=?,delivered_at=COALESCE(delivered_at,?) WHERE id=? AND user_id=? AND status!=?', ['read', nowIso(), notificationId, userId, 'cancelled']);

@@ -43,6 +43,7 @@ export interface LmsProgram {
     reviewedAt?: string;
     format?: string;
     accessModel?: string;
+    intakeOpen?: boolean;
     billingBasis?: "learner" | "organization";
   }>;
 }
@@ -114,6 +115,11 @@ export function useLmsApi() {
       error?.data?.code ||
       error?.data?.statusMessage;
     const known: Record<string, string> = {
+      BATCH_PREVIEW_EXPIRED: tr('Предварительный просмотр устарел. Создайте новый и проверьте состав.', 'Алдын ала қарау ескірген. Жаңасын жасап, құрамын тексеріңіз.'),
+      BATCH_PREVIEW_CHANGED: tr('После просмотра изменились сведения или утверждённый бланк. Создайте новый просмотр для этой записи.', 'Қараудан кейін мәліметтер немесе бекітілген бланк өзгерді. Осы жазба үшін жаңа қарау жасаңыз.'),
+      BATCH_IN_PROGRESS: tr('Эта группа уже обрабатывается. Обновите состояние через некоторое время.', 'Бұл топ өңделіп жатыр. Біраз уақыттан кейін күйін жаңартыңыз.'),
+      INCIDENT_SOURCE_NOT_RECOVERED: tr('Причина события ещё активна. Сначала завершите обработку заявки, задания или документа; после отклонённого события интеграции требуется не менее пяти минут без новых ошибок.', 'Оқиғаның себебі әлі белсенді. Алдымен өтінімді, тапсырманы немесе құжатты өңдеуді аяқтаңыз; қабылданбаған интеграция оқиғасынан кейін жаңа қатесіз кемінде бес минут қажет.'),
+      INCIDENT_ALREADY_RESOLVED: tr('Событие уже закрыто. Обновите список.', 'Оқиға жабылған. Тізімді жаңартыңыз.'),
       ONLY_PENDING_CREDENTIAL_REPAIRABLE: tr(
         "Восстановить подготовку можно только для ещё не выданного PDF.",
         "Дайындауды әлі берілмеген PDF үшін ғана қалпына келтіруге болады.",
@@ -149,6 +155,10 @@ export function useLmsApi() {
       MFA_REQUIRED: tr(
         "Для этого действия подтвердите вход кодом приложения в разделе безопасности.",
         "Бұл әрекет үшін қауіпсіздік бөлімінде қолданба кодымен кіруді растаңыз.",
+      ),
+      PROGRAM_INTAKE_CLOSED: tr(
+        "Набор на эту версию программы приостановлен. Выберите другую программу или свяжитесь с учебным центром.",
+        "Бағдарламаның осы нұсқасына қабылдау тоқтатылған. Басқа бағдарламаны таңдаңыз немесе оқу орталығына хабарласыңыз.",
       ),
       APPROVED_DOCUMENT_TEMPLATE_REQUIRED: tr(
         "Для этой программы ещё не утверждён шаблон документа. Добавьте и согласуйте шаблон в управлении документами.",
@@ -296,7 +306,7 @@ export function safeLmsReturnTo(value: unknown, fallback = "/cabinet"): string {
     return fallback;
   const path = value.split(/[?#]/)[0] || "";
   if (
-    !/^\/(?:kk\/)?(?:cabinet(?:\/(?:organization|security))?|courses(?:\/[a-z0-9-]+)?|learn\/[a-zA-Z0-9_-]+(?:\/(?:exam|pre-test|confirm|success|failed))?|payment(?:\/[a-zA-Z0-9_-]+)?|certificates\/[a-zA-Z0-9_-]+|admin(?:\/(?:users|documents|programs(?:\/[a-zA-Z0-9_-]+)?))?)\/?$/.test(
+    !/^\/(?:kk\/)?(?:cabinet(?:\/(?:organization|security|reminders))?|courses(?:\/[a-z0-9-]+)?|learn\/[a-zA-Z0-9_-]+(?:\/(?:exam|pre-test|confirm|success|failed))?|payment(?:\/[a-zA-Z0-9_-]+)?|certificates\/[a-zA-Z0-9_-]+|admin(?:\/(?:users|documents|incidents|support|document-batches|programs(?:\/[a-zA-Z0-9_-]+)?))?)\/?$/.test(
       path,
     )
   )

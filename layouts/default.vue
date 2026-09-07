@@ -63,7 +63,10 @@ const copy = computed(() => locale.value === 'kk' ? {
         </div>
       </div>
       <nav class="border-t border-slate-200 bg-white">
-        <div class="container flex flex-wrap items-center gap-4 py-3 text-sm font-medium text-slate-700">
+        <div
+          class="site-nav-links container flex flex-wrap items-center gap-4 py-3 text-sm font-medium text-slate-700"
+          :class="{ 'site-nav-links--kk': locale === 'kk' }"
+        >
           <NuxtLink :to="localePath('/')" class="hover:text-brand">{{ t('nav.home') }}</NuxtLink>
           <NuxtLink :to="`${localePath('/') }#courses`" class="hover:text-brand">{{ t('nav.courses') }}</NuxtLink>
           <NuxtLink :to="`${localePath('/') }#formats`" class="hover:text-brand">{{ t('nav.formats') }}</NuxtLink>
@@ -134,6 +137,14 @@ const copy = computed(() => locale.value === 'kk' ? {
 </template>
 
 <style scoped>
+/* Loaded KK labels occupy three rows through 366px. Keep that existing height
+   while fallback fonts briefly fit into two rows (verified at 320–420px). */
+@media (max-width: 22.875rem) {
+  .site-nav-links--kk {
+    min-height: 7.25rem;
+    align-content: flex-start;
+  }
+}
 footer a { color: #cbd5e1; }
 footer a[href^='tel:'], footer a[href^='mailto:'] { color: #93c5fd; }
 footer a:hover, footer a:focus-visible { color: #fff; }

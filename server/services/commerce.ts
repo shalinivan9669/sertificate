@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { audit, enqueue, execute, queryAll, queryOne, withTransaction, type Db } from '../db';
 import { businessFail as fail, id, idempotent, nowIso, parse, sha256 } from '../utils/business';
+import { incrementOperationalCounter, recordWebhookRejection } from './incidents';
+import { assertProgramIntakeOpen } from './program-intake';
 
 export function paymentMode() {
   const mode = process.env.OT_PAYMENT_PROVIDER || 'disabled';
@@ -22,6 +24,7 @@ export async function createOrder(userId: string, data: unknown, key: string) {
   return idempotent(`order:${userId}`, key, body, async tx => {
     const version = await queryOne('SELECT * FROM program_versions WHERE id=? AND status=?', [body.versionId, 'published'], tx);
     if (!version) fail(404, 'PUBLISHED_VERSION_NOT_FOUND');
+    await assertProgramIntakeOpen(version.id, tx);
     const program = JSON.parse(version.data_json);
     if (program.billingBasis === 'organization') fail(409, 'CORPORATE_INVOICE_REQUIRED');
     if (program.accessModel !== 'paid' || !Number.isSafeInteger(program.priceMinor) || program.priceMinor < 0 || program.currency !== 'KZT') fail(409, 'PROGRAM_NOT_PURCHASABLE');
@@ -50,7 +53,7 @@ export async function checkout(orderId: string, userId: string) {
 }
 
 const eventSchema = z.object({ eventId: z.string().min(8).max(120), paymentId: z.string().uuid(), merchant: z.string().max(100), amountMinor: z.number().int().nonnegative().safe(), currency: z.literal('KZT'), status: z.enum(['pending', 'succeeded', 'failed', 'cancelled']), timestamp: z.number().int() }).strict();
-export async function processPaymentWebhook(raw: string, signature: string) {
+async function verifiedPaymentWebhook(raw: string, signature: string) {
   if (paymentMode() !== 'sandbox') fail(503, 'PAYMENTS_DISABLED');
   const secret = process.env.OT_SANDBOX_WEBHOOK_SECRET;
   if (!secret || secret.length < 32) fail(503, 'SANDBOX_NOT_CONFIGURED');
@@ -84,6 +87,22 @@ export async function processPaymentWebhook(raw: string, signature: string) {
     }
     return { received: true, duplicate: false };
   });
+}
+
+export async function processPaymentWebhook(raw: string, signature: string) {
+  try {
+    const result = await verifiedPaymentWebhook(raw, signature);
+    if ('duplicate' in result && result.duplicate) {
+      try { await incrementOperationalCounter('webhook_duplicate'); }
+      catch { console.warn(JSON.stringify({ event: 'operational_observation_unavailable', code: 'COUNTER_WRITE_FAILED' })); }
+    }
+    return result;
+  } catch (error: any) {
+    // Logging happens outside the rejected domain transaction. Neither raw body nor signature is retained.
+    try { await recordWebhookRejection(error?.data?.code || error?.statusMessage || ''); }
+    catch { console.warn(JSON.stringify({ event: 'operational_observation_unavailable', code: 'INCIDENT_WRITE_FAILED' })); }
+    throw error;
+  }
 }
 
 export async function refundOrder(orderId: string, actorId: string, reason: string) {

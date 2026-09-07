@@ -72,13 +72,23 @@ async function eligibleEnrollment(enrollmentId: string, tx: Db) {
   if (program.accessModel === 'paid' && !(await queryOne('SELECT id FROM orders WHERE enrollment_id=? AND status=?', [enrollmentId, 'succeeded'], tx))) fail(409, 'CONTRACTUAL_CONDITIONS_INCOMPLETE');
   return { enrollment, program, passed };
 }
-export async function issueCredential(actorId: string, enrollmentId: string, reason: string, supersedesId: string | null = null) {
+export async function credentialIssuancePreview(enrollmentId: string, db?: Db) {
+  const inspect = async (tx: Db) => {
+    const { enrollment, program } = await eligibleEnrollment(enrollmentId, tx);
+    const template = await queryOne('SELECT id,name FROM credential_templates WHERE program_id=? AND status=? ORDER BY approved_at DESC,id LIMIT 1', [enrollment.program_id, 'approved'], tx);
+    if (!template) fail(409, 'APPROVED_DOCUMENT_TEMPLATE_REQUIRED');
+    const active = await queryOne("SELECT id,serial,status FROM credentials WHERE enrollment_id=? AND status IN ('pending','issued')", [enrollmentId], tx);
+    return { enrollmentId, learnerName: enrollment.name, programTitle: program.title, versionId: enrollment.version_id, templateId: template.id, templateName: template.name, activeCredential: active || null };
+  };
+  return db ? inspect(db) : withTransaction(inspect, undefined, 'read');
+}
+export async function issueCredential(actorId: string, enrollmentId: string, reason: string, supersedesId: string | null = null, db?: Db) {
   if (reason.trim().length < 10 || reason.length > 2000) fail(400, 'ISSUANCE_EVIDENCE_REQUIRED');
-  return withTransaction(async tx => {
+  const reserve = async (tx: Db) => {
     const old = await queryOne('SELECT id,serial,status FROM credentials WHERE enrollment_id=? AND status IN (?,?)', [enrollmentId, 'pending', 'issued'], tx);
     if (old) return { credential: old, duplicate: true };
     const { enrollment, program, passed } = await eligibleEnrollment(enrollmentId, tx);
-    const template = await queryOne('SELECT id,data_json FROM credential_templates WHERE program_id=? AND status=? ORDER BY approved_at DESC LIMIT 1', [enrollment.program_id, 'approved'], tx);
+    const template = await queryOne('SELECT id,data_json FROM credential_templates WHERE program_id=? AND status=? ORDER BY approved_at DESC,id LIMIT 1', [enrollment.program_id, 'approved'], tx);
     if (!template) fail(409, 'APPROVED_DOCUMENT_TEMPLATE_REQUIRED');
     if (supersedesId) {
       const previous = await queryOne('SELECT id FROM credentials WHERE id=? AND enrollment_id=? AND status=?', [supersedesId, enrollmentId, 'revoked'], tx);
@@ -94,7 +104,8 @@ export async function issueCredential(actorId: string, enrollmentId: string, rea
     await enqueue('credential.render', credentialId, { credentialId }, tx);
     await audit(actorId, 'credential_reserved', credentialId, reason, enrollment.organization_id, tx);
     return { credential: { id: credentialId, serial, status: 'pending' }, duplicate: false };
-  });
+  };
+  return db ? reserve(db) : withTransaction(reserve);
 }
 
 export async function renderCredential(credentialId: string) {
@@ -117,6 +128,20 @@ export async function renderCredential(credentialId: string) {
     try { form.updateFieldAppearances(); } catch { fail(409, 'UNICODE_TEMPLATE_FONT_REQUIRED'); }
   }
   form.flatten();
+  // pdf-lib can delete form widget objects while leaving their page annotation
+  // references behind. Remove retired widgets/unresolved references, preserving
+  // valid non-form annotations and the appearance streams painted by flatten().
+  for (const page of document.getPages()) {
+    const annotations = page.node.Annots();
+    if (!annotations) continue;
+    for (let index = annotations.size() - 1; index >= 0; index--) {
+      const annotation = document.context.lookup(annotations.get(index));
+      if (!annotation || annotation instanceof PDFDict && annotation.get(PDFName.of('Subtype')) === PDFName.of('Widget')) annotations.remove(index);
+    }
+    if (!annotations.size()) page.node.delete(PDFName.of('Annots'));
+  }
+  // The issued document is static; no empty form tree should suggest editability.
+  document.catalog.delete(PDFName.of('AcroForm'));
   if (meta.qr) {
     const qr = await document.embedPng(await QRCode.toBuffer(snapshot.verificationUrl, { errorCorrectionLevel: 'M', margin: 1 }));
     const page = document.getPage(meta.qr.page);
@@ -190,9 +215,9 @@ export async function verifyCredential(token: string) {
   const snapshot = JSON.parse(credential.snapshot_json);
   return { serial: credential.serial, status: credential.status, programTitle: snapshot.programTitle, issuedAt: credential.issued_at, revokedAt: credential.revoked_at, registry: 'OT Center' };
 }
-export async function revokeCredential(actorId: string, credentialId: string, reason: string) {
+export async function revokeCredential(actorId: string, credentialId: string, reason: string, db?: Db) {
   if (reason.trim().length < 10 || reason.length > 2000) fail(400, 'REASON_REQUIRED');
-  return withTransaction(async tx => {
+  const revoke = async (tx: Db) => {
     const credential = await queryOne('SELECT status FROM credentials WHERE id=?', [credentialId], tx);
     if (!credential) fail(404, 'CREDENTIAL_NOT_FOUND');
     if (credential.status === 'revoked') return { revoked: true };
@@ -200,5 +225,6 @@ export async function revokeCredential(actorId: string, credentialId: string, re
     await execute('UPDATE credentials SET status=?,revoked_at=?,revoked_reason=? WHERE id=?', ['revoked', nowIso(), reason, credentialId], tx);
     await audit(actorId, 'credential_revoked', credentialId, reason, null, tx);
     return { revoked: true };
-  });
+  };
+  return db ? revoke(db) : withTransaction(revoke);
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { audit, enqueue, execute, queryAll, queryOne, withTransaction, type Db } from '../db';
 import { assertRole, type AppUser } from '../utils/auth';
+import { assertProgramIntakeOpen } from './program-intake';
 import { businessFail as fail, id, idempotent, nowIso, parse } from '../utils/business';
 import { requireMembership } from './organizations';
 import { getVersion, type ProgramData } from './catalog';
@@ -77,6 +78,7 @@ export async function createInvoice(actor: AppUser, organizationId: string, data
   return idempotent(`invoice:${actor.id}:${organizationId}`, key, body, async tx => {
     await requireMembership(actor.id, organizationId, ['owner', 'manager'], tx);
     const version = await getVersion(body.versionId, tx); const program: ProgramData = JSON.parse(version.data_json);
+    await assertProgramIntakeOpen(version.id, tx);
     if (version.status !== 'published' || program.accessModel !== 'paid' || !Number.isSafeInteger(program.priceMinor) || program.priceMinor! <= 0 || program.currency !== 'KZT') fail(409, 'PAID_PUBLISHED_VERSION_REQUIRED');
     const { members } = await eligibleSeats(organizationId, body.userIds, version.id, tx);
     const reservation = await queryOne(`SELECT invoice_id FROM corporate_invoice_reservations WHERE organization_id=? AND version_id=? AND user_id IN (${placeholders(body.userIds.length)}) LIMIT 1`, [organizationId, version.id, ...body.userIds], tx);

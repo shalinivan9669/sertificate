@@ -200,8 +200,9 @@ async function enroll() {
                 {{ tr("Проверено", "Тексерілді") }}:
                 {{ date(version.reviewedAt) }}
               </p>
+              <p v-if="version.intakeOpen === false" class="lms-note">{{ tr("Набор на эту версию программы приостановлен. Уточните следующий набор в учебном центре.", "Бағдарламаның осы нұсқасына қабылдау тоқтатылған. Келесі қабылдауды оқу орталығынан нақтылаңыз.") }}</p>
               <button
-                v-if="
+                v-else-if="
                   version.accessModel === 'free' &&
                   version.billingBasis !== 'organization'
                 "

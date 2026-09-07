@@ -27,6 +27,12 @@ jobs:
       - run: npm run build
       - run: npm run test:seo
       - run: node scripts/build-asset-check.mjs .output/public
+      - run: npx playwright install --with-deps chromium
+      - name: Isolated browser workflows and mobile forms
+        run: node tests/run-core-browser.mjs
+        env:
+          NODE_ENV: test
+          OT_ALLOW_TEST_SEED: '1'
       - run: npm run build:vercel
       - uses: actions/upload-artifact@v4
         if: failure()

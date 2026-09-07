@@ -274,9 +274,9 @@ const invoiceStatus = (status: string) =>
             <option value="" disabled>
               {{ tr("Выберите программу", "Бағдарламаны таңдаңыз") }}
             </option>
-            <option v-for="v in versions" :key="v.id" :value="v.id">
+            <option v-for="v in versions" :key="v.id" :value="v.id" :disabled="v.intakeOpen === false">
               {{ v.title }} · {{ v.language.toUpperCase() }} ·
-              {{ money(v.priceMinor, v.currency) }}
+              {{ money(v.priceMinor, v.currency) }}{{ v.intakeOpen === false ? ' · ' + tr('Набор приостановлен', 'Қабылдау тоқтатылған') : '' }}
               {{
                 v.billingBasis === "organization"
                   ? tr("на организацию", "ұйымға")

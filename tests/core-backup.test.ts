@@ -23,6 +23,12 @@ before(async () => {
   await source.execute({ sql: "INSERT INTO credentials (id,enrollment_id,attempt_id,serial,status,snapshot_json,verification_hash,document_base64,issued_by,created_at) VALUES (?,?,?,?,'revoked','{}',?,?,?,?)", args: ['synthetic-credential', 'restore-enrollment', 'restore-attempt', 'TEST-ONLY-BACKUP', 'test-only-hash', document, 'source-reviewer', now] });
   await source.execute('CREATE TABLE backup_binary_fixture (id TEXT PRIMARY KEY, payload BLOB NOT NULL)');
   await source.execute({ sql: 'INSERT INTO backup_binary_fixture VALUES (?,?)', args: ['binary', Buffer.from([0, 1, 2, 127, 128, 255])] });
+  await source.execute({ sql: 'INSERT INTO support_notes(id,user_id,author_id,body,created_at) VALUES(?,?,?,?,?)', args: ['restore-note', 'source-author', 'source-reviewer', 'SYNTHETIC private support observation', now] });
+  await source.execute({ sql: 'INSERT INTO program_intake_controls(version_id,is_open,actor_id,reason,updated_at) VALUES(?,0,?,?,?)', args: ['restore-version', 'source-reviewer', 'SYNTHETIC preserve stopped intake after restore', now] });
+  await source.execute({ sql: 'INSERT INTO learning_reminders(id,user_id,enrollment_id,kind,due_at,timezone,lead_days_json,created_by,reason,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)', args: ['restore-reminder', 'source-author', 'restore-enrollment', 'renewal', '2030-01-01T00:00:00.000Z', 'Asia/Qyzylorda', '[7]', 'source-author', 'SYNTHETIC explicit planned date', now, now] });
+  await source.execute({ sql: 'INSERT INTO learning_reminder_deliveries(id,reminder_id,revision,offset_days,scheduled_at,expires_at,created_at) VALUES(?,?,0,7,?,?,?)', args: ['restore-reminder-slot', 'restore-reminder', '2029-12-25T00:00:00.000Z', '2029-12-26T00:00:00.000Z', now] });
+  await source.execute({ sql: 'INSERT INTO credential_batches(id,created_by,action,reason,expires_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)', args: ['restore-batch', 'source-reviewer', 'issue', 'SYNTHETIC preserve pending batch', '2030-01-01T00:00:00.000Z', now, now] });
+  await source.execute({ sql: 'INSERT INTO credential_batch_items(batch_id,target_id,preview_json,fingerprint) VALUES(?,?,?,?)', args: ['restore-batch', 'restore-enrollment', '{"notice":"SYNTHETIC private preview"}', 'synthetic-preview-hash'] });
   snapshot = await exportDatabase(source);
 });
 after(async () => {
@@ -48,6 +54,7 @@ test('restore preserves data, private document bytes, binary values, migration c
   const restoredSchema = (await target.execute("SELECT type,name,sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name")).rows;
   const sourceSchema = (await source.execute("SELECT type,name,sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name")).rows;
   assert.deepEqual(restoredSchema, sourceSchema);
+  assert.deepEqual((await exportDatabase(target)).tables, snapshot.tables, 'Every table row, including reminders, stopped intake, support notes and pending batches, survives encrypted restore');
   await assert.rejects(target.execute("UPDATE program_versions SET data_json='{}' WHERE id='restore-version'"), /immutable/);
   await assert.rejects(target.execute("UPDATE attempts SET result_json='{}' WHERE id='restore-attempt'"), /immutable/);
   await assert.rejects(target.execute('DELETE FROM audit_events'), /append-only/);

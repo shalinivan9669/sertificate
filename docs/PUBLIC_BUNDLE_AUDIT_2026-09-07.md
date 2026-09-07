@@ -1,5 +1,15 @@
 # Final local public bundle audit — 2026-09-07
 
+## Additional workflow package: final build inspection
+
+The later audit inspected **Node `4855f35b-6913-4002-a0fa-7c87ad77c0a7`** and **Vercel `ca57b6d3-18bb-45e9-93e2-afaf737785b9`** after the additional organization, reminder and staff workflows. Each artifact contains **89 JavaScript and 5 CSS files**; all 94 paths and SHA-256 hashes match across builds. All 89 JS files parsed, all 1,204 public textual files were scanned, and both build identity checks passed. There are no public source maps or map references. The 102 known-value comparisons (17 fixture/session, 19 academic test, 56 synthetic email, 3 private PDF identities, 7 exact private rate phrases) found no matches. No real provider secrets were configured for an exact production-secret comparison.
+
+Positive signatures remain attributable: `_nuxt/BlOOOiHj.js` contains the authoring editor's empty `correctOptionIds` array and four field accesses; `_nuxt/DV4hE_NC.js` has the same optional shared `async_hooks` helper described below. These are UI/runtime identifiers, without populated academic answers or provider credentials. This result is bounded to the inspected local artifacts, not a claim that all possible transformed secrets or hosted responses were examined.
+
+Evidence: `artifacts/privacy/public-bundle-audit-4855f35b-ca57b6d3.json` and `implementation-bundle-audit-final-4855.log`. The earlier `c76fd093` functional artifact had an extra unused build metadata file from concurrent Nuxt typecheck/build. Its functional browser results remain valid for that artifact, but its strict build identity gate failed. A fresh sequential Node build removed the concurrency issue and passed 550 public pages, 551 total HTML files, 15,797 asset references, missing0 and one build ID. No generated file was manually removed to manufacture a passed artifact.
+
+## Earlier implementation snapshot
+
 The complete local public client assets were inspected at **2026-09-07 14:31:56 UTC**, against Node build **`6aa9fbb6-2c27-4ec9-bb12-8eb4f4fd60f9`** (`.output/public`) and Vercel build **`34a99837-1e71-4025-83a9-2414427497cf`** (`.vercel/output/static`). Both expected build IDs were confirmed. Application runtime source was unchanged during this audit; the source commit was `1e23fc5`.
 
 Each artifact contains **84 JavaScript files, 762,621 bytes**, and **5 CSS files, 25,314 bytes**. Every file was read, hashed and scanned; all 89 assets have identical paths and SHA-256 hashes between the two builds. All 84 JavaScript files parsed successfully with Acorn. Inspection included 7,044 decoded string/static-template values and 13 decodable percent/base64 representations per artifact. There were **no public `.map` files or `sourceMappingURL` references**, including inline data maps. The scan also covered all **1,199 public textual files per artifact**, including 551 HTML files and 554 JSON files, so static HTML and Nuxt payloads were included.

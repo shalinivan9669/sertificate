@@ -3,6 +3,7 @@ import { audit, enqueue, execute, queryAll, queryOne, withTransaction, type Db }
 import { assertRole, type AppUser } from '../utils/auth';
 import { fail, integer, payloadHash, textValue } from '../utils/validation';
 import { getVersion, type ProgramData } from './catalog';
+import { assertProgramIntakeOpen } from './program-intake';
 
 export type EnrollmentRow = { id: string; user_id: string; version_id: string; organization_id: string | null; status: string; access_until: string | null; created_at: string };
 
@@ -145,6 +146,7 @@ export async function createEnrollment(actor: AppUser, input: { userId: string; 
     const data: ProgramData = JSON.parse(version.data_json);
     const program = await queryOne('SELECT status FROM programs WHERE id=?', [version.program_id], tx);
     if (version.status !== 'published' || program?.status !== 'active') fail(409, 'VERSION_NOT_PUBLISHED', 'Enrollment requires a published, available program');
+    await assertProgramIntakeOpen(version.id, tx);
     if (self && data.billingBasis === 'organization') fail(403, 'ORGANIZATION_ASSIGNMENT_REQUIRED', 'This program requires an organization assignment');
     if (self && data.accessModel !== 'free') fail(403, 'MANUAL_ENROLLMENT_REQUIRED', 'This program requires an approved enrollment arrangement');
     if (!self && data.accessModel === 'paid') fail(409, 'PAYMENT_REQUIRED', 'Paid access must be granted through a verified order');

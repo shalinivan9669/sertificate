@@ -2,7 +2,7 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 189
+Всего файлов: 227
 
 - `.env.example`
 - `.gitattributes`
@@ -15,6 +15,7 @@
 - `components/lms/LmsAuthoringGuide.vue`
 - `components/lms/LmsExamPage.vue`
 - `components/lms/LmsInvoices.vue`
+- `components/lms/LmsLearningReminders.vue`
 - `components/lms/LmsNotifications.vue`
 - `components/lms/LmsPreferences.vue`
 - `components/lms/LmsProgramEditor.vue`
@@ -61,6 +62,7 @@
 - `config/public-route-runtime.js`
 - `content/direction-details.js`
 - `content/public-city-content.ts`
+- `docs/ACCEPTANCE_EXTRA_BROWSER.md`
 - `docs/ACCEPTANCE_STATUS.csv`
 - `docs/ARCHITECTURE-DECISIONS.md`
 - `docs/BACKLOG_STATUS.csv`
@@ -71,11 +73,16 @@
 - `docs/CORE_RESTORE_DRILL.json`
 - `docs/CORE_SOURCE_CATALOG.md`
 - `docs/DEPENDENCY-REVIEW.md`
+- `docs/DOCUMENT-OPERATIONS-PILOT.md`
+- `docs/LMS_NAV_LAYOUT_LAB.md`
 - `docs/LMS-BROWSER-QA.md`
+- `docs/ORGANIZATION_REPORT_AND_REMINDERS.md`
 - `docs/PDF-CONTENT-AUDIT.md`
 - `docs/PERFORMANCE_LOCAL_LAB_2026-09-07.md`
 - `docs/PREVIEW-NOINDEX-QA.md`
+- `docs/PROGRAM-INTAKE.md`
 - `docs/PUBLIC_BUNDLE_AUDIT_2026-09-07.md`
+- `docs/ROLLBACK_DRILL.md`
 - `docs/RUNBOOK.md`
 - `docs/SEO-POLICY.md`
 - `docs/STATUS_MATRIX_METHOD.md`
@@ -92,9 +99,12 @@
 - `pages/[city]/[course].vue`
 - `pages/[city]/[slug].vue`
 - `pages/[city]/index.vue`
+- `pages/admin/document-batches.vue`
 - `pages/admin/documents.vue`
+- `pages/admin/incidents.vue`
 - `pages/admin/index.vue`
 - `pages/admin/programs/index.vue`
+- `pages/admin/support.vue`
 - `pages/admin/users.vue`
 - `pages/auth/forgot.vue`
 - `pages/auth/login.vue`
@@ -105,6 +115,7 @@
 - `pages/b2b.vue`
 - `pages/cabinet/index.vue`
 - `pages/cabinet/organization.vue`
+- `pages/cabinet/reminders.vue`
 - `pages/cabinet/security.vue`
 - `pages/categories.vue`
 - `pages/certificates/[id].vue`
@@ -133,7 +144,10 @@
 - `scripts/db-migrate.ts`
 - `scripts/db-readiness.ts`
 - `scripts/generate-sitemap.mjs`
+- `scripts/lms-nav-layout-lab.mjs`
 - `scripts/performance-lab.mjs`
+- `scripts/rollback-drill.ts`
+- `scripts/rollback-preflight.ts`
 - `scripts/seo-build-check.mjs`
 - `scripts/seo-http-check.mjs`
 - `scripts/seo-uniqueness-check.ts`
@@ -150,6 +164,11 @@
 - `server/db/migrations/003-credential-templates.sql`
 - `server/db/migrations/004-corporate-invoices.sql`
 - `server/db/migrations/005-invoice-allocations.sql`
+- `server/db/migrations/006-operational-incidents.sql`
+- `server/db/migrations/007-learning-reminders.sql`
+- `server/db/migrations/008-program-intake.sql`
+- `server/db/migrations/009-staff-workflows.sql`
+- `server/db/required-migrations.ts`
 - `server/handlers/business.ts`
 - `server/handlers/core.ts`
 - `server/middleware/security.ts`
@@ -160,17 +179,23 @@
 - `server/services/commerce.ts`
 - `server/services/core-administration.ts`
 - `server/services/credentials.ts`
+- `server/services/incidents.ts`
 - `server/services/invoices.ts`
 - `server/services/leads.ts`
 - `server/services/learning.ts`
 - `server/services/operations.ts`
 - `server/services/organizations.ts`
+- `server/services/program-intake.ts`
+- `server/services/reminders.ts`
+- `server/services/staff-workflows.ts`
 - `server/utils/auth.ts`
 - `server/utils/business.ts`
 - `server/utils/request-body.ts`
 - `server/utils/validation.ts`
 - `shared/course-registry.ts`
 - `shared/source-products.ts`
+- `tests/acceptance-extra-browser.mjs`
+- `tests/acceptance-extra-fixtures.ts`
 - `tests/business-integration.test.ts`
 - `tests/contact-browser.mjs`
 - `tests/core-auth.test.ts`
@@ -178,18 +203,31 @@
 - `tests/core-domain.test.ts`
 - `tests/credential-repair.test.ts`
 - `tests/database-safety.test.ts`
+- `tests/document-pilot-browser.mjs`
+- `tests/document-pilot-fixtures.ts`
+- `tests/document-pilot-pdf.py`
 - `tests/e2e-fixtures.ts`
 - `tests/e2e-reset-learning.ts`
 - `tests/http-security.test.ts`
 - `tests/invoices.test.ts`
+- `tests/learning-reminders.test.ts`
 - `tests/lms-admin-browser.mjs`
 - `tests/lms-auth-browser.mjs`
 - `tests/lms-browser.mjs`
+- `tests/migration-upgrade.test.ts`
 - `tests/notifications.test.ts`
+- `tests/operational-incidents.test.ts`
+- `tests/organization-report-browser.mjs`
+- `tests/organization-report-fixtures.ts`
+- `tests/organization-report.test.ts`
 - `tests/prepare-performance-session.mjs`
+- `tests/program-intake.test.ts`
 - `tests/public-content.test.ts`
 - `tests/public-route-policy.test.mjs`
+- `tests/run-core-browser.mjs`
+- `tests/run-document-pilot.ps1`
 - `tests/seo-indexability.test.mjs`
 - `tests/source-products.test.ts`
+- `tests/support-notes.test.ts`
 - `tsconfig.json`
 - `vercel.json`

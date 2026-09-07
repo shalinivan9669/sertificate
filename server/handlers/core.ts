@@ -4,6 +4,7 @@ import { catalogProgram, catalogPrograms, createProgram, createVersion, getAutho
 import { activateEnrollment, completeLesson, confirmPractice, createEnrollment, enrollmentDetails, getLesson, myEnrollments } from '../services/learning';
 import { getAttempt, saveAnswer, startAttempt, submitAttempt } from '../services/assessment';
 import { changeRole, listUsers } from '../services/core-administration';
+import { setProgramIntake } from '../services/program-intake';
 import { requireUser } from '../utils/auth';
 import { entityId, fail, integer, isoDate, jsonBody, requestKey, textValue } from '../utils/validation';
 
@@ -51,6 +52,8 @@ export default defineEventHandler(async (event) => {
   match = path.match(/^\/attempts\/([^/]+)\/submit$/);
   if (method === 'POST' && match) { await jsonBody(event, []); return submitAttempt(actor, entityId(match[1])); }
   if (method === 'GET' && path === '/admin/program-versions') return listVersions(actor);
+  match = path.match(/^\/admin\/program-versions\/([^/]+)\/intake$/);
+  if (method === 'POST' && match) { const body = await jsonBody(event, ['open', 'reason']); return setProgramIntake(actor, entityId(match[1]), body); }
   match = path.match(/^\/admin\/programs\/([^/]+)\/authoring-guide$/);
   if (method === 'GET' && match) return getAuthoringGuide(actor, entityId(match[1]));
   if (method === 'POST' && path === '/admin/programs') { const body = await jsonBody(event, ['id', 'directionId', 'title']); return createProgram(actor, body); }

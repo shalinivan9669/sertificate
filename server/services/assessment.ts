@@ -65,17 +65,19 @@ async function finalize(row: AttemptRow, db: Db, now = Date.now()) {
 }
 
 /** Runs from a scheduled/manual worker and lazily at reads; browser execution is never required. */
-export async function expireDueAttempts(limit = 100, now = Date.now()) {
+export async function expireDueAttempts(limit = 100, now = Date.now(), budgetMs = 10000) {
   integer(limit, 'limit', 1, 500);
+  integer(budgetMs, 'budgetMs', 1, 10000); const started = Date.now();
   const due = await queryAll<{ id: string }>("SELECT id FROM attempts WHERE status='in_progress' AND deadline_at<=? ORDER BY deadline_at LIMIT ?", [new Date(now).toISOString(), limit]);
   let expired = 0;
   for (const candidate of due) {
+    if (Date.now() - started >= budgetMs) break;
     await withTransaction(async (tx) => {
       const row = await attemptRow(candidate.id, tx);
       if (row.status === 'in_progress' && Date.parse(row.deadline_at) <= now) { await finalize(row, tx, now); expired++; }
     });
   }
-  return { expired };
+  return { expired, moreCandidates: expired < due.length || due.length === limit };
 }
 
 export async function getAttempt(actor: AppUser, id: string, now = Date.now()) {

@@ -37,6 +37,6 @@ try {
     versionId = (await publishVersion(reviewer, review.id, review.revision, 'Isolated browser test fixture')).version.id;
   }
   const output = { notice: 'SYNTHETIC LOCAL TEST DATA ONLY', databasePath: resolve(process.env.OT_DATABASE_PATH!), learner: { ...learner, password }, other: { ...other, password }, editor: { ...editor, password }, reviewer: { ...reviewer, password }, programId: 'ohrana-truda', versionId, lessonId: 'e2e-lesson' };
-  const outputPath = resolve(process.cwd(), '.data/e2e-fixture.json');
+  const outputPath = resolve(process.env.OT_E2E_FIXTURE_PATH || '.data/e2e-fixture.json');
   await writeFile(outputPath, JSON.stringify(output, null, 2)); console.log(`Synthetic local fixture written: ${outputPath}`);
 } finally { await closeDb(); }

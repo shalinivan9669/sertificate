@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createClient as createRemoteClient, type Client } from '@libsql/client/web';
 import { assertDefaultForeignKeys } from '../server/db';
 
-const requiredMigrations = ['001-core.sql', '002-business.sql', '003-credential-templates.sql', '004-corporate-invoices.sql', '005-invoice-allocations.sql'];
+import { requiredMigrations } from '../server/db/required-migrations';
 
 /** A deliberately invalid, non-PII enrollment is always rolled back, even if enforcement is broken. */
 export async function probeDatabaseForeignKeys(db: Client) {

@@ -22,6 +22,7 @@ export type ProgramData = {
 export type VersionRow = {
   id: string; program_id: string; version: number; status: 'draft' | 'review' | 'published'; data_json: string;
   created_by: string; approved_by: string | null; published_at: string | null; revision: number;
+  intake_open?: number | null;
 };
 
 function boundedArray(value: unknown, label: string, max: number): any[] {
@@ -94,7 +95,7 @@ export function validateProgramData(value: unknown, publishing = false): Program
 export function publicVersion(row: VersionRow) {
   const data: ProgramData = JSON.parse(row.data_json);
   return {
-    id: row.id, programId: row.program_id, version: row.version, title: data.title, language: data.language,
+    id: row.id, programId: row.program_id, version: row.version, title: data.title, language: data.language, intakeOpen: row.intake_open !== 0,
     audience: data.audience, prerequisites: data.prerequisites, outcomes: data.outcomes, limitations: data.limitations,
     format: data.format, durationHours: data.durationHours, priceMinor: data.priceMinor, currency: data.currency, billingBasis: data.billingBasis ?? 'learner',
     accessModel: data.accessModel, documentDescription: data.documentDescription, support: data.support,
@@ -119,7 +120,7 @@ function publicDirectionPath(id: string) { return legacyCourseDirections.some(di
 export async function catalogPrograms() {
   const storageAvailable = databaseConfigured();
   const programs = storageAvailable ? await queryAll('SELECT * FROM programs ORDER BY created_at,id') : courseDirections.map((direction) => ({ id: direction.id, direction_id: direction.id, title_json: JSON.stringify(direction.title), status: 'active' }));
-  const versions = storageAvailable ? await queryAll<VersionRow>("SELECT v.* FROM program_versions v JOIN programs p ON p.id=v.program_id WHERE v.status='published' AND p.status='active' ORDER BY v.version DESC") : [];
+  const versions = storageAvailable ? await queryAll<VersionRow>("SELECT v.*,c.is_open AS intake_open FROM program_versions v JOIN programs p ON p.id=v.program_id LEFT JOIN program_intake_controls c ON c.version_id=v.id WHERE v.status='published' AND p.status='active' ORDER BY v.version DESC") : [];
   return { storageAvailable, programs: programs.map((program) => {
     const direction = resolveCourseDirection(program.direction_id)!;
     const published = versions.filter((version) => version.program_id === program.id);
@@ -136,7 +137,7 @@ export async function catalogProgram(id: string) {
   const program = await queryOne('SELECT id,direction_id,title_json,status FROM programs WHERE id=?', [direction?.id || id]);
   if (!program) fail(404, 'PROGRAM_NOT_FOUND', 'Program not found');
   const metadata = resolveCourseDirection(program.direction_id)!;
-  const versions = program.status === 'active' ? await queryAll<VersionRow>("SELECT * FROM program_versions WHERE program_id=? AND status='published' ORDER BY version DESC", [program.id]) : [];
+  const versions = program.status === 'active' ? await queryAll<VersionRow>("SELECT v.*,c.is_open AS intake_open FROM program_versions v LEFT JOIN program_intake_controls c ON c.version_id=v.id WHERE v.program_id=? AND v.status='published' ORDER BY v.version DESC", [program.id]) : [];
   return { program: { id: program.id, directionId: program.direction_id, slug: metadata.id, title: JSON.parse(program.title_json), publicPath: publicDirectionPath(metadata.id), ...inventoryMetadata(metadata.id), versions: versions.map(publicVersion), availability: versions.length ? 'published' : 'consultation' } };
 }
 

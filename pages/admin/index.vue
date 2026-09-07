@@ -6,7 +6,7 @@ const { data, pending, error, refresh } = await useAsyncData(
   "lms-admin-operations",
   () => api<any>("/admin/operations"),
 );
-const { data: catalog } = await useAsyncData("lms-catalog", () =>
+const { data: catalog, refresh: refreshCatalog } = await useAsyncData("lms-catalog", () =>
   api<{ programs: LmsProgram[] }>("/catalog/programs"),
 );
 const busy = ref(false);
@@ -34,12 +34,32 @@ const practiceEvidence = ref("");
 const versions = computed(
   () => catalog.value?.programs.flatMap((p) => p.versions) || [],
 );
+const practiceLessons = computed(() => {
+  const enrollment = data.value?.enrollments?.find(
+    (item: any) => item.id === practiceEnrollment.value,
+  );
+  const version = versions.value.find((item) => item.id === enrollment?.versionId);
+  return version?.modules?.flatMap((module: any) => module.lessons || [])
+    .filter((lesson: any) => lesson.kind === "practice") || [];
+});
+watch(practiceEnrollment, () => { practiceLesson.value = ""; });
 const can = (...roles: string[]) =>
   me.value?.user?.role === "admin" ||
   roles.includes(me.value?.user?.role || "");
 const supersedesId = ref("");
 const repairTemplateId = ref("");
 const tickConfirmed = ref(false);
+const intakeVersionId = ref("");
+const intakeOpen = ref(false);
+const intakeReason = ref("");
+const intakeConfirmed = ref(false);
+async function changeIntake() {
+  const result = await run(
+    () => api("/admin/program-versions/" + encodeURIComponent(intakeVersionId.value) + "/intake", { method: "POST", body: { open: intakeOpen.value, reason: intakeReason.value } }),
+    tr("Настройка набора сохранена. Уже назначенное обучение и документы сохранены.", "Қабылдау баптауы сақталды. Бұрын тағайындалған оқу мен құжаттар сақталды."),
+  );
+  if (result) { intakeConfirmed.value = false; await refreshCatalog(); }
+}
 async function tick() {
   await run(
     () => api("/admin/operations/tick", { method: "POST", body: {} }),
@@ -228,6 +248,13 @@ useHead(() => ({
         class="lms-button secondary"
         :to="path('/admin/documents')"
         >{{ tr("Шаблоны документов", "Құжат үлгілері") }}</NuxtLink
+      ><NuxtLink
+        v-if="can('finance', 'issuer')"
+        class="lms-button secondary"
+        :to="path('/admin/incidents')"
+        >{{ tr("Операционные инциденты", "Операциялық оқиғалар") }}</NuxtLink
+      ><NuxtLink v-if="can('issuer')" class="lms-button secondary" :to="path('/admin/document-batches')">{{ tr("Пакетное оформление документов", "Құжаттарды топтамамен рәсімдеу") }}</NuxtLink
+      ><NuxtLink v-if="can('admin')" class="lms-button secondary" :to="path('/admin/support')">{{ tr("Обращения и заметки поддержки", "Қолдау өтініштері мен жазбалары") }}</NuxtLink
       ><NuxtLink class="lms-button secondary" :to="path('/cabinet/security')">{{
         tr("Подтвердить безопасность входа", "Кіру қауіпсіздігін растау")
       }}</NuxtLink>
@@ -377,6 +404,17 @@ useHead(() => ({
         </form>
       </section>
       <div class="grid gap-5 lg:grid-cols-2">
+        <section v-if="can('admin')" class="lms-card space-y-4">
+          <h2 class="text-xl font-bold">{{ tr("Набор на программы", "Бағдарламаларға қабылдау") }}</h2>
+          <p class="lms-note">{{ tr("Приостановка запрещает новые записи, назначения, заказы и счета. Действующее обучение и ранее оформленные обязательства продолжаются.", "Тоқтату жаңа тіркелулерді, тағайындауларды, тапсырыстар мен шоттарды шектейді. Қолданыстағы оқу мен бұрын рәсімделген міндеттемелер жалғасады.") }}</p>
+          <form class="space-y-4" @submit.prevent="changeIntake">
+            <label class="block space-y-2"><span>{{ tr("Версия для настройки набора", "Қабылдауды баптау нұсқасы") }}</span><select v-model="intakeVersionId" required><option value="" disabled>{{ tr("Выберите опубликованную версию", "Жарияланған нұсқаны таңдаңыз") }}</option><option v-for="version in versions" :key="version.id" :value="version.id">{{ version.title }} · {{ version.language.toUpperCase() }} · {{ version.intakeOpen === false ? tr("Набор приостановлен", "Қабылдау тоқтатылған") : tr("Набор открыт", "Қабылдау ашық") }}</option></select></label>
+            <label class="block space-y-2"><span>{{ tr("Новое состояние набора", "Қабылдаудың жаңа күйі") }}</span><select v-model="intakeOpen"><option :value="false">{{ tr("Приостановить новый набор", "Жаңа қабылдауды тоқтату") }}</option><option :value="true">{{ tr("Открыть новый набор", "Жаңа қабылдауды ашу") }}</option></select></label>
+            <label class="block space-y-2"><span>{{ tr("Основание изменения набора", "Қабылдауды өзгерту негізі") }}</span><textarea v-model="intakeReason" required minlength="10" maxlength="2000" /></label>
+            <label class="flex items-start gap-3"><input v-model="intakeConfirmed" type="checkbox" required /><span>{{ tr("Подтверждаю изменение набора для выбранной версии.", "Таңдалған нұсқа үшін қабылдауды өзгертуді растаймын.") }}</span></label>
+            <button class="lms-button" :disabled="busy || !intakeConfirmed">{{ tr("Сохранить состояние набора", "Қабылдау күйін сақтау") }}</button>
+          </form>
+        </section>
         <section v-if="can('admin')" class="lms-card space-y-4">
           <h2 class="text-xl font-bold">
             {{ tr("Очередь обработки", "Өңдеу кезегі") }}
@@ -568,8 +606,8 @@ useHead(() => ({
                   <option value="" disabled>
                     {{ tr("Выберите программу", "Бағдарламаны таңдаңыз") }}
                   </option>
-                  <option v-for="v in versions" :key="v.id" :value="v.id">
-                    {{ v.title }} · {{ v.language.toUpperCase() }}
+                  <option v-for="v in versions" :key="v.id" :value="v.id" :disabled="v.intakeOpen === false">
+                    {{ v.title }} · {{ v.language.toUpperCase() }}{{ v.intakeOpen === false ? ' · ' + tr('Набор приостановлен', 'Қабылдау тоқтатылған') : '' }}
                   </option>
                 </select></label
               ><label class="space-y-2"
@@ -624,16 +662,26 @@ useHead(() => ({
             </h3>
             <div class="grid gap-4 md:grid-cols-2">
               <label class="space-y-2"
-                ><span>{{ tr("ID назначения", "Тағайындау ID") }}</span
-                ><input
+                ><span>{{ tr("Назначение слушателя", "Тыңдаушы тағайындауы") }}</span
+                ><select
                   v-model="practiceEnrollment"
-                  list="lms-enrollment-options"
-                  required /></label
+                  required
+                >
+                  <option value="" disabled>{{ tr("Выберите слушателя и программу", "Тыңдаушы мен бағдарламаны таңдаңыз") }}</option>
+                  <option v-for="enrollment in data?.enrollments" :key="enrollment.id" :value="enrollment.id">
+                    {{ enrollment.learnerName }} · {{ versions.find((version) => version.id === enrollment.versionId)?.title || enrollment.programId }} · {{ statusLabel(enrollment.status) }}
+                  </option>
+                </select></label
               ><label class="space-y-2"
                 ><span>{{
-                  tr("ID практического урока", "Практикалық сабақ ID")
+                  tr("Практический урок", "Практикалық сабақ")
                 }}</span
-                ><input v-model="practiceLesson" required /></label
+                ><select v-model="practiceLesson" required :disabled="!practiceEnrollment || !practiceLessons.length">
+                  <option value="" disabled>{{ tr("Выберите практическое занятие", "Практикалық сабақты таңдаңыз") }}</option>
+                  <option v-for="lesson in practiceLessons" :key="lesson.id" :value="lesson.id">{{ lesson.title }}</option>
+                </select>
+                <small v-if="practiceEnrollment && !practiceLessons.length" class="block text-slate-600">{{ tr("В назначенной опубликованной версии нет доступных практических занятий. Проверьте выбранную программу.", "Тағайындалған жарияланған нұсқада қолжетімді практикалық сабақтар жоқ. Таңдалған бағдарламаны тексеріңіз.") }}</small>
+              </label
               ><label class="space-y-2"
                 ><span>{{
                   tr("Основание подтверждения", "Растау негізі")

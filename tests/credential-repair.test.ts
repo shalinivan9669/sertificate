@@ -5,13 +5,14 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFDict, PDFName, PDFRawStream, PDFString } from 'pdf-lib';
 import { closeDb, execute, getDb, queryOne } from '../server/db';
 import { createVersion, publishVersion, reviewVersion, type ProgramData } from '../server/services/catalog';
 import { completeLesson, createEnrollment } from '../server/services/learning';
 import { saveAnswer, startAttempt, submitAttempt } from '../server/services/assessment';
 import { approveCredentialTemplate, createCredentialTemplate, downloadCredential, issueCredential, renderCredential, repairPendingCredential, revokeCredential, verifyCredential } from '../server/services/credentials';
 import { processOutbox } from '../server/services/operations';
+import { commitCredentialBatch, getCredentialBatch, previewCredentialBatch } from '../server/services/staff-workflows';
 import type { AppUser } from '../server/utils/auth';
 
 let directory: string;
@@ -25,24 +26,41 @@ const oldEnv = Object.fromEntries(envKeys.map(key => [key, process.env[key]]));
 const rejectsCode = (promise: Promise<unknown>, code: string) => assert.rejects(promise, (error: any) => error?.data?.code === code);
 const reason = 'ISOLATED TEST repair evidence, no production document';
 
+async function readyWithoutDocument() {
+  await template({ font: true });
+  const draft = (await createVersion(editor, 'ohrana-truda', data())).version;
+  const review = (await reviewVersion(editor, draft.id, draft.revision)).version;
+  const published = (await publishVersion(reviewer, review.id, review.revision, reason)).version;
+  const { enrollment } = await createEnrollment(learner, { userId: learner.id, versionId: published.id }, randomUUID(), true);
+  await completeLesson(learner, enrollment.id, 'lesson', 0);
+  let attempt = await startAttempt(learner, enrollment.id, randomUUID());
+  attempt = await saveAnswer(learner, attempt.id, 'question', ['right'], attempt.revision);
+  await submitAttempt(learner, attempt.id);
+  return enrollment.id;
+}
+
 function data(): ProgramData {
   return { title: 'ТЕСТОВАЯ ПРОГРАММА — НЕДЕЙСТВИТЕЛЬНО', language: 'ru', audience: 'Test only', prerequisites: '', outcomes: 'Test invariant', limitations: 'No academic validity', format: 'Test', durationHours: 1, priceMinor: 0, currency: 'KZT', accessModel: 'free', documentDescription: 'TEST PDF - NO VALIDITY', support: 'Test only', sourceRefs: ['Isolated synthetic fixture'], reviewedAt: new Date().toISOString().slice(0, 10),
     modules: [{ id: 'module', title: 'Test', lessons: [{ id: 'lesson', title: 'Test', kind: 'text', required: true, body: 'Synthetic test only.', media: [] }] }],
     assessment: { durationMinutes: 1, maxAttempts: 2, passPercent: 100, questionCount: 1, retakeDelayMinutes: 0 },
     questions: [{ id: 'question', text: 'Synthetic test?', topic: 'Test', options: [{ id: 'wrong', text: 'Wrong' }, { id: 'right', text: 'Correct' }], correctOptionIds: ['right'] }] };
 }
-async function template(options: { font?: boolean; programId?: string; issuerName?: string; approved?: boolean } = {}) {
+async function template(options: { font?: boolean; programId?: string; issuerName?: string; approved?: boolean; preserveAnnotation?: boolean } = {}) {
   const document = await PDFDocument.create(); const page = document.addPage([620, 800]);
   page.drawText('ISOLATED TEST PDF - NO VALIDITY', { x: 30, y: 760, size: 14 });
   const fieldMap = Object.fromEntries(['learnerName', 'programTitle', 'serial', 'issuedAt', 'verificationUrl', 'issuerName'].map((key, index) => {
     document.getForm().createTextField(key).addToPage(page, { x: 30, y: 700 - index * 65, width: 560, height: 45 }); return [key, key];
   }));
-  const result = await createCredentialTemplate(actor.id, { programId: options.programId || 'ohrana-truda', issuerName: options.issuerName || 'TEST ISSUER - NO VALIDITY', name: 'ISOLATED TEST TEMPLATE', pdfBase64: Buffer.from(await document.save()).toString('base64'), ...(options.font ? { fontBase64 } : {}), fieldMap });
+  if (options.preserveAnnotation) {
+    const note = document.context.obj({ Type: 'Annot', Subtype: 'Text', Rect: [20, 20, 40, 40], Contents: PDFString.of('TEST ONLY retained non-form annotation') });
+    page.node.addAnnot(document.context.register(note));
+  }
+  const result = await createCredentialTemplate(actor.id, { programId: options.programId || 'ohrana-truda', issuerName: options.issuerName || 'TEST ISSUER - NO VALIDITY', name: 'ISOLATED TEST TEMPLATE', pdfBase64: Buffer.from(await document.save()).toString('base64'), ...(options.font ? { fontBase64 } : {}), ...(options.preserveAnnotation ? { qr: { page: 0, x: 500, y: 30, size: 80 } } : {}), fieldMap });
   if (options.approved !== false) await approveCredentialTemplate(reviewer.id, result.template.id, reason);
   return result.template.id;
 }
-async function reservation(withFont = false) {
-  const originalTemplateId = await template({ font: withFont });
+async function reservation(withFont = false, preserveAnnotation = false) {
+  const originalTemplateId = await template({ font: withFont, preserveAnnotation });
   const created = (await createVersion(editor, 'ohrana-truda', data())).version;
   const review = (await reviewVersion(editor, created.id, created.revision)).version;
   const version = (await publishVersion(reviewer, review.id, review.revision, reason)).version;
@@ -82,6 +100,25 @@ after(async () => {
   assert.ok(target.startsWith(`${resolve(tmpdir())}${sep}`) && basename(target).startsWith('ot-credential-repair-'));
   await rm(target, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   for (const key of envKeys) { if (oldEnv[key] === undefined) delete process.env[key]; else process.env[key] = oldEnv[key]; }
+});
+
+test('rendered credential removes dangling form widgets while preserving valid annotations and QR image', async () => {
+  const pending = await reservation(true, true);
+  assert.equal((await processOutbox({ limit: 1, aggregateId: pending.id })).results[0]?.status, 'delivered');
+  const downloaded = await downloadCredential(pending.id, learner.id);
+  const document = await PDFDocument.load(downloaded.bytes);
+  assert.equal(document.catalog.has(PDFName.of('AcroForm')), false, 'issued PDF has no residual editable form tree');
+  const annotations = document.getPages().flatMap(page => page.node.Annots()?.asArray() || []);
+  assert.equal(annotations.length, 1, 'only the valid non-form annotation remains');
+  for (const ref of annotations) {
+    const annotation = document.context.lookup(ref);
+    assert.ok(annotation instanceof PDFDict, 'every annotation reference resolves after serialization');
+    assert.notEqual(annotation.get(PDFName.of('Subtype')), PDFName.of('Widget'));
+    assert.equal((annotation.get(PDFName.of('Contents')) as PDFString).decodeText(), 'TEST ONLY retained non-form annotation');
+  }
+  const images = document.context.enumerateIndirectObjects().filter(([, object]) => object instanceof PDFRawStream && object.dict.get(PDFName.of('Subtype')) === PDFName.of('Image'));
+  assert.ok(images.length >= 1, 'QR raster remains embedded in the final serialized PDF');
+  assert.equal((await verifyCredential(JSON.parse(pending.before.snapshot_json).verificationUrl.split('/').pop())).status, 'issued');
 });
 
 test('T060 Unicode render failure repairs to approved font template and issues one genuine test PDF with unchanged identity', async () => {
@@ -167,4 +204,49 @@ test('render that started without a lease cannot commit stale PDF after atomic t
     assert.equal(row.status, 'pending'); assert.equal(row.document_base64, null); assert.equal(JSON.parse(row.snapshot_json).templateId, replacement);
     assert.equal((await processOutbox({ limit: 1, aggregateId: pending.id })).results[0]?.status, 'delivered');
   } finally { paused.mock.restore(); release(); }
+});
+
+test('B43 batch preview creates no credential; explicit confirmation records per-item outcomes and repeat never reserves a second document', async () => {
+  const enrollmentId = await readyWithoutDocument();
+  const preview = await previewCredentialBatch(actor, { action: 'issue', targetIds: [enrollmentId, 'missing-enrollment'], reason });
+  assert.equal(preview.status, 'preview'); assert.equal(preview.items.filter(item => item.status === 'failed').length, 1);
+  assert.equal((await queryOne('SELECT COUNT(*) n FROM credentials WHERE enrollment_id=?', [enrollmentId]))!.n, 0);
+  assert.equal(JSON.stringify(preview).includes('correctOptionIds'), false);
+  await rejectsCode(commitCredentialBatch(actor, preview.id, { confirmed: false }), 'VALIDATION_ERROR');
+  await rejectsCode(getCredentialBatch(learner, preview.id), 'FORBIDDEN');
+  await rejectsCode(getCredentialBatch({ ...actor, id: reviewer.id }, preview.id), 'BATCH_NOT_FOUND');
+  const committed = await commitCredentialBatch(actor, preview.id, { confirmed: true });
+  assert.equal(committed.status, 'partial');
+  const completed = committed.items.find(item => item.targetId === enrollmentId)!;
+  assert.equal(completed.status, 'completed'); assert.equal(completed.result.credential.status, 'pending');
+  assert.deepEqual(await commitCredentialBatch(actor, preview.id, { confirmed: true }), committed);
+  assert.equal((await queryOne('SELECT COUNT(*) n FROM credentials WHERE enrollment_id=?', [enrollmentId]))!.n, 1);
+  assert.equal((await queryOne("SELECT COUNT(*) n FROM outbox WHERE type='credential.render' AND aggregate_id=?", [completed.result.credential.id]))!.n, 1);
+  const revoke = await previewCredentialBatch(actor, { action: 'revoke', targetIds: [completed.result.credential.id], reason });
+  assert.equal((await queryOne('SELECT status FROM credentials WHERE id=?', [completed.result.credential.id]))!.status, 'pending');
+  assert.equal((await commitCredentialBatch(actor, revoke.id, { confirmed: true })).status, 'completed');
+  assert.equal((await queryOne('SELECT status FROM credentials WHERE id=?', [completed.result.credential.id]))!.status, 'revoked');
+});
+
+test('B43 stale/expired batch previews fail closed and infrastructure rollback leaves an item safely resumable', async () => {
+  const enrollmentId = await readyWithoutDocument();
+  const stale = await previewCredentialBatch(actor, { action: 'issue', targetIds: [enrollmentId], reason });
+  await template({ font: true });
+  const rejected = await commitCredentialBatch(actor, stale.id, { confirmed: true });
+  assert.equal(rejected.status, 'partial'); assert.equal(rejected.items[0]!.errorCode, 'BATCH_PREVIEW_CHANGED');
+  assert.equal((await queryOne('SELECT COUNT(*) n FROM credentials WHERE enrollment_id=?', [enrollmentId]))!.n, 0);
+  const expired = await previewCredentialBatch(actor, { action: 'issue', targetIds: [enrollmentId], reason });
+  await execute('UPDATE credential_batches SET expires_at=? WHERE id=?', [new Date(Date.now() - 60000).toISOString(), expired.id]);
+  await rejectsCode(commitCredentialBatch(actor, expired.id, { confirmed: true }), 'BATCH_PREVIEW_EXPIRED');
+  const resumable = await previewCredentialBatch(actor, { action: 'issue', targetIds: [enrollmentId], reason });
+  await execute("CREATE TRIGGER test_batch_audit_failure BEFORE INSERT ON audit_events WHEN NEW.action='credential_reserved' BEGIN SELECT RAISE(ABORT,'ISOLATED BATCH AUDIT FAILURE'); END");
+  try { await assert.rejects(commitCredentialBatch(actor, resumable.id, { confirmed: true }), /ISOLATED BATCH AUDIT FAILURE/); }
+  finally { await execute('DROP TRIGGER test_batch_audit_failure'); }
+  assert.equal((await queryOne('SELECT COUNT(*) n FROM credentials WHERE enrollment_id=?', [enrollmentId]))!.n, 0);
+  assert.equal((await getCredentialBatch(actor, resumable.id)).items[0]!.status, 'pending');
+  const results = await Promise.allSettled([commitCredentialBatch(actor, resumable.id, { confirmed: true }), commitCredentialBatch(actor, resumable.id, { confirmed: true })]);
+  assert.ok(results.some(result => result.status === 'fulfilled'));
+  for (const result of results) if (result.status === 'rejected') assert.equal(result.reason?.data?.code, 'BATCH_IN_PROGRESS');
+  assert.equal((await getCredentialBatch(actor, resumable.id)).status, 'completed');
+  assert.equal((await queryOne('SELECT COUNT(*) n FROM credentials WHERE enrollment_id=?', [enrollmentId]))!.n, 1);
 });

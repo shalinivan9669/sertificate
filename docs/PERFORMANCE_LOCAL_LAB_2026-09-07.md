@@ -1,5 +1,7 @@
 # Final local performance comparison — 2026-09-07
 
+A later [focused LMS navigation/font-loading comparison](LMS_NAV_LAYOUT_LAB.md#executed-comparison-and-narrow-css-fixes) reproduced the terminal-view shift below and validated a narrow CSS fix in local candidate build `718c3f06`: RU/390 terminal observed shift sum changed from 0.18025 to 0.00055, and all 16 controlled navigation scenarios retained their rows/height when fonts loaded. The original full experiment and its numbers below remain historical evidence for build `6aa9fbb6`; the focused candidate check does not replace the homepage/API measurements or establish field Core Web Vitals.
+
 This report replaces the earlier intermediate measurements. It compares the preserved HomePageClassic baseline at `http://127.0.0.1:3100/` with final Node build **`6aa9fbb6-2c27-4ec9-bb12-8eb4f4fd60f9`** at `http://127.0.0.1:3101/`. The run began **2026-09-07 14:09:30 UTC**, used Chrome **152.0.7977.76**, and completed with exit 0. All 13 measured navigations returned HTTP 200 and hydrated, with no page exceptions, failed requests, HTTP resource errors, blocked mutations or horizontal overflow. These facts do **not** mean every performance threshold passed: the terminal exam view had a measured CLS of **0.18**, a known local quality limitation.
 
 ```powershell

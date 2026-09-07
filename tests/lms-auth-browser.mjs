@@ -8,7 +8,7 @@ const base = process.env.TEST_BASE_URL || "http://127.0.0.1:3101";
 if (!/^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(base))
   throw new Error("Local test server required");
 const fixture = JSON.parse(
-  await readFile(new URL("../.data/e2e-fixture.json", import.meta.url), "utf8"),
+  await readFile(process.env.OT_E2E_FIXTURE_PATH || new URL("../.data/e2e-fixture.json", import.meta.url), "utf8"),
 );
 assert.equal(fixture.notice, "SYNTHETIC LOCAL TEST DATA ONLY");
 assert.ok(fixture.databasePath.endsWith("e2e.sqlite"));

@@ -24,13 +24,13 @@ export async function queryAll<T = Record<string, any>>(sql: string, args: InArg
 export async function execute(sql: string, args: InArgs = [], db?: Db): Promise<ResultSet> {
   return (db || await getDb()).execute({ sql, args });
 }
-export async function withTransaction<T>(callback: (tx: Transaction) => Promise<T>, db?: Client): Promise<T> {
+export async function withTransaction<T>(callback: (tx: Transaction) => Promise<T>, db?: Client, mode: 'write' | 'read' = 'write'): Promise<T> {
   const client = db || await getDb();
   let tx: Transaction | undefined;
   // libSQL local and remote connections contend for the same writer. Retry acquisition only;
   // never replay a callback whose domain writes or commit outcome could be uncertain.
   for (let attempt = 0; !tx; attempt++) {
-    try { tx = await client.transaction('write'); }
+    try { tx = await client.transaction(mode); }
     catch (error: any) {
       if (!['SQLITE_BUSY', 'SQLITE_BUSY_TIMEOUT', 'TRANSACTION_ACTIVE'].includes(error?.code) || attempt >= 12) throw error;
       await new Promise((resolve) => setTimeout(resolve, Math.min(20 * 2 ** attempt, 200)));

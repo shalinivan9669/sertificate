@@ -2,9 +2,10 @@
 const { api, tr, locale, errorText, date, statusLabel } = useLmsApi();
 const path = useLocalePath();
 const route = useRoute();
+const organizationPage = ref(1);
 const { data, pending, error, refresh } = await useAsyncData(
   "lms-organizations",
-  () => api<any>("/organizations"),
+  () => api<any>("/organizations", { query: { page: organizationPage.value } }),
 );
 const selected = ref("");
 const overview = ref<any>(null);
@@ -27,6 +28,9 @@ const accessUntil = ref("");
 const assignConfirmed = ref(false);
 const revokeId = ref("");
 const revokeReason = ref("");
+const reportProgramId = ref("");
+const pages = reactive({ enrollments: 1, members: 1, invitations: 1 });
+const reportUrl = computed(() => "/api/v1/organizations/" + encodeURIComponent(selected.value) + "/report.csv" + (reportProgramId.value ? "?programId=" + encodeURIComponent(reportProgramId.value) : ""));
 let assignmentKey = "";
 const { data: catalog } = await useAsyncData("lms-catalog", () =>
   api<{ programs: LmsProgram[] }>("/catalog/programs"),
@@ -58,23 +62,60 @@ watch(
   },
   { deep: true },
 );
-async function load() {
+async function load(resetPages = true) {
   if (!selected.value) return;
+  if (resetPages) {
+    pages.enrollments = pages.members = pages.invitations = 1;
+    preview.value = null;
+    issuedInvitation.value = "";
+    userIds.value = [];
+    revokeId.value = "";
+  }
   loading.value = true;
   overview.value = null;
   failure.value = "";
-  preview.value = null;
-  issuedInvitation.value = "";
-  userIds.value = [];
   try {
     overview.value = await api(
       "/organizations/" + encodeURIComponent(selected.value),
+      { query: { page: pages.enrollments, memberPage: pages.members, invitationPage: pages.invitations, ...(reportProgramId.value ? { programId: reportProgramId.value } : {}) } },
     );
+    for (const key of ["enrollments", "members", "invitations"] as const) pages[key] = overview.value.pagination[key].page;
   } catch (e) {
     failure.value = errorText(e);
   } finally {
     loading.value = false;
   }
+}
+async function changePage(kind: keyof typeof pages, page: number) {
+  if (loading.value || busy.value) return;
+  if (kind === "members") { userIds.value = []; revokeId.value = ""; }
+  pages[kind] = page;
+  await load(false);
+}
+async function changeOrganizationPage(page: number) {
+  if (pending.value || loading.value || busy.value) return;
+  organizationPage.value = page;
+  selected.value = "";
+  overview.value = null;
+  reportProgramId.value = "";
+  await refresh();
+}
+function range(paging: any) { return `${paging.from}–${paging.to} ${tr("из", " / ")} ${paging.total}`; }
+function reportStatus(value: string) {
+  const labels: Record<string, [string, string]> = {
+    not_started: ["Не начал", "Әлі бастамаған"], in_progress: ["В процессе", "Оқу жүріп жатыр"],
+    ready_for_assessment: ["К проверке", "Тексеруге дайын"], waiting_practice: ["Ожидает практики / комиссии", "Практиканы / комиссияны күтуде"],
+    assessment_in_progress: ["Проходит проверку", "Тексеруден өтуде"], assessment_failed: ["Проверка не пройдена", "Тексеруден өтпеді"],
+    completed: ["Проверка пройдена", "Тексеруден өтті"], awaiting_grading: ["Ожидает серверного результата", "Сервер нәтижесін күтуде"],
+    assessment_voided: ["Попытка аннулирована", "Талпыныс жойылды"], voided: ["Попытка аннулирована", "Талпыныс жойылды"],
+    passed: ["Пройдена", "Өтті"], failed: ["Не пройдена", "Өтпеді"],
+    document_none: ["Не оформлен", "Рәсімделмеген"], document_pending: ["Документ оформляется", "Құжат рәсімделуде"],
+    document_issued: ["Документ выдан", "Құжат берілді"], document_revoked: ["Документ отозван", "Құжат кері қайтарылды"],
+    document_superseded: ["Документ заменён", "Құжат ауыстырылды"], active: ["Доступ открыт", "Қолжетімділік ашық"],
+    pending_access: ["Назначено · ожидает подтверждения доступа", "Тағайындалды · қолжетімділікті растауды күтуде"],
+    organization_access_revoked: ["Доступ к организации отозван", "Ұйымға қолжетімділік жойылды"],
+  };
+  const label = labels[value]; return label ? tr(label[0], label[1]) : statusLabel(value);
 }
 async function run(action: () => Promise<any>, success: string) {
   if (busy.value) return;
@@ -240,7 +281,7 @@ useHead(() => ({
           v-if="data?.organizations?.length"
           class="block max-w-xl space-y-2"
           ><span>{{ tr("Организация", "Ұйым") }}</span
-          ><select v-model="selected" @change="load">
+          ><select v-model="selected" :disabled="loading || busy" @change="reportProgramId = ''; load()">
             <option value="" disabled>
               {{ tr("Выберите организацию", "Ұйымды таңдаңыз") }}
             </option>
@@ -257,6 +298,11 @@ useHead(() => ({
             )
           }}
         </p>
+        <nav v-if="data?.pagination?.totalPages > 1" class="flex flex-wrap items-center gap-3" :aria-label="tr('Страницы организаций', 'Ұйым беттері')">
+          <span>{{ tr('Организации', 'Ұйымдар') }}: {{ range(data.pagination) }}</span>
+          <button class="lms-button secondary" :disabled="pending || loading || busy || !data.pagination.hasPrevious" @click="changeOrganizationPage(data.pagination.page - 1)">{{ tr('Предыдущие', 'Алдыңғы') }}</button>
+          <button class="lms-button secondary" :disabled="pending || loading || busy || !data.pagination.hasMore" @click="changeOrganizationPage(data.pagination.page + 1)">{{ tr('Следующие', 'Келесі') }}</button>
+        </nav>
         <details :open="!!inviteToken" class="rounded-xl border p-4">
           <summary class="cursor-pointer font-semibold">
             {{ tr("Принять приглашение", "Шақыруды қабылдау") }}
@@ -295,7 +341,7 @@ useHead(() => ({
     <button
       v-if="selected && !overview && !loading"
       class="lms-button secondary"
-      @click="load"
+      @click="load(false)"
     >
       {{ tr("Повторить загрузку", "Жүктеуді қайталау") }}
     </button>
@@ -303,19 +349,23 @@ useHead(() => ({
       ><div class="flex flex-wrap items-center justify-between gap-4">
         <h2 class="text-2xl font-bold">{{ overview.organization.name }}</h2>
         <a
+          v-if="overview.export.available"
           class="lms-button secondary"
-          :href="
-            '/api/v1/organizations/' +
-            encodeURIComponent(selected) +
-            '/report.csv'
-          "
+          :href="reportUrl"
           >{{ tr("Скачать отчёт CSV", "CSV есебін жүктеу") }}</a
         >
       </div>
+      <p class="lms-note">{{ tr('Сотрудников с доступом', 'Қолжетімділігі бар қызметкерлер') }}: {{ overview.totals.activeMembers }} / {{ overview.totals.members }}. {{ tr('Назначений в выбранном отчёте', 'Таңдалған есептегі тағайындаулар') }}: {{ overview.totals.enrollments }}.</p>
       <section class="lms-card space-y-5">
         <h2 class="text-xl font-bold">
           {{ tr("Назначить обучение", "Оқуды тағайындау") }}
         </h2>
+        <nav class="flex flex-wrap items-center gap-3" :aria-label="tr('Страницы сотрудников', 'Қызметкер беттері')">
+          <span>{{ tr('Сотрудники', 'Қызметкерлер') }}: {{ range(overview.pagination.members) }}</span>
+          <button class="lms-button secondary" :disabled="loading || busy || !overview.pagination.members.hasPrevious" @click="changePage('members', pages.members - 1)">{{ tr('Предыдущие сотрудники', 'Алдыңғы қызметкерлер') }}</button>
+          <button class="lms-button secondary" :disabled="loading || busy || !overview.pagination.members.hasMore" @click="changePage('members', pages.members + 1)">{{ tr('Следующие сотрудники', 'Келесі қызметкерлер') }}</button>
+        </nav>
+        <p class="text-sm text-slate-600">{{ tr('Выбор сотрудников для назначения, счёта и отзыва доступа относится к текущей странице. При смене страницы выбор сбрасывается.', 'Оқуға тағайындау, шот және қолжетімділікті жою үшін қызметкерлер осы беттен таңдалады. Бет ауысқанда таңдау тазартылады.') }}</p>
         <p v-if="!overview.members?.length" class="lms-note">
           {{
             tr(
@@ -357,8 +407,8 @@ useHead(() => ({
                 <option value="" disabled>
                   {{ tr("Выберите программу", "Бағдарламаны таңдаңыз") }}
                 </option>
-                <option v-for="v in versions" :key="v.id" :value="v.id">
-                  {{ v.title }} · {{ v.language.toUpperCase() }}
+                <option v-for="v in versions" :key="v.id" :value="v.id" :disabled="v.intakeOpen === false">
+                  {{ v.title }} · {{ v.language.toUpperCase() }} {{ v.intakeOpen === false ? tr('· Приём остановлен', '· Қабылдау тоқтатылды') : '' }}
                 </option>
               </select></label
             ><label class="space-y-2"
@@ -408,26 +458,39 @@ useHead(() => ({
         <h2 class="text-xl font-bold">
           {{ tr("Прогресс сотрудников", "Қызметкерлердің оқу барысы") }}
         </h2>
+        <label class="block max-w-xl space-y-2"><span>{{ tr('Программа в отчёте', 'Есептегі бағдарлама') }}</span>
+          <select v-model="reportProgramId" :disabled="loading || busy" @change="load()"><option value="">{{ tr('Все программы', 'Барлық бағдарламалар') }}</option><option v-for="p in catalog?.programs || []" :key="p.id" :value="p.id">{{ p.title[locale === 'kk' ? 'kk' : 'ru'] }}</option></select>
+        </label>
+        <p class="text-sm text-slate-600">{{ tr('Данные на', 'Деректер уақыты') }} {{ date(overview.snapshotAt) }}. {{ tr('Процент показывает завершение обязательных уроков закреплённой версии программы.', 'Пайыз бекітілген бағдарлама нұсқасындағы міндетті сабақтардың аяқталуын көрсетеді.') }}</p>
+        <p v-if="!overview.export.available" class="lms-note" role="status">{{ tr('CSV содержит все строки выбранного отчёта, максимум', 'CSV таңдалған есептің барлық жолдарын қамтиды, ең көбі') }} {{ overview.export.maximumRows }}. {{ tr('В отчёте', 'Есепте') }} {{ overview.export.totalRows }}. {{ tr('Выберите программу, чтобы уменьшить объём экспорта. Частичный файл не создаётся.', 'Экспорт көлемін азайту үшін бағдарламаны таңдаңыз. Толық емес файл жасалмайды.') }}</p>
         <p v-if="!overview.enrollments?.length" class="lms-note">
           {{ tr("Назначений пока нет.", "Тағайындаулар әзірге жоқ.") }}
         </p>
         <article
           v-for="e in overview.enrollments"
           :key="e.id"
-          class="rounded-xl border p-4"
+          class="rounded-xl border p-4 space-y-2"
+          :data-enrollment-id="e.id"
         >
           <h3 class="font-semibold">{{ e.name }}</h3>
-          <p class="text-sm">{{ e.programId }} · {{ statusLabel(e.status) }}</p>
-          <p class="mt-2 text-sm text-slate-600">
-            {{ tr("Завершено уроков", "Аяқталған сабақтар") }}:
-            {{ e.completedLessons }} · {{ tr("Документов", "Құжаттар") }}:
-            {{ e.documents }}
-          </p>
+          <p class="text-sm">{{ e.programTitle }} · {{ e.language?.toUpperCase() }}</p>
+          <p class="font-semibold">{{ reportStatus(e.progressStatus) }}</p>
+          <dl class="grid gap-3 text-sm sm:grid-cols-2">
+            <div><dt class="font-medium">{{ tr('Доступ', 'Қолжетімділік') }}</dt><dd>{{ reportStatus(e.accessStatus) }}</dd></div>
+            <div><dt class="font-medium">{{ tr('Обучение', 'Оқу') }}</dt><dd>{{ reportStatus(e.learning.status) }} · {{ e.learning.requiredCompleted }} / {{ e.learning.requiredTotal }} {{ tr('обязательных уроков', 'міндетті сабақ') }}<span v-if="e.learning.percent !== null"> · {{ e.learning.percent }}%</span><span v-else> · {{ tr('процент не рассчитывается', 'пайыз есептелмейді') }}</span></dd><dd v-if="e.learning.pendingPractice">{{ tr('Практических подтверждений ожидается', 'Күтілетін практика растаулары') }}: {{ e.learning.pendingPractice }}</dd></div>
+            <div><dt class="font-medium">{{ tr('Последняя проверка', 'Соңғы тексеру') }}</dt><dd>{{ reportStatus(e.assessment.status) }}<span v-if="e.assessment.score !== null"> · {{ e.assessment.score }}%</span></dd></div>
+            <div><dt class="font-medium">{{ tr('Документ', 'Құжат') }}</dt><dd>{{ reportStatus('document_' + e.credential.status) }}<span v-if="e.credential.serial"> · {{ e.credential.serial }}</span></dd><dd v-if="e.credential.issuedAt">{{ tr('Выдан', 'Берілді') }}: {{ date(e.credential.issuedAt) }}</dd><dd v-if="e.credential.revokedAt">{{ tr('Отозван', 'Кері қайтарылды') }}: {{ date(e.credential.revokedAt) }}</dd></div>
+          </dl>
           <p v-if="e.accessUntil" class="text-sm text-slate-600">
             {{ tr("Доступ до", "Қолжетімділік мерзімі") }}
             {{ date(e.accessUntil) }}
           </p>
         </article>
+        <nav class="flex flex-wrap items-center gap-3" :aria-label="tr('Страницы прогресса', 'Оқу барысының беттері')">
+          <span>{{ tr('Назначения', 'Тағайындаулар') }}: {{ range(overview.pagination.enrollments) }}</span>
+          <button class="lms-button secondary" :disabled="loading || busy || !overview.pagination.enrollments.hasPrevious" @click="changePage('enrollments', pages.enrollments - 1)">{{ tr('Предыдущие назначения', 'Алдыңғы тағайындаулар') }}</button>
+          <button class="lms-button secondary" :disabled="loading || busy || !overview.pagination.enrollments.hasMore" @click="changePage('enrollments', pages.enrollments + 1)">{{ tr('Следующие назначения', 'Келесі тағайындаулар') }}</button>
+        </nav>
       </section>
       <div class="grid gap-6 lg:grid-cols-2">
         <section class="lms-card space-y-5">
@@ -474,6 +537,11 @@ useHead(() => ({
               {{ date(inv.expiresAt) }}
             </p>
           </div>
+          <nav class="flex flex-wrap items-center gap-3" :aria-label="tr('Страницы приглашений', 'Шақыру беттері')">
+            <span>{{ tr('Приглашения', 'Шақырулар') }}: {{ range(overview.pagination.invitations) }}</span>
+            <button class="lms-button secondary" :disabled="loading || busy || !overview.pagination.invitations.hasPrevious" @click="changePage('invitations', pages.invitations - 1)">{{ tr('Предыдущие приглашения', 'Алдыңғы шақырулар') }}</button>
+            <button class="lms-button secondary" :disabled="loading || busy || !overview.pagination.invitations.hasMore" @click="changePage('invitations', pages.invitations + 1)">{{ tr('Следующие приглашения', 'Келесі шақырулар') }}</button>
+          </nav>
         </section>
         <section class="lms-card space-y-5">
           <h2 class="text-xl font-bold">
@@ -544,6 +612,7 @@ useHead(() => ({
           </div>
         </section>
       </div>
+      <LmsLearningReminders :organization-id="selected" :enrollments="overview.enrollments" />
       <LmsInvoices
         :organization-id="selected"
         :organization-name="overview.organization.name"

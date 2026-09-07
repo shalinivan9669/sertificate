@@ -57,6 +57,10 @@ async function logout() {
             :to="path('/cabinet/organization')"
             >{{ tr("Моя организация", "Менің ұйымым") }}</NuxtLink
           ><NuxtLink
+            class="lms-button secondary"
+            :to="path('/cabinet/reminders')"
+            >{{ tr("Напоминания", "Еске салулар") }}</NuxtLink
+          ><NuxtLink
             v-if="me.user.role !== 'learner'"
             class="lms-button secondary"
             :to="path('/admin')"

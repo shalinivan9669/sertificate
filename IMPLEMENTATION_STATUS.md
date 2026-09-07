@@ -1,6 +1,29 @@
 # OT Center — статус реализации
 
-Обновлено: 2026-09-07. Реализация запушена в GitHub, удалённый Quality прошёл, Vercel preview готов. Production ожидает настройки постоянного хранилища и почты. Владелец отдельно разрешил production-деплой после обновлений и проверок. Реальные платежи и массовые уведомления отдельно не разрешены.
+Обновлено: 2026-09-07. Основной пакет запушен в GitHub и прошёл удалённый Quality; дополнительный пакет ниже прошёл локальные проверки и подготовлен к новому push/CI. Production ожидает настройки постоянного хранилища и почты. Владелец отдельно разрешил production-деплой после обновлений и проверок. Реальные платежи и массовые уведомления отдельно не разрешены.
+
+## Дополнительный пакет — локальная проверка, перед новым GitHub CI
+
+После повторного сопоставления полного handoff обнаружены пробелы в прежнем объёме B42/B43/B44/B52/B53. Значения `passed` в старых матрицах для отчётов и администрирования подтверждали более узкие сценарии и уточняются. Новый рабочий код пока не является проверенным production-релизом.
+
+- B42: подробные состояния обучения, экзамена, практики и документов; явная пагинация сотрудников/назначений/приглашений; CSV без молчаливого обрезания. 7 новых интеграционных тестов и 23 прежних business tests пройдены. Совместный браузерный прогон отчётов/напоминаний **13/13**, 0 JS errors, RU desktop/KK360; включает пустую организацию, все 71 назначения/62 сотрудника/60 приглашений и реальное скачивание CSV.
+- B43: реальный браузерный цикл документов выявил оставшиеся после `pdf-lib.flatten()` ссылки на удалённые поля PDF. Исправление сохраняет другие аннотации и QR; 7 credential-repair tests пройдены. Новый выбор практического урока использует название и точную версию назначения. Расширенный UI/PDF pilot **20/20**, 0 JS errors: реальные MFA/практика/экзамен/failed render/retry/repair, два PDF с проверенной структурой и распознанными QR, owner ACL, отзыв/замена, журнал инцидентов, заметки и пакетная обработка.
+- B52: миграция 006, журнал инцидентов с владельцем/основанием/историей, пороги ожидания, bounded scan и счётчики отклонённых событий без исходных payload. 7 новых incident tests + 2 FK/readiness tests пройдены; сфокусированный ESLint exit 0. В fault-injection тесте поломка счётчика не вызывает повтор уже доставленного уведомления. SMTP не использовался.
+- Локальная проверка смещения навигации после загрузки шрифтов: итоговая отдельная CSS-сборка `718c3f06`, 32/32 сценария; в 16 контролируемых font-swap сценариях геометрия ссылок стабильна. RU390 terminal: 0.18025 → 0.00055; KK360 catalog/terminal: 0.19926 → 0.00884. Это лабораторные наблюдения, не полевые CWV.
+- B44: настраиваемые напоминания по действительному access_until или явно выбранной дате повторного обучения, IANA timezone, максимум 3 смещения, дедупликация, изменение/отмена, актуальное членство, opt-out. 9 тестов БД и браузерные create→reschedule→cancel/opt-out пройдены; внешняя почта не отправлялась.
+- Остановка новых зачислений отделена от immutable версии: 3 новых интеграционных теста и UI pilot подтверждают запрет новых назначений/заказов/счетов с сохранением прежних обязательств. Служебные заметки append-only; пакет до 10 документов требует preview/confirm и атомарного результата по каждой записи. Дополнительные batch/support tests **3/3**.
+- Проверка остальных локальных сценариев **9/9**, 0 JS errors: KK город/подбор/returnTo, переходы во время попытки, действительное истечение HTTP session и восстановление ответов, неподтверждённая оплата, минимальный verification DTO/headers и 429. Вторая независимая Chromium-сессия с настоящим новым входом и отличающимся server session ID подтверждает T033/T040: версия, урок, attempt, порядок вопросов, deadline и ответы сохранены. `artifacts/acceptance-extra/report.json`, завершён 15:57:14 UTC.
+- Полный локальный набор **124/124**, 0 failed/skipped, exit 0, 34.22s: `implementation-staff-workflows-124-tests.log`. Два предыдущих полных запуска дали 122/123 из-за Windows EBUSY при очистке искусственно неполной тестовой БД. Этот отрицательный rollback-тест переведён на отдельную реальную SQLite memory DB; полный file-backed FK/readiness тест сохранён. После изменения полный набор 123/123 прошёл; добавленный тест миграции также включён в последний полный запуск124.
+- Полные lint и typecheck пройдены: `implementation-prepush-lint.log`, `implementation-prepush-typecheck.log`, оба exit 0. Один промежуточный typecheck выявил implicit-any в новом диагностическом rollback script; явный тип исправлен, полный повтор прошёл.
+- Браузерный общий запуск на c76fd093 прошёл 4 набора: auth6, contact2 locales, learner11, staff13 (включая synthetic invoice и 360px). Новый `tests/run-core-browser.mjs` создаёт отдельную БД/manifest/порт 3105 и теперь включён в GitHub CI после установки Chromium.
+- Vercel artifact **ca57b6d3**, Node24/max60s, 18.7MB/4.66MBgzip: 550 public HTML+GSC, 15797 asset refs, missing0, один build ID. Node c76fd093 прошёл UI и все550HTTP/10private/6true404, но отдельная инвентаризация выявила лишний unused build metadata от параллельного Nuxt typecheck; его strict artifact gate не засчитан. Чистая последовательная Node пересборка **4855f35b** прошла SEO550/HTML551/15797refs/missing0/oneID. Финальный аудит JS89+CSS5 подтвердил совпадение всех путей/SHA с Vercel, 102 privacy canary не найден, public maps отсутствуют.
+- Локальный rollback drill **15 проверок**, exit 0: старый сохранённый LMS читает отдельную synthetic копию со схемой001–009 и прежней session; новые ограничения/неизвестная миграция/checksum mismatch запрещают запуск старого writer. Это диагностика совместимости данных, **не разрешённый production rollback**. `docs/ROLLBACK_DRILL.md`.
+- Encrypted backup/restore **5/5** после расширения fixture: сравниваются все строки всех таблиц, включая напоминания, остановленный набор, служебные заметки и незавершённые группы; не только число таблиц. `implementation-backup-nine-migrations.log`.
+- Отдельный тест действительного обновления старой synthetic БД **005 → 009, 1/1**: сохранность прежних строк/индексов/триггеров/checksum, девять новых пустых таблиц, FK/integrity, запреты изменения опубликованной версии/результата/аудита, идемпотентность повторного применения. Не является hosted migration.
+- На окончательном Node artifact4855f35b повторно пройдён learner browser **11/11**, 0 JS errors, свежая отдельная БД: `artifacts/core-browser/e27e7ba2-5360-4350-8bc7-4166c8ad961a/report.json`.
+- Матрицы повторно сопоставлены со всеми исходными строками handoff: backlog58 =40 passed/13 blocked/5 not_run; acceptance84 =74 passed/4 blocked/6 not_run. Source-column equality, unique IDs и CSV roundtrip пройдены. Значения относятся к указанной локальной области проверки; внешние зависимости не объявлены завершёнными.
+
+Результаты основной таблицы ниже относятся к указанным прежним коммитам/сборкам до этого пакета. Новый remote CI/preview ещё требует нового commit/push; production зависит от постоянной БД/почты и фактических release checks.
 
 ## Исходное состояние и поручение
 
@@ -28,7 +51,7 @@
 - Payments: серверные заказы/история и изолированный HMAC sandbox с signature/amount/currency/merchant/replay checks. Боевого адаптера нет, default disabled; sandbox запрещён в Vercel production и не возвращает manually confirmed invoice payment.
 - Credentials: загрузка реального PDF AcroForm/шрифта, независимое утверждение, eligibility, уникальный номер, protected download, opaque verification без публичных ФИО/контактов, revoke/reissue. Failed pending render можно перепривязать к новому approved шаблону с прежним номером/ссылкой; stale parallel render отвергается. Печати/подписи не рисуются.
 - CRM/operations: durable lead до ответа 202, idempotency, совместимый `/api/amo-lead`, leased outbox/backoff/retry, сохранение amoCRM ID до notes, общий deadline доставки, inbox/согласия. Внешние delivery flags соблюдаются. Контактная форма RU/KK сохраняет данные и ключ повтора после сетевого сбоя.
-- Security/operations: streamed body limits, origin/JSON/rate limits, audit, scoped admin, health/ready, encrypted backup/restore, CI, migrations 001–005 с checksum; LF закреплён в .gitattributes для Windows/Linux.
+- Security/operations: streamed body limits, origin/JSON/rate limits, audit, scoped admin, health/ready, encrypted backup/restore, CI, migrations 001–009 с checksum; LF закреплён в .gitattributes для Windows/Linux.
 
 ## PDF и реальные материалы
 
@@ -68,7 +91,7 @@
 
 Промежуточные ошибки: первый одновременный dev/build дал Windows ESM/HTTP500 и невалидные screenshots — заменены корректным baseline. Работающий старый сервер блокировал native binary (EPERM) — остановлен и пересобран. Повтор Vercel смешивал stale HTML/assets — исправлен official Nuxt cleanup с проверкой результата и обязательным asset gate. Typecheck включал скачанные SDK research .ts — исключены artifacts/generated/local, не исходники приложения.
 
-[Локальная performance лаборатория](docs/PERFORMANCE_LOCAL_LAB_2026-09-07.md) завершена на последнем artifact: 13 навигаций HTTP 200 без JS/ресурсных ошибок и переполнения, 100 из 100 GET-запросов успешны; p95 health 76,63 ms, каталога 108,07 ms. Медиана LCP главной desktop 564→552 ms, mobile 2036→2136 ms. Экран завершённого тестового экзамена: LCP 1968 ms, CLS 0,18 — конкретное ограничение качества из-за переноса внутренней навигации. Ускорение, прохождение полевых Core Web Vitals/INP и production capacity не заявляются.
+[Локальная performance лаборатория](docs/PERFORMANCE_LOCAL_LAB_2026-09-07.md) ранее завершена на artifact6aa9fbb6: 13 навигаций HTTP 200 без JS/ресурсных ошибок и переполнения, 100 из 100 GET-запросов успешны; p95 health 76,63 ms, каталога 108,07 ms. Медиана LCP главной desktop 564→552 ms, mobile 2036→2136 ms. Экран завершённого тестового экзамена: LCP 1968 ms, CLS 0,18 был связан с переносом внутренней навигации; дополнительная проверка и исправление описаны выше и в docs/LMS_NAV_LAYOUT_LAB.md. Ускорение, прохождение полевых Core Web Vitals/INP и production capacity не заявляются.
 
 ## Бесплатное окружение и выпуск
 
@@ -84,7 +107,7 @@ Nuxt/Nitro Vercel Functions + удалённый libSQL/Turso, native file DB т
 
 ## Конкретные оставшиеся зависимости
 
-1. Подключить постоянную бесплатную БД после ответа по Turso, применить001–005, выполнить remote readiness/negativeFKprobe, сохранить Auth URL/secret/CRON_SECRET. Новый backend без БД нарушил бы приём заявок; production сейчас не изменён.
+1. Подключить постоянную бесплатную БД после ответа по Turso, применить001–009, выполнить remote readiness/negativeFKprobe, сохранить Auth URL/secret/CRON_SECRET. Новый backend без БД нарушил бы приём заявок; production сейчас не изменён.
 2. Настроить transactional почту для подтверждения регистрации и восстановления доступа. Outbox не означает доставленное письмо.
 3. Загрузить/согласовать настоящие учебные материалы, вопросы и PDF-шаблон. PDF-прайс не заменяет программу; production migrations не создают фиктивных пользователей/результатов/сертификатов.
 4. Для реальных денег нужны выбранный provider/условия/credentials/отдельное разрешение. Officialsandbox/reconciliation/refund adapter отсутствуют. Счетам нужны фактические issuer реквизиты; TEST ONLY не являются defaults.

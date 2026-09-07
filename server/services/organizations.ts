@@ -2,15 +2,31 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { audit, enqueue, execute, queryAll, queryOne, withTransaction, type Db } from '../db';
 import { businessFail as fail, id, idempotent, nowIso, parse, safeCsv, sha256 } from '../utils/business';
+import { assertProgramIntakeOpen } from './program-intake';
 
 export async function requireMembership(userId: string, organizationId: string, roles = ['owner', 'manager'], db?: Db) {
   const member = await queryOne('SELECT m.*,o.name FROM memberships m JOIN organizations o ON o.id=m.organization_id WHERE m.user_id=? AND m.organization_id=? AND m.status=? AND o.status=?', [userId, organizationId, 'active', 'active'], db);
   if (!member || !roles.includes(member.role)) fail(404, 'ORGANIZATION_NOT_FOUND');
   return member;
 }
-export async function listOrganizations(userId: string) {
-  const rows = await queryAll('SELECT o.id,o.name,m.role FROM organizations o JOIN memberships m ON m.organization_id=o.id WHERE m.user_id=? AND m.status=? AND o.status=? ORDER BY o.name LIMIT 100', [userId, 'active', 'active']);
-  return { organizations: rows };
+const pageNumber = z.coerce.number().int().min(1).max(1000000).default(1);
+const pageSize = z.coerce.number().int().min(1).max(100).default(50);
+const overviewQuery = z.object({ page: pageNumber, pageSize, memberPage: pageNumber, invitationPage: pageNumber, programId: z.string().regex(/^[a-z0-9-]{1,100}$/).optional() }).strict();
+const exportQuery = z.object({ programId: z.string().regex(/^[a-z0-9-]{1,100}$/).optional() }).strict();
+export const MAX_ORGANIZATION_EXPORT_ROWS = 5000;
+function pagination(requested: number, size: number, total: number) {
+  const totalPages = Math.max(1, Math.ceil(total / size)); const page = Math.min(requested, totalPages);
+  return { page, pageSize: size, total, totalPages, hasPrevious: page > 1, hasMore: page < totalPages, from: total ? (page - 1) * size + 1 : 0, to: Math.min(page * size, total) };
+}
+export async function listOrganizations(userId: string, query: unknown = {}) {
+  const options = parse(z.object({ page: pageNumber, pageSize }).strict(), query);
+  return withTransaction(async tx => {
+    const condition = "m.user_id=? AND m.status='active' AND o.status='active'";
+    const total = Number((await queryOne(`SELECT COUNT(*) n FROM organizations o JOIN memberships m ON m.organization_id=o.id WHERE ${condition}`, [userId], tx))!.n);
+    const paging = pagination(options.page, options.pageSize, total);
+    const rows = await queryAll(`SELECT o.id,o.name,m.role FROM organizations o JOIN memberships m ON m.organization_id=o.id WHERE ${condition} ORDER BY o.name,o.id LIMIT ? OFFSET ?`, [userId, paging.pageSize, (paging.page - 1) * paging.pageSize], tx);
+    return { organizations: rows, pagination: paging };
+  }, undefined, 'read');
 }
 export async function createOrganization(actorId: string, data: unknown) {
   const body = parse(z.object({ name: z.string().trim().min(2).max(200), ownerEmail: z.email().max(254).optional() }).strict(), data);
@@ -24,17 +40,71 @@ export async function createOrganization(actorId: string, data: unknown) {
     return { organization: { id: organizationId, name: body.name } };
   });
 }
-export async function organizationOverview(userId: string, organizationId: string) {
-  const member = await requireMembership(userId, organizationId);
-  const [members, enrollments, invitations] = await Promise.all([
-    queryAll('SELECT u.id,u.name,u.email,m.role,m.status FROM memberships m JOIN "user" u ON u.id=m.user_id WHERE m.organization_id=? ORDER BY u.name LIMIT 500', [organizationId]),
-    queryAll(`SELECT e.id,e.user_id AS userId,u.name,e.status,e.access_until AS accessUntil,v.program_id AS programId,
-      (SELECT COUNT(*) FROM lesson_progress p WHERE p.enrollment_id=e.id AND p.completed=1) AS completedLessons,
-      (SELECT COUNT(*) FROM credentials c WHERE c.enrollment_id=e.id AND c.status='issued') AS documents
-      FROM enrollments e JOIN "user" u ON u.id=e.user_id JOIN program_versions v ON v.id=e.version_id WHERE e.organization_id=? ORDER BY e.created_at DESC LIMIT 500`, [organizationId]),
-    queryAll('SELECT id,email,role,status,expires_at AS expiresAt FROM invitations WHERE organization_id=? ORDER BY created_at DESC LIMIT 100', [organizationId]),
-  ]);
-  return { organization: { id: organizationId, name: member.name, role: member.role }, members, enrollments, invitations };
+/** Only bounded, organization-owned metadata is selected. No answers, PDF data or verification tokens. */
+async function reportRows(organizationId: string, programId: string | undefined, limit: number, offset: number, snapshotAt: string, tx: Db) {
+  const completed = "p.completed=1 AND (json_extract(l.value,'$.kind')!='practice' OR (p.completed_by IS NOT NULL AND p.completed_by!=s.user_id))";
+  const required = "json_extract(l.value,'$.required')=1";
+  const args: any[] = [organizationId]; if (programId) args.push(programId); args.push(limit, offset);
+  const rows = await queryAll(`WITH selected AS (
+    SELECT e.*,u.name,v.program_id,v.data_json AS program_data,COALESCE(m.status,'absent') AS membership_status
+    FROM enrollments e JOIN "user" u ON u.id=e.user_id JOIN program_versions v ON v.id=e.version_id
+    LEFT JOIN memberships m ON m.organization_id=e.organization_id AND m.user_id=e.user_id
+    WHERE e.organization_id=?${programId ? ' AND v.program_id=?' : ''} ORDER BY e.created_at DESC,e.id DESC LIMIT ? OFFSET ?
+  ), lesson_counts AS (
+    SELECT s.id,COUNT(l.value) AS total_lessons,
+      SUM(CASE WHEN ${completed} THEN 1 ELSE 0 END) AS completed_lessons,
+      SUM(CASE WHEN ${required} THEN 1 ELSE 0 END) AS required_lessons,
+      SUM(CASE WHEN ${required} AND ${completed} THEN 1 ELSE 0 END) AS required_completed,
+      SUM(CASE WHEN ${required} AND json_extract(l.value,'$.kind')='practice' AND NOT COALESCE(${completed},0) THEN 1 ELSE 0 END) AS pending_practice
+    FROM selected s LEFT JOIN json_each(s.program_data,'$.modules') m ON 1=1
+    LEFT JOIN json_each(m.value,'$.lessons') l ON 1=1
+    LEFT JOIN lesson_progress p ON p.enrollment_id=s.id AND p.lesson_id=json_extract(l.value,'$.id') GROUP BY s.id
+  ), ranked_attempts AS (
+    SELECT a.id,a.enrollment_id,a.status,a.deadline_at,json_extract(a.result_json,'$.pass') AS passed,json_extract(a.result_json,'$.score') AS score,
+      ROW_NUMBER() OVER(PARTITION BY a.enrollment_id ORDER BY a.created_at DESC,a.rowid DESC) AS rank
+    FROM attempts a JOIN selected s ON s.id=a.enrollment_id
+  ), ranked_documents AS (
+    SELECT c.id,c.enrollment_id,c.serial,c.status,c.issued_at,c.revoked_at,
+      SUM(CASE WHEN c.status='issued' THEN 1 ELSE 0 END) OVER(PARTITION BY c.enrollment_id) AS issued_count,
+      ROW_NUMBER() OVER(PARTITION BY c.enrollment_id ORDER BY CASE WHEN c.status IN ('pending','issued') THEN 0 ELSE 1 END,c.created_at DESC,c.rowid DESC) AS rank
+    FROM credentials c JOIN selected s ON s.id=c.enrollment_id
+  ) SELECT s.id,s.user_id AS userId,s.name,s.status,s.access_until AS accessUntil,s.version_id AS versionId,s.program_id AS programId,
+    json_extract(s.program_data,'$.title') AS programTitle,json_extract(s.program_data,'$.language') AS language,s.membership_status,
+    l.total_lessons,l.completed_lessons,l.required_lessons,l.required_completed,l.pending_practice,
+    a.id AS attempt_id,a.status AS attempt_status,a.deadline_at,a.passed,a.score,
+    c.id AS credential_id,c.serial,c.status AS credential_status,c.issued_at,c.revoked_at,COALESCE(c.issued_count,0) AS documents
+    FROM selected s JOIN lesson_counts l ON l.id=s.id LEFT JOIN ranked_attempts a ON a.enrollment_id=s.id AND a.rank=1
+    LEFT JOIN ranked_documents c ON c.enrollment_id=s.id AND c.rank=1 ORDER BY s.created_at DESC,s.id DESC`, args, tx);
+  return rows.map(row => {
+    const total = Number(row.total_lessons); const completedCount = Number(row.completed_lessons); const requiredTotal = Number(row.required_lessons); const requiredCompleted = Number(row.required_completed); const pendingPractice = Number(row.pending_practice);
+    const assessmentStatus = !row.attempt_id ? 'not_started' : row.attempt_status === 'in_progress' ? (row.deadline_at <= snapshotAt ? 'awaiting_grading' : 'in_progress') : row.attempt_status === 'voided' ? 'voided' : row.passed === 1 ? 'passed' : row.passed === 0 ? 'failed' : 'awaiting_grading';
+    const learningStatus = requiredTotal === requiredCompleted ? 'ready_for_assessment' : requiredTotal - requiredCompleted === pendingPractice && pendingPractice > 0 ? 'waiting_practice' : completedCount > 0 || row.attempt_id ? 'in_progress' : 'not_started';
+    const accessStatus = ['cancelled','suspended','expired'].includes(row.status) ? row.status : row.membership_status !== 'active' ? 'organization_access_revoked' : row.accessUntil && row.accessUntil <= snapshotAt ? 'expired' : row.status === 'pending_access' ? 'pending_access' : 'active';
+    const documentStatus = row.credential_status || 'none';
+    const progressStatus = accessStatus !== 'active' ? accessStatus : documentStatus !== 'none' ? `document_${documentStatus}` : assessmentStatus === 'passed' ? 'completed' : assessmentStatus === 'failed' ? 'assessment_failed' : assessmentStatus === 'in_progress' ? 'assessment_in_progress' : assessmentStatus === 'awaiting_grading' ? 'awaiting_grading' : assessmentStatus === 'voided' ? 'assessment_voided' : learningStatus;
+    return { id: row.id, userId: row.userId, name: row.name, status: row.status, accessUntil: row.accessUntil, versionId: row.versionId, programId: row.programId, programTitle: row.programTitle, language: row.language,
+      accessStatus, progressStatus, completedLessons: completedCount, documents: Number(row.documents),
+      learning: { status: learningStatus, total, completed: completedCount, requiredTotal, requiredCompleted, pendingPractice, percent: requiredTotal ? Math.round(requiredCompleted / requiredTotal * 100) : null },
+      assessment: { status: assessmentStatus, attemptId: row.attempt_id || null, deadlineAt: row.deadline_at || null, score: row.score === null ? null : Number(row.score) },
+      credential: { status: documentStatus, id: row.credential_id || null, serial: row.serial || null, issuedAt: row.issued_at || null, revokedAt: row.revoked_at || null } };
+  });
+}
+export async function organizationOverview(userId: string, organizationId: string, query: unknown = {}) {
+  const options = parse(overviewQuery, query);
+  return withTransaction(async tx => {
+    const member = await requireMembership(userId, organizationId, ['owner','manager'], tx); const snapshotAt = nowIso();
+    const args = options.programId ? [organizationId, options.programId, organizationId, organizationId, organizationId] : [organizationId, organizationId, organizationId, organizationId];
+    const counts = (await queryOne(`SELECT
+      (SELECT COUNT(*) FROM enrollments e JOIN program_versions v ON v.id=e.version_id WHERE e.organization_id=?${options.programId ? ' AND v.program_id=?' : ''}) AS enrollments,
+      (SELECT COUNT(*) FROM memberships WHERE organization_id=?) AS members,
+      (SELECT COUNT(*) FROM memberships WHERE organization_id=? AND status='active') AS activeMembers,
+      (SELECT COUNT(*) FROM invitations WHERE organization_id=?) AS invitations`, args, tx))!;
+    const pages = { enrollments: pagination(options.page, options.pageSize, Number(counts.enrollments)), members: pagination(options.memberPage, options.pageSize, Number(counts.members)), invitations: pagination(options.invitationPage, options.pageSize, Number(counts.invitations)) };
+    const members = await queryAll('SELECT u.id,u.name,u.email,m.role,m.status FROM memberships m JOIN "user" u ON u.id=m.user_id WHERE m.organization_id=? ORDER BY u.name,u.id LIMIT ? OFFSET ?', [organizationId, pages.members.pageSize, (pages.members.page - 1) * pages.members.pageSize], tx);
+    const enrollments = await reportRows(organizationId, options.programId, pages.enrollments.pageSize, (pages.enrollments.page - 1) * pages.enrollments.pageSize, snapshotAt, tx);
+    const invitations = await queryAll('SELECT id,email,role,status,expires_at AS expiresAt FROM invitations WHERE organization_id=? ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?', [organizationId, pages.invitations.pageSize, (pages.invitations.page - 1) * pages.invitations.pageSize], tx);
+    return { organization: { id: organizationId, name: member.name, role: member.role }, members, enrollments, invitations, pagination: pages, totals: { enrollments: Number(counts.enrollments), members: Number(counts.members), activeMembers: Number(counts.activeMembers), invitations: Number(counts.invitations) }, snapshotAt, filters: { programId: options.programId || null }, export: { maximumRows: MAX_ORGANIZATION_EXPORT_ROWS, totalRows: Number(counts.enrollments), available: Number(counts.enrollments) <= MAX_ORGANIZATION_EXPORT_ROWS } };
+  }, undefined, 'read');
 }
 async function insertInvitation(actorId: string, organizationId: string, email: string, role: string, tx: Db) {
   const existing = await queryOne('SELECT id,expires_at FROM invitations WHERE organization_id=? AND email=? AND status=?', [organizationId, email, 'pending'], tx);
@@ -145,6 +215,7 @@ export async function assignEmployees(userId: string, organizationId: string, da
     await requireMembership(userId, organizationId, ['owner', 'manager'], tx);
     const version = await queryOne('SELECT * FROM program_versions WHERE id=? AND status=?', [body.versionId, 'published'], tx);
     if (!version) fail(404, 'PUBLISHED_VERSION_NOT_FOUND');
+    await assertProgramIntakeOpen(version.id, tx);
     if (body.accessUntil && body.accessUntil <= nowIso()) fail(400, 'FUTURE_DEADLINE_REQUIRED');
     const ids: string[] = [];
     for (const target of userIds) {
@@ -165,7 +236,16 @@ export async function assignEmployees(userId: string, organizationId: string, da
     return { enrollmentIds: JSON.parse(event!.reason), status: 'pending_access' };
   });
 }
-export async function organizationReport(userId: string, organizationId: string) {
-  const overview = await organizationOverview(userId, organizationId);
-  return ['"name","program","status","access_until","completed_lessons","documents"', ...overview.enrollments.map(row => [row.name, row.programId, row.status, row.accessUntil, row.completedLessons, row.documents].map(safeCsv).join(','))].join('\r\n');
+export async function organizationReport(userId: string, organizationId: string, query: unknown = {}) {
+  const options = parse(exportQuery, query);
+  return withTransaction(async tx => {
+    await requireMembership(userId, organizationId, ['owner','manager'], tx);
+    const args = options.programId ? [organizationId, options.programId] : [organizationId];
+    const total = Number((await queryOne(`SELECT COUNT(*) n FROM enrollments e JOIN program_versions v ON v.id=e.version_id WHERE e.organization_id=?${options.programId ? ' AND v.program_id=?' : ''}`, args, tx))!.n);
+    if (total > MAX_ORGANIZATION_EXPORT_ROWS) fail(413, 'REPORT_TOO_LARGE', `Report exceeds ${MAX_ORGANIZATION_EXPORT_ROWS} rows; select one program before exporting`);
+    const rows = await reportRows(organizationId, options.programId, MAX_ORGANIZATION_EXPORT_ROWS, 0, nowIso(), tx);
+    if (rows.length !== total) fail(409, 'REPORT_INCOMPLETE');
+    const headers = ['name','program','program_title','language','version_id','enrollment_status','access_status','progress_status','access_until','completed_lessons','total_lessons','required_completed','required_total','required_percent','pending_practice','assessment_status','assessment_score','document_status','document_serial','document_issued_at','document_revoked_at','documents'];
+    return [headers.map(safeCsv).join(','), ...rows.map(row => [row.name,row.programId,row.programTitle,row.language,row.versionId,row.status,row.accessStatus,row.progressStatus,row.accessUntil,row.completedLessons,row.learning.total,row.learning.requiredCompleted,row.learning.requiredTotal,row.learning.percent,row.learning.pendingPractice,row.assessment.status,row.assessment.score,row.credential.status,row.credential.serial,row.credential.issuedAt,row.credential.revokedAt,row.documents].map(safeCsv).join(','))].join('\r\n');
+  }, undefined, 'read');
 }

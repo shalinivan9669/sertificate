@@ -55,7 +55,11 @@ useHead(() => ({
         <h2 class="text-xl font-semibold">
           {{ program?.title?.[locale === "kk" ? "kk" : "ru"] }}
         </h2>
-        <div v-if="version?.billingBasis === 'organization'" class="space-y-4">
+        <div v-if="version?.intakeOpen === false" class="space-y-4">
+          <p class="lms-note">{{ tr("Набор на эту версию программы приостановлен. Новый заказ сейчас недоступен.", "Бағдарламаның осы нұсқасына қабылдау тоқтатылған. Жаңа тапсырыс қазір қолжетімсіз.") }}</p>
+          <NuxtLink class="lms-button secondary" :to="{ path: path('/contacts'), query: { program: id } }">{{ tr("Обсудить обучение", "Оқуды талқылау") }}</NuxtLink>
+        </div>
+        <div v-else-if="version?.billingBasis === 'organization'" class="space-y-4">
           <p class="lms-note">
             {{
               tr(
