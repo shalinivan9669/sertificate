@@ -1,8 +1,8 @@
 # OT Center — статус реализации
 
-Обновлено: 2026-09-07. Основной пакет запушен в GitHub и прошёл удалённый Quality; дополнительный пакет ниже прошёл локальные проверки и подготовлен к новому push/CI. Production ожидает настройки постоянного хранилища и почты. Владелец отдельно разрешил production-деплой после обновлений и проверок. Реальные платежи и массовые уведомления отдельно не разрешены.
+Обновлено: 2026-09-07. Полный пакет запушен в GitHub: `cc6b662535853196fd2f6404f7c2439c33f69ee3`. Удалённый Quality прошёл, новый Vercel preview Ready. Production ожидает настройки постоянного хранилища, Auth, почты и проверки доставки заявок в CRM. Владелец отдельно разрешил production-деплой после обновлений и проверок. Реальные платежи и массовые уведомления отдельно не разрешены.
 
-## Дополнительный пакет — локальная проверка, перед новым GitHub CI
+## Дополнительный пакет — локальная и удалённая проверка cc6b662
 
 После повторного сопоставления полного handoff обнаружены пробелы в прежнем объёме B42/B43/B44/B52/B53. Значения `passed` в старых матрицах для отчётов и администрирования подтверждали более узкие сценарии и уточняются. Новый рабочий код пока не является проверенным production-релизом.
 
@@ -23,7 +23,11 @@
 - На окончательном Node artifact4855f35b повторно пройдён learner browser **11/11**, 0 JS errors, свежая отдельная БД: `artifacts/core-browser/e27e7ba2-5360-4350-8bc7-4166c8ad961a/report.json`.
 - Матрицы повторно сопоставлены со всеми исходными строками handoff: backlog58 =40 passed/13 blocked/5 not_run; acceptance84 =74 passed/4 blocked/6 not_run. Source-column equality, unique IDs и CSV roundtrip пройдены. Значения относятся к указанной локальной области проверки; внешние зависимости не объявлены завершёнными.
 
-Результаты основной таблицы ниже относятся к указанным прежним коммитам/сборкам до этого пакета. Новый remote CI/preview ещё требует нового commit/push; production зависит от постоянной БД/почты и фактических release checks.
+Удалённая проверка этого пакета: [Quality34141297253](https://github.com/shalinivan9669/sertificate/actions/runs/34141297253), job101803650908, **completed/success**. Linux install/lint/typecheck, **124/124 tests,0failed/0skipped,22.44s**, audit0, Node/SEO/assets, установка Chromium, четыре изолированных browser suites и Vercel build прошли. Из журнала подтверждены auth6/contact2locales/learner11/staff13; runtime этого CI — ab79c6a4. Внешние письма/заявки не отправлялись.
+
+Новый [Vercel deployment2mSGsQqBF](https://vercel.com/shalinivan9669s-projects/sertificate/2mSGsQqBFsn5VuexFzCq1fNgxKD1) на cc6b662 — **Ready,1m18s**. Через авторизованный браузер открыты главная, каталог20 и ISO9001RU/KK со стоимостью по запросу: [preview](https://sertificate-czv7s2iyb-shalinivan9669s-projects.vercel.app/). Это проверка размещения публичных страниц, не hosted readiness LMS. Проект Storage вновь проверен: подключённых БД нет; окно Turso остановлено до «Accept and Create» и сохранено для ответа владельца. Новые условия/интеграция не приняты.
+
+Результаты основной таблицы ниже — исторические результаты указанных прежних коммитов/сборок. Production зависит от постоянной БД/Auth/почты, доставки в CRM и фактических release checks; он не обновлён. Последующие правки этого журнала не меняют проверенный runtime.
 
 ## Исходное состояние и поручение
 
@@ -101,13 +105,13 @@ Nuxt/Nitro Vercel Functions + удалённый libSQL/Turso, native file DB т
 
 **Production разрешён владельцем.** Новая интеграция Turso пока не создана: принятие условий нового сервиса ожидает отдельного ответа; это не повторное разрешение на деплой. SMTP/служебный адрес также ожидают ответа. Платные тарифы, реальные платежи и массовые уведомления не подключались. Ограничение Hobby для личного некоммерческого использования было сообщено ранее; тариф автоматически не меняется.
 
-Результат публикации: [PR #2](https://github.com/shalinivan9669/sertificate/pull/2), [успешный Quality](https://github.com/shalinivan9669/sertificate/actions/runs/34132591085), [Vercel deployment](https://vercel.com/shalinivan9669s-projects/sertificate/8ApeFvY61QTAmTCWS3SqJ4PKzJ4m), [preview сайта](https://sertificate-qtcfln6fa-shalinivan9669s-projects.vercel.app/). Preview требует аккаунт Vercel. Ветка main и production остаются на исходном commit; PR draft до устранения зависимостей выпуска.
+Результат публикации: [PR #2](https://github.com/shalinivan9669/sertificate/pull/2), [успешный Quality cc6b662](https://github.com/shalinivan9669/sertificate/actions/runs/34141297253), [Vercel deployment](https://vercel.com/shalinivan9669s-projects/sertificate/2mSGsQqBFsn5VuexFzCq1fNgxKD1), [preview сайта](https://sertificate-czv7s2iyb-shalinivan9669s-projects.vercel.app/). Preview требует аккаунт Vercel. Ветка main и production остаются на исходном commit; PR draft до устранения зависимостей выпуска.
 
 В hosted preview `/kk/cabinet` отображает локализованную ошибку запроса и кнопку повтора; работа кабинета без подключённой БД не заявляется. Read-only проверка существующего production подтвердила прежний `otcenter.kz → 307 → www.otcenter.kz → 200`. Реальные заявки, письма, платежи и документы при этом не создавались.
 
 ## Конкретные оставшиеся зависимости
 
-1. Подключить постоянную бесплатную БД после ответа по Turso, применить001–009, выполнить remote readiness/negativeFKprobe, сохранить Auth URL/secret/CRON_SECRET. Новый backend без БД нарушил бы приём заявок; production сейчас не изменён.
+1. Подключить постоянную бесплатную БД после ответа по Turso, применить001–009, выполнить remote readiness/negativeFKprobe, сохранить Auth URL/secret/CRON_SECRET. Новый backend без БД нарушил бы приём заявок; production сейчас не изменён. После подключения БД нужно отдельно проверить прежние AMO_* настройки и очередь при OT_CRM_DELIVERY_ENABLED=1: сохранение202 само по себе не означает поступление заявки оператору.
 2. Настроить transactional почту для подтверждения регистрации и восстановления доступа. Outbox не означает доставленное письмо.
 3. Загрузить/согласовать настоящие учебные материалы, вопросы и PDF-шаблон. PDF-прайс не заменяет программу; production migrations не создают фиктивных пользователей/результатов/сертификатов.
 4. Для реальных денег нужны выбранный provider/условия/credentials/отдельное разрешение. Officialsandbox/reconciliation/refund adapter отсутствуют. Счетам нужны фактические issuer реквизиты; TEST ONLY не являются defaults.
