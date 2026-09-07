@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useHead, useI18n, useRoute, useRuntimeConfig } from '#imports';
+import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
 import { getFormatByType } from '~/config/formats';
 import { getCityPrepositional } from '~/composables/useCity';
 
@@ -23,6 +23,7 @@ const format = computed(() => getFormatByType(props.type));
 const { locale, t } = useI18n();
 const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
+const localePath = useLocalePath();
 
 const cityPrepositional = computed(
   () =>
@@ -74,10 +75,11 @@ const metaDescription = computed(() => {
 });
 
 const programSelectionRoute = computed(() => ({
-  path: '/program-selection',
+  path: localePath('/program-selection'),
   query: {
     source: 'format',
-    slug: props.type,
+    slug: format.value?.slug || '',
+    format: { online: 'online', ochnoe: 'classroom', vyezdnoe: 'onsite' }[props.type] || '',
     city: resolvedCity.value?.slug || '',
   },
 }));
@@ -132,8 +134,8 @@ useHead(() => ({
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center space-y-3">
       <h2 class="text-xl font-semibold text-slate-900">{{ t('formatLanding.ctaTitle') }}</h2>
       <p class="text-slate-700">{{ t('formatLanding.ctaDescription') }}</p>
-      <div class="flex justify-center gap-3">
-        <NuxtLink :to="programSelectionRoute" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">Подобрать программу</NuxtLink>
+      <div class="flex flex-wrap justify-center gap-3">
+        <NuxtLink :to="programSelectionRoute" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink>
         <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871">{{ t('cta.call') }}</a>
       </div>
     </section>

@@ -17,6 +17,17 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 debug.log
+.data/
+artifacts/
+test-results/
+playwright-report/
+*-build.log
+*-dev.log
+*-browser.log
+dependency-audit*.json
+implementation-*.log
+baseline-browser-retry.log
+lms-ui-typecheck.log
 
 # Vercel
 .vercel/

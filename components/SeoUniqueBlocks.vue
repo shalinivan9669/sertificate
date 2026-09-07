@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useLocalePath } from '#imports';
+import { useI18n, useLocalePath } from '#imports';
 const props = defineProps({
   content: {
     type: Object,
@@ -12,11 +12,19 @@ const props = defineProps({
   },
   ctaLabel: {
     type: String,
-    default: 'Подобрать программу',
+    default: '',
   },
 });
 
 const localePath = useLocalePath();
+const { locale } = useI18n();
+const copy = computed(() => locale.value === 'kk' ? {
+  label: 'Бағдарлама таңдау', title: 'Жұмысыңызға сай оқыту',
+  text: 'Бағытты, қызметіңізді және оқу форматын таңдаңыз. Қажетті дайындықты анықтап, оқуға өтінім беріңіз.',
+} : {
+  label: 'Подобрать программу', title: 'Обучение под задачи вашей работы',
+  text: 'Выберите направление, свою должность и удобный формат. Подбор поможет определить нужную подготовку и оставить заявку на обучение.',
+});
 const relatedLinks = computed(() =>
   (props.content.modules.related.links || []).map((link) => ({
     ...link,
@@ -25,7 +33,7 @@ const relatedLinks = computed(() =>
 );
 
 const programSelectionRoute = computed(() => ({
-  path: '/program-selection',
+  path: localePath('/program-selection'),
   query: props.ctaQuery,
 }));
 </script>
@@ -111,16 +119,15 @@ const programSelectionRoute = computed(() => ({
     </section>
 
     <section class="rounded-2xl border border-slate-200 bg-[#0A192F] p-6 text-white shadow-sm space-y-3">
-      <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#8ec1ff]">New flow entry</p>
-      <h2 class="text-2xl font-bold">Перейти в новый подбор программы</h2>
+      <h2 class="text-2xl font-bold">{{ copy.title }}</h2>
       <p class="text-sm leading-relaxed text-slate-300">
-        SEO-страница остаётся доступной для индексации, а следующий шаг уводит пользователя в новый runtime-flow.
+        {{ copy.text }}
       </p>
       <NuxtLink
         class="inline-flex items-center justify-center rounded-lg bg-[#4A90E2] px-5 py-3 text-sm font-bold text-white transition hover:brightness-110"
         :to="programSelectionRoute"
       >
-        {{ ctaLabel }}
+        {{ ctaLabel || copy.label }}
       </NuxtLink>
     </section>
   </article>

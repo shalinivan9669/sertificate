@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nuxtjs",
+  "buildCommand": "npm run build:vercel",
+  "crons": [{ "path": "/api/v1/operations/tick", "schedule": "0 3 * * *" }]
+}

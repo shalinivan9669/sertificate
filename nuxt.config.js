@@ -1,68 +1,11 @@
 ﻿import { cities } from './config/cities';
-import { courses } from './config/courses';
-import { formats } from './config/formats';
-import { blogPosts } from './config/blog';
+import { buildPrivateRouteRules, buildPublicRoutes, buildSitemapEntries, defaultSiteUrl } from './config/public-route-policy.js';
 
-const siteUrl = 'https://otcenter.kz';
+// Preserve the existing host until the owner approves a domain migration.
+const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || defaultSiteUrl;
 const siteName = 'OT Center';
 const defaultLocale = 'ru-KZ';
 const compatibilityDate = '2025-11-20';
-
-const getBlogRoutes = () => blogPosts.map((post) => post._path);
-
-const buildCityRoutes = () => cities.map((city) => `/${city.slug}`);
-const buildCourseRoutes = () =>
-  cities.flatMap((city) => courses.map((course) => `/${city.slug}/${course.slug}`));
-const buildFormatRoutes = () =>
-  cities.flatMap((city) => formats.map((format) => `/${city.slug}/${format.slug}`));
-
-const localePrefixes = ['kk'];
-const prefixRoutes = (routes, locale) =>
-  routes.map((route) => (route === '/' ? `/${locale}` : `/${locale}${route}`));
-
-const redesignCourseIds = ['industrial-safety', 'labor-safety', 'fire-safety'];
-
-const buildRedesignRoutes = () => [
-  '/',
-  '/categories',
-  '/wizard',
-  '/courses',
-  '/cabinet',
-  '/b2b',
-  '/payment/pending',
-  '/contacts',
-  '/licenses',
-  '/privacy',
-  '/public-offer',
-  ...redesignCourseIds.flatMap((courseId) => [
-    `/courses/${courseId}`,
-    `/learn/${courseId}`,
-    `/learn/${courseId}/confirm`,
-    `/learn/${courseId}/pre-test`,
-    `/learn/${courseId}/exam`,
-    `/learn/${courseId}/failed`,
-    `/learn/${courseId}/success`,
-    `/payment/${courseId}`,
-    `/certificates/${courseId}`,
-  ]),
-];
-
-const staticRoutes = () => {
-  const baseRoutes = [
-    ...buildRedesignRoutes(),
-    '/blog',
-    ...courses.map((course) => `/${course.slug}`),
-    ...formats.map((format) => `/${format.slug}`),
-  ];
-  const allRoutes = [
-    ...baseRoutes,
-    ...getBlogRoutes(),
-    ...buildCityRoutes(),
-    ...buildCourseRoutes(),
-    ...buildFormatRoutes(),
-  ];
-  return [...allRoutes, ...localePrefixes.flatMap((locale) => prefixRoutes(allRoutes, locale))];
-};
 
 const organizationLd = {
   '@type': 'EducationalOrganization',
@@ -79,28 +22,13 @@ const organizationLd = {
     '@type': 'City',
     name: city.nameRu,
   })),
-  makesOffer: courses.map((course) => ({
-    '@type': 'Course',
-    name: course.name.ru,
-    identifier: course.slug,
-  })),
 };
 
-const locationsLd = cities.map((city) => ({
-  '@type': 'LocalBusiness',
-  name: `${siteName}, г. ${city.nameRu}`,
-  address: {
-    '@type': 'PostalAddress',
-    addressLocality: city.nameRu,
-    addressCountry: 'KZ',
-  },
-  areaServed: city.nameRu,
-}));
-
 export default defineNuxtConfig({
+  buildDir: '.nuxt',
   ssr: true,
   compatibilityDate,
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV !== 'production' },
   runtimeConfig: {
     amoBaseUrl: process.env.AMO_BASE_URL,
     amoAccessToken: process.env.AMO_ACCESS_TOKEN,
@@ -125,7 +53,7 @@ export default defineNuxtConfig({
       },
     },
   },
-  modules: ['@nuxtjs/i18n', '@nuxtjs/seo', '@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/i18n', '@nuxtjs/robots', '@nuxtjs/sitemap', '@nuxtjs/tailwindcss'],
   css: ['~/assets/css/tailwind.css'],
   postcss: {
     plugins: {
@@ -138,7 +66,7 @@ export default defineNuxtConfig({
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
       title: siteName,
-      titleTemplate: (titleChunk) => (titleChunk ? `OT Center — ${titleChunk}` : siteName),
+      titleTemplate: (titleChunk) => (!titleChunk ? siteName : /OT Center/i.test(titleChunk) ? titleChunk : `${titleChunk} — ${siteName}`),
       meta: [
         {
           name: 'description',
@@ -147,7 +75,9 @@ export default defineNuxtConfig({
         },
         { property: 'og:site_name', content: siteName },
         { property: 'og:type', content: 'website' },
+        { property: 'og:image', content: `${siteUrl}/logo.png` },
         { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:image', content: `${siteUrl}/logo.png` },
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
@@ -163,7 +93,7 @@ export default defineNuxtConfig({
           type: 'application/ld+json',
           children: JSON.stringify({
             '@context': 'https://schema.org',
-            '@graph': [organizationLd, ...locationsLd],
+            '@graph': [organizationLd],
           }),
         },
       ],
@@ -177,38 +107,48 @@ export default defineNuxtConfig({
     vueI18n: './i18n.config.js',
     baseUrl: siteUrl,
     locales: [
-      { code: 'ru', iso: 'ru-KZ', name: 'Русский' },
-      { code: 'kk', iso: 'kk-KZ', name: 'Қазақша' },
+      { code: 'ru', language: 'ru-KZ', name: 'Русский' },
+      { code: 'kk', language: 'kk-KZ', name: 'Қазақша' },
     ],
   },
-  seo: {
-    site: {
-      url: siteUrl,
-      name: siteName,
-      defaultLocale,
-    },
-    sitemap: {
-      enabled: true,
-      hostname: siteUrl,
-      routes: staticRoutes,
-      cacheTtl: 60 * 60,
-    },
-    robots: {
-      enabled: true,
-      sitemap: `${siteUrl}/sitemap.xml`,
-      rules: [
-        {
-          userAgent: '*',
-          allow: '/',
-          disallow: ['/admin', '/preview', '/_nuxt', '/api'],
-        },
-      ],
-    },
+  site: {
+    url: siteUrl,
+    name: siteName,
+    defaultLocale,
+    indexable: process.env.OT_NOINDEX !== 'true',
   },
+  sitemap: {
+    enabled: true,
+    excludeAppSources: true,
+    autoI18n: false,
+    autoLastmod: false,
+    discoverImages: false,
+    discoverVideos: false,
+    urls: buildSitemapEntries(siteUrl),
+    cacheMaxAgeSeconds: 60 * 60,
+  },
+  robots: {
+    enabled: true,
+    sitemap: `${siteUrl}/sitemap.xml`,
+    // HTML noindex remains readable to crawlers; auth is enforced by server APIs.
+    disallow: ['/api/', '/kk/api/'],
+    disallowNonIndexableRoutes: false,
+    mergeWithRobotsTxtPath: false,
+  },
+  routeRules: buildPrivateRouteRules(),
   nitro: {
+    // Nitro's auto-detection currently falls back to Node 22 even on a Node 24
+    // build host. Keep the generated function runtime aligned with engines.node.
+    vercel: { functions: { runtime: 'nodejs24.x', maxDuration: 60 } },
+    externals: {
+      inline: [/config[\\/]public-route-(policy|runtime)/, /config[\\/](cities|courses|formats|blog)/, /shared[\\/]source-products/],
+      // Native development adapter is optional and its binary cannot be inferred by the tracer.
+      traceInclude: process.platform === 'win32' && process.env.NITRO_PRESET !== 'vercel'
+        ? ['node_modules/@libsql/win32-x64-msvc/index.node'] : [],
+    },
     prerender: {
-      crawlLinks: true,
-      routes: [...staticRoutes(), '/sitemap.xml', '/robots.txt'],
+      crawlLinks: false,
+      routes: [...buildPublicRoutes(), '/sitemap.xml', '/robots.txt'],
     },
   },
 });

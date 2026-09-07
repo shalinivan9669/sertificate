@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-09-07T13:32:51.618Z",
+  "scope": "LOCAL SYNTHETIC E2E SNAPSHOT ONLY; source read transaction with PRAGMA query_only=ON; no source migration/write, no remote access",
+  "source": "C:\\Users\\Admin\\Documents\\sertificate\\.data\\e2e.sqlite",
+  "snapshotCopy": "C:\\Users\\Admin\\Documents\\sertificate\\.data\\restore-drill-2026-09-07T13-32-49-206Z\\snapshot-copy.sqlite",
+  "archive": "C:\\Users\\Admin\\Documents\\sertificate\\.data\\restore-drill-2026-09-07T13-32-49-206Z\\encrypted.otb",
+  "restored": "C:\\Users\\Admin\\Documents\\sertificate\\.data\\restore-drill-2026-09-07T13-32-49-206Z\\restored.sqlite",
+  "sourceSnapshotMs": 6,
+  "archiveBytes": 55944,
+  "archiveSha256": "b139e1ec983c698eaf332c563753028821a0723e2eb85d2d5e2ef784c67e47ac",
+  "tableCount": 34,
+  "rowCount": 106,
+  "migrations": [
+    "001-core.sql",
+    "002-business.sql",
+    "003-credential-templates.sql",
+    "004-corporate-invoices.sql",
+    "005-invoice-allocations.sql"
+  ],
+  "restoredSchemaAndRowsIdentical": true,
+  "checks": {
+    "foreignKeys": true,
+    "physicalIntegrity": true,
+    "publishedVersionImmutable": true,
+    "auditAppendOnly": true,
+    "failedGuardsPreserveRows": true,
+    "wrongPasswordCreatedNoTarget": true,
+    "tamperCreatedNoTarget": true
+  },
+  "operations": [
+    {
+      "operation": "backup",
+      "exitCode": 0,
+      "elapsedMs": 395,
+      "passed": true
+    },
+    {
+      "operation": "restore",
+      "exitCode": 0,
+      "elapsedMs": 424,
+      "passed": true
+    },
+    {
+      "operation": "refuse-existing-archive",
+      "exitCode": 1,
+      "elapsedMs": 389,
+      "passed": true
+    },
+    {
+      "operation": "refuse-existing-target",
+      "exitCode": 1,
+      "elapsedMs": 362,
+      "passed": true
+    },
+    {
+      "operation": "refuse-wrong-password",
+      "exitCode": 1,
+      "elapsedMs": 390,
+      "passed": true
+    },
+    {
+      "operation": "refuse-tampered-archive",
+      "exitCode": 1,
+      "elapsedMs": 390,
+      "passed": true
+    }
+  ],
+  "caveats": [
+    "Snapshot-copy CLI may apply missing additive migrations on the COPY only; staff writes to source after snapshot are outside this restore point.",
+    "No production rollback or remote RTO/RPO tested.",
+    "No raw users, tokens, answers, bank details or document contents included in this report."
+  ],
+  "credentials": "Temporary random passphrase retained only in the drill process; encrypted synthetic artifact is evidence, not an operational owner backup."
+}

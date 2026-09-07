@@ -8,25 +8,56 @@
     "build": "nuxt build && npm run seo:check",
     "generate": "nuxt generate && npm run seo:check",
     "preview": "nuxt preview",
-    "lint": "nuxt lint",
+    "lint": "eslint .",
     "sitemap": "node scripts/generate-sitemap.mjs",
-    "seo:check": "tsx scripts/seo-uniqueness-check.ts"
+    "seo:check": "tsx scripts/seo-uniqueness-check.ts",
+    "typecheck": "nuxt typecheck",
+    "test": "node --import tsx --test tests/*.test.ts tests/*.test.mjs",
+    "test:seo": "node scripts/seo-build-check.mjs",
+    "test:e2e": "node tests/lms-browser.mjs",
+    "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/db-migrate.ts",
+    "db:backup": "node --env-file-if-exists=.env --import tsx scripts/db-backup.ts",
+    "admin:bootstrap": "node --env-file-if-exists=.env --import tsx scripts/core-admin.ts",
+    "build:vercel": "node scripts/build-vercel.mjs"
   },
   "dependencies": {
-    "@nuxtjs/i18n": "latest",
-    "@nuxtjs/seo": "latest",
-    "@nuxtjs/tailwindcss": "latest",
-    "autoprefixer": "latest",
-    "better-sqlite3": "latest",
-    "nuxt": "latest",
-    "postcss": "latest",
-    "tailwindcss": "latest"
+    "@better-auth/drizzle-adapter": "1.7.3",
+    "@libsql/client": "0.18.0",
+    "@nuxtjs/i18n": "10.6.0",
+    "@nuxtjs/robots": "6.2.0",
+    "@nuxtjs/sitemap": "8.5.0",
+    "@nuxtjs/tailwindcss": "6.14.0",
+    "@pdf-lib/fontkit": "1.1.1",
+    "autoprefixer": "10.4.22",
+    "better-auth": "1.7.3",
+    "better-sqlite3": "12.4.1",
+    "drizzle-orm": "0.45.2",
+    "nodemailer": "10.0.0",
+    "nuxt": "4.5.2",
+    "nuxt-site-config": "4.2.3",
+    "pdf-lib": "1.17.1",
+    "postcss": "8.5.28",
+    "qrcode": "1.5.4",
+    "tailwindcss": "3.4.18",
+    "vue-router": "5.2.0",
+    "zod": "4.3.6"
   },
   "engines": {
-    "node": ">=18.18.0"
+    "node": ">=24.15.0 <25"
   },
-  "packageManager": "npm@11.6.3",
+  "packageManager": "npm@11.13.0",
   "devDependencies": {
-    "tsx": "^4.21.0"
+    "@eslint/js": "9.39.1",
+    "@playwright/test": "1.58.2",
+    "@types/better-sqlite3": "7.6.13",
+    "@types/nodemailer": "7.0.9",
+    "@types/qrcode": "1.5.6",
+    "eslint": "9.39.1",
+    "eslint-plugin-vue": "10.6.2",
+    "playwright-core": "1.58.2",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.4",
+    "vue-tsc": "3.3.11"
   }
 }

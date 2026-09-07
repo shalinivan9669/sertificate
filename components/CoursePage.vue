@@ -2,10 +2,8 @@
 import { computed } from 'vue';
 import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
 import { getCityName, getCityPrepositional } from '~/composables/useCity';
-import {
-  buildProgramSelectionQuery,
-  getSelectionPresetFromCourse,
-} from '~/composables/useProgramFlowMock';
+import { resolveCourseDirection } from '~/shared/course-registry';
+import { directionDetails } from '~/content/direction-details';
 
 const props = defineProps({
   course: {
@@ -68,6 +66,7 @@ const metaDescription = computed(() =>
 );
 
 const courseContentHtml = computed(() => props.course.contentHtml || '');
+const directionContent = computed(() => directionDetails[props.course.slug]?.[locale.value === 'kk' ? 'kk' : 'ru']);
 
 const isLaborSafety = computed(() => props.course.slug === 'ohrana-truda');
 
@@ -305,17 +304,19 @@ const cityIntro = computed(() => {
   if (!specialContent.value || !resolvedCity.value) return null;
 
   if (locale.value === 'kk') {
-    return `Бұл бет ${cityPrepositional.value} еңбекті қорғау бойынша оқытуға арналған. Мұнда ОТ және ТБ бойынша негізгі форматтар, мазмұны және жалпы Қазақстан бойынша лендингке сілтеме жиналған.`;
+    return `${cityPrepositional.value} мамандар үшін форматты, кестені және практикалық бөлімді келісеміз. Жазылу алдында қызметкердің міндеттері мен құжаттарды рәсімдеу шарттарын нақтылаймыз.`;
   }
 
-  return `Страница посвящена обучению по охране труда ${cityPrepositional.value}. Здесь собраны основные форматы, частые вопросы по ОТ и ТБ и ссылка на общий лендинг по Казахстану.`;
+  return `Для специалистов ${cityPrepositional.value} согласуем формат, график и практическую часть. Перед записью уточним задачи работника и условия оформления документов.`;
 });
 
 const programSelectionRoute = computed(() => ({
-  path: '/program-selection',
-  query: buildProgramSelectionQuery(
-    getSelectionPresetFromCourse(props.course.slug, resolvedCity.value?.slug || ''),
-  ),
+  path: localePath('/program-selection'),
+  query: {
+    direction: resolveCourseDirection(props.course.slug)?.id,
+    city: resolvedCity.value?.slug || '',
+    source: 'course',
+  },
 }));
 
 const pageTitle = computed(() => specialContent.value?.title || metaTitle.value);
@@ -482,7 +483,7 @@ useHead(() => ({
     </nav>
 
     <p v-if="resolvedCity?.slug" class="text-sm text-slate-600">
-      {{ locale === 'kk' ? 'Жалпы бет:' : 'Общий лендинг:' }}
+      {{ locale === 'kk' ? 'Бағыт туралы толығырақ:' : 'Подробнее о направлении:' }}
       <NuxtLink
         :to="localePath('/ohrana-truda')"
         class="font-medium text-brand hover:underline"
@@ -606,6 +607,16 @@ useHead(() => ({
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
       <h2 class="text-xl font-semibold text-slate-900">{{ t('course.programTitle') }}</h2>
       <div v-if="courseContentHtml" class="prose max-w-none prose-slate" v-html="courseContentHtml" />
+      <div v-else-if="directionContent" class="space-y-4 text-slate-700">
+        <p>{{ directionContent.audience }}</p>
+        <ul class="grid gap-2 list-disc ml-4">
+          <li v-for="topic in directionContent.topics" :key="topic">{{ topic }}</li>
+        </ul>
+        <p>{{ directionContent.clarify }}</p>
+        <NuxtLink :to="localePath('/courses/' + (resolveCourseDirection(course.slug)?.alias || course.slug))" class="inline-flex font-semibold text-brand-accent hover:underline">
+          {{ locale === 'kk' ? 'Бағдарламаның мазмұны мен оқу шарттары' : 'Содержание программы и условия обучения' }}
+        </NuxtLink>
+      </div>
       <div v-else class="text-slate-700">
         {{ t('course.programFallback', { courseName, cityPrepositional }) }}
       </div>
@@ -635,7 +646,7 @@ useHead(() => ({
           class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition"
           :to="programSelectionRoute"
         >
-          Подобрать программу
+          {{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}
         </NuxtLink>
         <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871">{{ t('cta.call') }}</a>
       </div>

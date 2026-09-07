@@ -1,116 +1,146 @@
-<script setup>
-import { computed } from 'vue';
-import MarketingFooter from '~/components/redesign-flow/shared/MarketingFooter.vue';
-import MarketingHeader from '~/components/redesign-flow/shared/MarketingHeader.vue';
-import PretestMetricsGrid from '~/components/redesign-flow/pretest/PretestMetricsGrid.vue';
-import PretestSupportCard from '~/components/redesign-flow/pretest/PretestSupportCard.vue';
-import { logRedesignFlow, summarizeLearningState } from '~/composables/useRedesignFlowDebug';
-import { getRuntimeFlowFixture } from '~/composables/useRedesignRuntimeMock';
-
-definePageMeta({ layout: 'fullwidth' });
-
+<script setup lang="ts">
 const route = useRoute();
-const { paths, flow, syncCourseId } = useRedesignRoutes();
-
-const courseId = computed(() => (Array.isArray(route.params.id) ? route.params.id[0] : route.params.id));
-const runtime = computed(() => getRuntimeFlowFixture(courseId.value));
-
-syncCourseId();
-
-logRedesignFlow('pretest-page', 'enter', {
-  path: route.fullPath,
-  stageBeforePatch: flow.flow.value.stage,
-  learning: summarizeLearningState(flow.flow.value.learning || {}),
-});
-
-flow.patchFlow({
-  stage: 'pretest',
-  overview: {
-    ...(flow.flow.value.overview || {}),
-    currentStep: 'pretest',
-    progress: 100,
-  },
-});
-
-logRedesignFlow('pretest-page', 'patched-flow', {
-  path: route.fullPath,
-  stageAfterPatch: flow.flow.value.stage,
-});
-
-const supportLinks = computed(() =>
-  runtime.value.pretest.supportLinks.map((item) => ({
-    icon: item.icon,
-    label: item.label,
-    to: paths.value[item.routeKey],
-  })),
+const path = useLocalePath();
+const { api, tr, errorText } = useLmsApi();
+const id = String(route.params.id);
+const { data, pending, error, refresh } = await useAsyncData(
+  "lms-exam-eligibility-" + id,
+  () => api<any>("/enrollments/" + encodeURIComponent(id)),
 );
-
-const goToExam = () => navigateTo(paths.value.exam);
-const backToLearning = () => navigateTo(paths.value.learning);
+const enrollment = computed(() => data.value?.enrollment || data.value);
+const agree = ref(false);
+const busy = ref(false);
+const failure = ref("");
+let attemptKey = "";
+async function start() {
+  busy.value = true;
+  failure.value = "";
+  try {
+    attemptKey ||= crypto.randomUUID();
+    const a = await api<LmsAttempt>(
+      "/enrollments/" + encodeURIComponent(id) + "/attempts",
+      { method: "POST", headers: { "Idempotency-Key": attemptKey }, body: {} },
+    );
+    await navigateTo({
+      path: path("/learn/" + id + "/exam"),
+      query: { attempt: a.id },
+    });
+  } catch (e) {
+    failure.value = errorText(e);
+  } finally {
+    busy.value = false;
+  }
+}
+useHead(() => ({
+  title: tr(
+    "Перед проверкой знаний — OT Center",
+    "Білімді тексеру алдында — OT Center",
+  ),
+  meta: [{ name: "robots", content: "noindex, nofollow" }],
+}));
 </script>
-
 <template>
-  <div class="flex min-h-screen flex-col bg-surface font-body text-on-surface">
-    <MarketingHeader active="catalog" />
-
-    <main class="mx-auto grid min-h-screen max-w-7xl grid-cols-1 gap-8 px-6 pb-20 pt-24 lg:grid-cols-12">
-      <div class="mb-4 lg:col-span-12">
-        <nav class="mb-4 flex items-center space-x-2 text-sm text-on-primary-container">
-          <span class="cursor-pointer transition-colors hover:text-secondary">{{ runtime.pretest.breadcrumbs[0] }}</span>
-          <span class="material-symbols-outlined text-xs">chevron_right</span>
-          <span class="cursor-pointer transition-colors hover:text-secondary">{{ runtime.pretest.breadcrumbs[1] }}</span>
-          <span class="material-symbols-outlined text-xs">chevron_right</span>
-          <span class="font-semibold text-primary">{{ runtime.pretest.breadcrumbs[2] }}</span>
-        </nav>
-        <h1 class="font-headline text-4xl font-extrabold tracking-tight text-primary md:text-5xl">{{ runtime.pretest.title }}</h1>
-        <p class="mt-4 max-w-2xl leading-relaxed text-on-surface-variant">
-          {{ runtime.pretest.description }}
+  <LmsShell
+    :title="tr('Перед проверкой знаний', 'Білімді тексеру алдында')"
+    :back="'/learn/' + id"
+    ><LmsState :pending="pending" :error="error" @retry="refresh"
+      ><div v-if="enrollment" class="lms-card max-w-3xl space-y-6">
+        <h2 class="text-xl font-semibold">{{ enrollment.title }}</h2>
+        <dl v-if="enrollment.assessment" class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt class="text-sm text-slate-500">
+              {{ tr("Время на попытку", "Әрекетке берілетін уақыт") }}
+            </dt>
+            <dd class="font-semibold">
+              {{ enrollment.assessment.durationMinutes }}
+              {{ tr("минут", "минут") }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm text-slate-500">
+              {{ tr("Количество вопросов", "Сұрақ саны") }}
+            </dt>
+            <dd class="font-semibold">
+              {{ enrollment.assessment.questionCount }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm text-slate-500">
+              {{ tr("Порог успешного результата", "Сәтті нәтиже шегі") }}
+            </dt>
+            <dd class="font-semibold">
+              {{ enrollment.assessment.passPercent }}%
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm text-slate-500">
+              {{ tr("Лимит попыток", "Әрекеттер шегі") }}
+            </dt>
+            <dd class="font-semibold">
+              {{ enrollment.assessment.maxAttempts }}
+            </dd>
+          </div>
+        </dl>
+        <p class="lms-note">
+          {{
+            tr(
+              "Время начинается после запуска попытки и продолжает идти при закрытии вкладки. Ответы сохраняются при выборе. После отправки изменить их нельзя.",
+              "Уақыт әрекетті бастағаннан кейін есептеледі және қойынды жабылғанда да жалғасады. Жауаптар таңдау кезінде сақталады. Жібергеннен кейін оларды өзгерту мүмкін емес.",
+            )
+          }}
         </p>
-      </div>
-
-      <div class="space-y-6 lg:col-span-8">
-        <PretestMetricsGrid :metrics="runtime.pretest.metrics" />
-
-        <div class="rounded-xl bg-[#2D3436] p-8 text-white shadow-xl">
-          <h3 class="mb-6 flex items-center text-xl font-bold font-headline">
-            <span class="material-symbols-outlined mr-3 text-secondary" style="font-variation-settings: 'FILL' 1;">gavel</span>
-            Регламент прохождения
-          </h3>
-          <ul class="space-y-4">
-            <li v-for="rule in runtime.pretest.rules" :key="rule" class="flex items-start">
-              <span class="material-symbols-outlined mr-3 mt-1 text-sm text-secondary">check_circle</span>
-              <p class="text-sm leading-relaxed text-slate-300">{{ rule }}</p>
+        <div v-if="!enrollment.eligibility?.eligible" class="lms-note">
+          <p class="font-semibold">
+            {{
+              tr(
+                "Для начала нужно выполнить условия:",
+                "Бастау үшін шарттарды орындаңыз:",
+              )
+            }}
+          </p>
+          <ul class="mt-2 list-inside list-disc">
+            <li v-for="reason in enrollment.eligibility?.reasons" :key="reason">
+              {{ reason }}
             </li>
           </ul>
+          <NuxtLink class="mt-3 inline-block" :to="path('/learn/' + id)">{{
+            tr("Вернуться к материалам", "Материалдарға оралу")
+          }}</NuxtLink>
         </div>
-
-        <div class="rounded-r-xl border-l-4 border-error bg-error-container/30 p-6">
-          <div class="mb-2 flex items-center">
-            <span class="material-symbols-outlined mr-2 text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
-            <span class="text-xs font-bold uppercase tracking-wide text-error">Внимание</span>
-          </div>
-          <p class="text-sm font-medium text-on-error-container">
-            {{ runtime.pretest.warning }}
-          </p>
-        </div>
-      </div>
-
-      <div class="space-y-6 lg:col-span-4">
-        <PretestSupportCard :image="runtime.pretest.image" :links="supportLinks" />
-
-        <div class="space-y-4 rounded-xl border border-outline-variant/20 bg-white p-6">
-          <button class="flex w-full items-center justify-center space-x-2 rounded-md bg-[#0A192F] px-6 py-4 font-bold text-white shadow-[0_4px_12px_rgba(10,25,47,0.2)] transition-all duration-200 hover:bg-[#162a4a]" type="button" @click="goToExam">
-            <span>Start Test</span>
-            <span class="material-symbols-outlined">play_arrow</span>
-          </button>
-          <button class="flex w-full items-center justify-center space-x-2 rounded-md border border-outline-variant px-6 py-4 font-semibold text-primary transition-all duration-200 hover:bg-surface-container-high" type="button" @click="backToLearning">
-            <span class="material-symbols-outlined">menu_book</span>
-            <span>Back to material</span>
-          </button>
-        </div>
-      </div>
-    </main>
-
-    <MarketingFooter description="The official portal for industrial safety certification in the Republic of Kazakhstan. Ensuring operational excellence through rigorous technical assessment." />
-  </div>
+        <label v-else class="flex items-start gap-3"
+          ><input v-model="agree" type="checkbox" class="mt-1" /><span>{{
+            tr(
+              "Я ознакомился(-ась) с условиями и готов(-а) начать проверку знаний.",
+              "Шарттармен таныстым және білімімді тексеруге дайынмын.",
+            )
+          }}</span></label
+        >
+        <p v-if="failure" class="lms-error" role="alert">{{ failure }}</p>
+        <button
+          class="lms-button"
+          :disabled="busy || !agree || !enrollment.eligibility?.eligible"
+          @click="start"
+        >
+          {{
+            busy
+              ? tr("Создаём попытку…", "Әрекет құрылуда…")
+              : tr(
+                  "Начать попытку — запустить таймер",
+                  "Әрекетті бастау — таймерді іске қосу",
+                )
+          }}</button
+        ><NuxtLink
+          v-if="enrollment.activeAttemptId"
+          class="lms-button secondary ml-2"
+          :to="{
+            path: path('/learn/' + id + '/exam'),
+            query: { attempt: enrollment.activeAttemptId },
+          }"
+          >{{
+            tr("Продолжить текущую попытку", "Ағымдағы әрекетті жалғастыру")
+          }}</NuxtLink
+        >
+      </div></LmsState
+    ></LmsShell
+  >
 </template>

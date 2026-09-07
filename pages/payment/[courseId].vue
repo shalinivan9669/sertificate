@@ -1,125 +1,132 @@
-<script setup>
-import { computed, ref } from 'vue';
-import RetryPaymentMethods from '~/components/redesign-flow/payment/RetryPaymentMethods.vue';
-import RetryPaymentSummary from '~/components/redesign-flow/payment/RetryPaymentSummary.vue';
-import { getRuntimeFlowFixture } from '~/composables/useRedesignRuntimeMock';
-
-definePageMeta({ layout: 'fullwidth' });
-
+<script setup lang="ts">
 const route = useRoute();
-const { paths, flow, syncCourseId } = useRedesignRoutes();
-
-const courseId = computed(() => {
-  const param = route.params.courseId || route.params.id;
-  return Array.isArray(param) ? param[0] : param || flow.flow.value.courseId;
-});
-
-const runtime = computed(() => getRuntimeFlowFixture(courseId.value));
-const paymentState = computed(() => flow.flow.value.payment || {});
-const selectedMethodId = ref(paymentState.value.methodId || runtime.value.retryPayment.methods[0].id);
-
-syncCourseId();
-
-flow.patchFlow({
-  stage: 'payment',
-  branch: 'fail',
-  overview: {
-    ...(flow.flow.value.overview || {}),
-    currentStep: 'payment',
-    progress: 100,
-  },
-});
-
-const attemptLabel = computed(() => `#${(paymentState.value.retryCount || 0) + 2}`);
-const payLabel = computed(() => `Оплатить ${runtime.value.retryPayment.amount}`);
-
-const pay = () => {
-  flow.patchFlow({
-    stage: 'pretest',
-    branch: 'browse',
-    payment: {
-      ...paymentState.value,
-      methodId: selectedMethodId.value,
-      status: 'retry-paid',
-      transactionId: `RET-${courseId.value.toUpperCase()}-${Date.now()}`,
-      retryCount: (paymentState.value.retryCount || 0) + 1,
-      lastPaidAt: new Date().toISOString(),
-    },
-    test: {
-      currentQuestionIndex: 0,
-      answers: {},
-      score: 0,
-      correctCount: 0,
-      passed: false,
-      submitted: false,
-      submittedAt: '',
-    },
-    overview: {
-      ...(flow.flow.value.overview || {}),
-      currentStep: 'pretest',
-      progress: 100,
-    },
-  });
-
-  navigateTo(paths.value.pretest);
-};
-
-const cancel = () => navigateTo(paths.value.failed);
+const path = useLocalePath();
+const { api, tr, locale, money, errorText } = useLmsApi();
+const id = String(route.params.courseId);
+const busy = ref(false);
+const failure = ref("");
+const accepted = ref(false);
+let orderKey = "";
+const { data, pending, error, refresh } = await useAsyncData(
+  "lms-order-program-" + id,
+  () => api<any>("/catalog/programs/" + encodeURIComponent(id)),
+);
+const program = computed(() => data.value?.program || data.value);
+const version = computed(() =>
+  program.value?.versions?.find((v: any) => v.id === route.query.versionId),
+);
+async function createOrder() {
+  if (!version.value || version.value.billingBasis === "organization") return;
+  busy.value = true;
+  failure.value = "";
+  try {
+    orderKey ||= crypto.randomUUID();
+    const result = await api<any>("/orders", {
+      method: "POST",
+      headers: { "Idempotency-Key": orderKey },
+      body: { versionId: version.value.id },
+    });
+    await navigateTo({
+      path: path("/payment/pending"),
+      query: { order: result.order.id },
+    });
+  } catch (e) {
+    if (lmsErrorStatus(e) === 401)
+      await navigateTo({
+        path: path("/auth/login"),
+        query: { returnTo: route.fullPath },
+      });
+    else failure.value = errorText(e);
+  } finally {
+    busy.value = false;
+  }
+}
+useHead(() => ({
+  title: tr("Запись на обучение — OT Center", "Оқуға жазылу — OT Center"),
+  meta: [{ name: "robots", content: "noindex, nofollow" }],
+}));
 </script>
-
 <template>
-  <div class="flex min-h-screen flex-col bg-surface text-on-surface">
-    <header class="bg-[#0A192F] text-white">
-      <div class="mx-auto flex max-w-screen-2xl items-center justify-between px-8 py-4">
-        <div class="text-2xl font-extrabold tracking-tighter text-white">Sertificat.kz</div>
-        <div class="flex items-center gap-4">
-          <span class="text-sm font-medium text-slate-400">Step 2 of 2</span>
-          <button class="text-slate-400 transition-colors duration-200 hover:text-white" type="button" @click="cancel">
-            <span class="material-symbols-outlined">close</span>
+  <LmsShell
+    :title="tr('Запись на обучение', 'Оқуға жазылу')"
+    :back="'/courses/' + id"
+    ><LmsState :pending="pending" :error="error" @retry="refresh"
+      ><div class="lms-card max-w-2xl space-y-5">
+        <h2 class="text-xl font-semibold">
+          {{ program?.title?.[locale === "kk" ? "kk" : "ru"] }}
+        </h2>
+        <div v-if="version?.billingBasis === 'organization'" class="space-y-4">
+          <p class="lms-note">
+            {{
+              tr(
+                "Эта программа оформляется для организации. Выберите сотрудников и согласуйте счёт в корпоративном кабинете.",
+                "Бұл бағдарлама ұйым үшін рәсімделеді. Қызметкерлерді таңдап, корпоративтік кабинетте шотты келісіңіз.",
+              )
+            }}
+          </p>
+          <NuxtLink class="lms-button" :to="path('/cabinet/organization')">{{
+            tr("Кабинет организации", "Ұйым кабинеті")
+          }}</NuxtLink>
+        </div>
+        <template v-else-if="version"
+          ><p>{{ version.title }} · {{ version.language.toUpperCase() }}</p>
+          <p class="text-3xl font-bold">
+            {{ money(version.priceMinor, version.currency) }}
+          </p>
+          <p class="lms-note">
+            {{
+              tr(
+                "Заказ фиксирует выбранную программу и стоимость. Доступ к обучению и оформление документа зависят от условий назначения и результата проверки знаний.",
+                "Тапсырыс таңдалған бағдарлама мен құнын бекітеді. Оқуға қолжетімділік және құжатты рәсімдеу тағайындау шарттары мен білімді тексеру нәтижесіне байланысты.",
+              )
+            }}
+          </p>
+          <label class="flex items-start gap-3"
+            ><input v-model="accepted" type="checkbox" class="mt-1" /><span
+              >{{
+                tr(
+                  "Я ознакомился(-ась) с содержанием программы и",
+                  "Бағдарлама мазмұнымен және",
+                )
+              }}
+              <NuxtLink :to="path('/public-offer')">{{
+                tr("условиями оферты", "оферта шарттарымен")
+              }}</NuxtLink
+              >.</span
+            ></label
+          ><button
+            class="lms-button"
+            :disabled="busy || !accepted || version.priceMinor == null"
+            @click="createOrder"
+          >
+            {{
+              busy
+                ? tr("Создаём заказ…", "Тапсырыс құрылуда…")
+                : tr("Создать заказ", "Тапсырыс жасау")
+            }}
           </button>
-        </div>
-      </div>
-    </header>
-
-    <main class="flex flex-grow items-center justify-center px-4 py-12">
-      <div class="grid w-full max-w-4xl grid-cols-1 gap-8 lg:grid-cols-5">
-        <div class="lg:col-span-2">
-          <RetryPaymentSummary
-            :amount="runtime.retryPayment.amount"
-            :attempt-label="attemptLabel"
-            :course-name="runtime.title"
-            :description="runtime.retryPayment.description"
-            :title="runtime.retryPayment.title"
-            :trust-badges="runtime.retryPayment.trustBadges"
-          />
-        </div>
-
-        <div class="lg:col-span-3">
-          <RetryPaymentMethods
-            :info-text="runtime.retryPayment.infoText"
-            :methods="runtime.retryPayment.methods"
-            :pay-label="payLabel"
-            :selected-method-id="selectedMethodId"
-            @cancel="cancel"
-            @pay="pay"
-            @select="selectedMethodId = $event"
-          />
-        </div>
-      </div>
-    </main>
-
-    <footer class="w-full border-t border-white/5 bg-[#0A192F] px-8 py-8">
-      <div class="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-6 md:flex-row">
-        <div class="flex flex-col gap-2">
-          <div class="text-xl font-black text-white">Sertificat.kz</div>
-          <p class="text-xs text-slate-400">© 2026 Industrial Safety Certification Center Kazakhstan. All rights reserved.</p>
-        </div>
-        <div class="flex gap-6">
-          <NuxtLink class="text-xs text-slate-400 transition-colors hover:text-[#4A90E2] hover:underline" :to="paths.privacy">Privacy Policy</NuxtLink>
-          <NuxtLink class="text-xs text-slate-400 transition-colors hover:text-[#4A90E2] hover:underline" :to="paths.terms">Terms of Service</NuxtLink>
-          <NuxtLink class="text-xs text-slate-400 transition-colors hover:text-[#4A90E2] hover:underline" :to="paths.contacts">Contact Support</NuxtLink>
-        </div>
-      </div>
-    </footer>
-  </div>
+          <p v-if="version.priceMinor == null" class="text-sm text-slate-600">
+            {{
+              tr(
+                "Стоимость нужно согласовать с учебным центром.",
+                "Бағаны оқу орталығымен келісу қажет.",
+              )
+            }}
+          </p></template
+        >
+        <p v-else class="lms-note">
+          {{
+            tr(
+              "Для записи выберите доступный вариант программы в каталоге или обратитесь в учебный центр.",
+              "Тіркелу үшін каталогтан қолжетімді бағдарлама нұсқасын таңдаңыз немесе оқу орталығына хабарласыңыз.",
+            )
+          }}
+        </p>
+        <p v-if="failure" class="lms-error" role="alert">{{ failure }}</p>
+        <NuxtLink class="lms-button secondary" :to="path('/contacts')">{{
+          tr("Согласовать условия", "Шарттарды келісу")
+        }}</NuxtLink>
+      </div></LmsState
+    ></LmsShell
+  >
 </template>
