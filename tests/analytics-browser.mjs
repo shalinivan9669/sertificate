@@ -4,7 +4,7 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, existsSync } from 'node:fs';
 import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, sep } from 'node:path';
 import { createClient } from '@libsql/client';
@@ -35,6 +35,10 @@ const server = spawn(process.execPath, [resolve(directory, '.output/server/index
 const db = createClient({ url: 'file:' + env.OT_DATABASE_PATH.replaceAll('\\', '/'), concurrency: 1 });
 const checks = [], errors = [], requests = [], events = [], reportWindows = [];
 const eventNames = ['program_view', 'selection_start', 'selection_complete', 'contact_click', 'lead_form_start', 'checkout_view', 'lesson_open', 'support_open'];
+const windowsChrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const useWindowsChrome = process.platform === 'win32' && existsSync(windowsChrome);
+const browserExecutable = process.env.BROWSER_PATH || (useWindowsChrome ? windowsChrome : chromium.executablePath());
+const browserSelection = process.env.BROWSER_PATH ? 'override' : useWindowsChrome ? 'windows-system' : 'playwright';
 const canary = 'PRIVATE_FORM_' + randomBytes(10).toString('hex');
 let browser, currentPage, enrollmentId, failure = null;
 const passed = name => { checks.push({ name, status: 'passed' }); console.log('PASS', name); };
@@ -90,7 +94,7 @@ try {
     if (ready) break; await new Promise(resolve => setTimeout(resolve, 250));
   }
   assert.ok(ready); assert.equal(Number((await rows('SELECT COUNT(*) AS n FROM analytics_events'))[0].n), 0);
-  browser = await chromium.launch({ executablePath: process.env.BROWSER_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
+  browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   const learnerContext = await browser.newContext({ viewport: { width: 1280, height: 900 } }); const learner = await learnerContext.newPage(); attach(learner);
   await go(learner, '/courses'); await go(learner, '/courses/ohrana-truda'); await expect(learner.getByLabel(/^Вариант и язык обучения/)).toBeVisible();
   await go(learner, '/program-selection'); await learner.getByRole('radio', { name: 'Охрана труда', exact: true }).check();
@@ -202,7 +206,7 @@ try {
   if (currentPage) await currentPage.screenshot({ path: resolve(output, 'failure.png'), fullPage: true }).catch(() => {});
   throw error;
 } finally {
-  await writeFile(resolve(output, 'report.json'), JSON.stringify({ status: failure ? 'failed' : 'passed', runId, buildId: build.id, base, finishedAt: new Date().toISOString(), syntheticOnly: true, externalDelivery: false, collectionEnabledOnlyLocally: true, checks, errors, failure, emittedNames: [...new Set(events.map(event => event.name))], eventRequestCount: events.length, distinctEventIds: new Set(events.map(event => event.id)).size, reportWindows, privateDirectory: relative(root, directory).replaceAll('\\', '/') }, null, 2));
+  await writeFile(resolve(output, 'report.json'), JSON.stringify({ status: failure ? 'failed' : 'passed', runId, buildId: build.id, base, finishedAt: new Date().toISOString(), browserSelection, browserPlatform: process.platform, syntheticOnly: true, externalDelivery: false, collectionEnabledOnlyLocally: true, checks, errors, failure, emittedNames: [...new Set(events.map(event => event.name))], eventRequestCount: events.length, distinctEventIds: new Set(events.map(event => event.id)).size, reportWindows, privateDirectory: relative(root, directory).replaceAll('\\', '/') }, null, 2));
   console.log('Browser report:', resolve(output, 'report.json'));
   if (browser) await browser.close(); db.close();
   if (server.exitCode === null) { const stopped = once(server, 'exit'); server.kill('SIGTERM'); await stopped; } log.end();

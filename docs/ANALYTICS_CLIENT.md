@@ -60,9 +60,21 @@
 $env:NODE_ENV = 'test'
 $env:OT_ALLOW_TEST_SEED = '1'
 $env:OT_ANALYTICS_ARTIFACT_OUTPUT = 'C:/path/to/completed/.output'
-$env:BROWSER_PATH = 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+# BROWSER_PATH можно задать явно; без него применяется выбор для текущей платформы.
 Remove-Item Env:VERCEL,Env:VERCEL_ENV,Env:TURSO_DATABASE_URL,Env:TURSO_AUTH_TOKEN -ErrorAction SilentlyContinue
 node tests/analytics-browser.mjs
 ```
 
 Скрипт каждый раз копирует готовый артефакт в новую UUID-папку, запускает свой процесс и Chrome, затем закрывает их в `finally`. Порт 3109 после выполненного прогона свободен. Общие `.output`, `.vercel` и `.data/e2e.sqlite` не изменялись; сборка Nuxt тестом не запускается. Сценарий подтверждает выбранные локальные UI-пути и положительные payload, но не заменяет negative error/log аудит, production/hosted проверку, реальную доставку или расписание очистки.
+
+## Исправление выбора браузера после Linux CI
+
+Для commit **4b7fcc66** [GitHub Quality 34146794421, job 101820468053](https://github.com/shalinivan9669/sertificate/actions/runs/34146794421/job/101820468053) успешно прошли 144 теста и пять основных браузерных suites, но шаг аналитики завершился ошибкой до запуска браузера: `tests/analytics-browser.mjs:93` без `BROWSER_PATH` подставлял `C:/Program Files/Google/Chrome/Application/chrome.exe` на Linux. Поэтому этот CI run **не является полностью успешной проверкой** аналитического сценария.
+
+Исправлен только тестовый launcher. Явный `BROWSER_PATH` сохраняет приоритет; системный Windows Chrome выбирается только при `process.platform === 'win32'` и существующем файле; в остальных случаях используется `chromium.executablePath()` из Playwright. В JSON-отчёт добавлены `browserSelection` и `browserPlatform`. Проверены другие новые точки входа из `quality.yml`: `runtime-privacy-audit.mjs` и `classic-browser.mjs` уже имеют Playwright fallback, а `run-core-browser.mjs` передаёт переносимый `BROWSER_PATH` всем пяти дочерним suites. Их код и отдельные локальные pilots не изменялись.
+
+После исправления выполнен полный локальный повтор на сохранённом `.data/analytics-release-node-d1402951-965b-45e7-997a-3cddd0e48962/.output`. Его фактический build ID из `latest.json` — **c4d9bf39-890d-4f44-8562-0075ce696d08**, а не идентификатор в имени внешней папки. Прогон **2026-09-07 17:29:37.655 UTC**: **16/16 passed, обычный exit 0, 0 ошибок JavaScript**, 12 POST/12 UUID всех восьми клиентских типов, два подтверждённых серверных события и настоящий admin TOTP/report сценарий. `BROWSER_PATH` был намеренно удалён из окружения; отчёт подтверждает автоматический выбор `windows-system`, `win32`.
+
+Доказательство повторного прогона: `artifacts/analytics-browser/cd309068-28df-4f6f-8999-5263e45b0859/report.json`, лог `implementation-analytics-browser-portable-rerun.log`; KK360-скриншот отчёта просмотрен. `node --check tests/analytics-browser.mjs` и `npx eslint tests/analytics-browser.mjs` завершились `exit 0`. Новая synthetic DB и копия артефакта находились в отдельной UUID-папке, порт 3109 освобождён. Runtime приложения, сохранённый исходный артефакт и внешние сервисы не изменялись.
+
+Этот повтор подтверждает Windows-ветку автоматического выбора и отсутствие регрессии сценария. Исправленную Linux-ветку предстоит подтвердить следующим удалённым CI после отдельного push; локальный успех не подменяет этот результат. Коммит или push в рамках исправления launcher не выполнялся.
