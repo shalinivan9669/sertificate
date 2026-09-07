@@ -4,10 +4,11 @@ import { getCurrentAdapter, getCurrentAuthEndpointContext, queueAfterTransaction
 import { twoFactor } from 'better-auth/plugins';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { drizzle } from 'drizzle-orm/libsql/web';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { databaseConfigured, execute, getDb, audit } from '../db';
 import * as schema from '../db/auth-schema';
+import { currentObservation } from '../utils/observability';
 
 let instance: ReturnType<typeof betterAuth> | undefined;
 const developmentSecret = randomBytes(48).toString('base64url');
@@ -40,7 +41,9 @@ async function queueAuthEmail(userId: string, payload: unknown) {
     // identity, credential account, and email outbox insertion commit together.
     const adapter = await getCurrentAdapter(ctx.context.adapter);
     const now = new Date().toISOString();
-    await adapter.create({ model: 'outbox', data: { type: 'auth.email', aggregate_id: userId, payload_json: JSON.stringify(payload), status: 'pending', attempts: 0, available_at: now, created_at: now, updated_at: now } });
+    const observation = currentObservation();
+    await adapter.create({ model: 'outbox', forceAllowId: true, data: { id: randomUUID(), type: 'auth.email', aggregate_id: userId, payload_json: JSON.stringify(payload), status: 'pending', attempts: 0, available_at: now, created_at: now, updated_at: now,
+      request_id: observation?.requestId || null, correlation_id: observation?.correlationId || null, origin_request_id: observation?.originRequestId || null, source_job_id: observation?.sourceJobId || null } });
     mailContext.getStore()?.add(userId);
   } catch (error) {
     (ctx.context as any).emailQueueFailed = true;
@@ -93,6 +96,8 @@ export async function getAuth() {
         type: { type: 'string', required: true }, aggregate_id: { type: 'string', required: true }, payload_json: { type: 'string', required: true, returned: false },
         status: { type: 'string', required: true, defaultValue: 'pending' }, attempts: { type: 'number', required: true, defaultValue: 0 },
         available_at: { type: 'string', required: true }, last_error: { type: 'string', required: false }, created_at: { type: 'string', required: true }, updated_at: { type: 'string', required: true },
+        request_id: { type: 'string', required: false, input: false, returned: false }, correlation_id: { type: 'string', required: false, input: false, returned: false },
+        origin_request_id: { type: 'string', required: false, input: false, returned: false }, source_job_id: { type: 'string', required: false, input: false, returned: false },
       } } },
     }],
     rateLimit: { enabled: true, storage: 'database', window: 60, max: 30, customRules: {

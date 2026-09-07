@@ -1,8 +1,9 @@
 import { createError, getHeader, getRequestURL, readBody, type H3Event } from 'h3';
 import { createHash } from 'node:crypto';
+import { markDomainError } from './observability';
 
 export function fail(statusCode: number, code: string, message: string, fieldErrors?: Record<string, string>): never {
-  throw createError({ statusCode, statusMessage: code, message, data: { code, message, ...(fieldErrors ? { fieldErrors } : {}) } });
+  throw markDomainError(createError({ statusCode, statusMessage: code, message, data: { code, message, ...(fieldErrors ? { fieldErrors } : {}) } }), code);
 }
 
 export function record(value: unknown, label = 'body'): Record<string, any> {

@@ -2,15 +2,16 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createError } from 'h3';
 import { z } from 'zod';
 import { execute, queryOne, withTransaction, type Db } from '../db';
+import { markDomainError } from './observability';
 
 export const nowIso = () => new Date().toISOString();
 export const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
 export const id = () => randomUUID();
-export function businessFail(statusCode: number, code: string, message = code): never { throw createError({ statusCode, statusMessage: code, data: { code, message } }); }
+export function businessFail(statusCode: number, code: string, message = code): never { throw markDomainError(createError({ statusCode, statusMessage: code, data: { code, message } }), code); }
 const fail: typeof businessFail = businessFail;
 export function parse<T>(schema: z.ZodType<T>, data: unknown): T {
   const result = schema.safeParse(data);
-  if (!result.success) throw createError({ statusCode: 400, statusMessage: 'VALIDATION_ERROR', data: { code: 'VALIDATION_ERROR', fieldErrors: result.error.flatten().fieldErrors } });
+  if (!result.success) throw markDomainError(createError({ statusCode: 400, statusMessage: 'VALIDATION_ERROR', data: { code: 'VALIDATION_ERROR', fieldErrors: result.error.flatten().fieldErrors } }), 'VALIDATION_ERROR');
   return result.data;
 }
 export async function limit(key: string, max: number, windowMs: number) {

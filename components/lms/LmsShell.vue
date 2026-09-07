@@ -7,6 +7,7 @@ defineProps<{
 }>();
 const path = useLocalePath();
 const { tr } = useLmsApi();
+const { track } = useLmsAnalytics();
 </script>
 <template>
   <section class="lms mx-auto max-w-6xl space-y-7">
@@ -48,7 +49,7 @@ const { tr } = useLmsApi();
     <slot />
     <p class="border-t border-slate-200 pt-5 text-sm text-slate-600">
       {{ tr("Нужна помощь?", "Көмек керек пе?") }}
-      <NuxtLink :to="path('/contacts')">{{
+      <NuxtLink :to="path('/contacts')" @click="track('support_open')">{{
         tr("Связаться с OT Center", "OT Center-ге хабарласу")
       }}</NuxtLink>
     </p>

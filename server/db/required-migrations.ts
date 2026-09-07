@@ -9,4 +9,5 @@ export const requiredMigrations = [
   '007-learning-reminders.sql',
   '008-program-intake.sql',
   '009-staff-workflows.sql',
+  '010-observability.sql',
 ] as const;

@@ -28,11 +28,21 @@ jobs:
       - run: npm run test:seo
       - run: node scripts/build-asset-check.mjs .output/public
       - run: npx playwright install --with-deps chromium
-      - name: Isolated browser workflows and mobile forms
+      - name: Preserved classic design and isolated browser workflows
         run: node tests/run-core-browser.mjs
         env:
           NODE_ENV: test
           OT_ALLOW_TEST_SEED: '1'
+      - name: Consented interface analytics and administrator report
+        run: node tests/analytics-browser.mjs
+        env:
+          NODE_ENV: test
+          OT_ALLOW_TEST_SEED: '1'
+      - name: Negative API responses and runtime privacy samples
+        run: node scripts/runtime-privacy-audit.mjs .output
+        env:
+          NODE_ENV: test
+          OT_ALLOW_PRIVACY_AUDIT: '1'
       - run: npm run build:vercel
       - uses: actions/upload-artifact@v4
         if: failure()

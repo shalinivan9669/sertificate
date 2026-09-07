@@ -8,6 +8,8 @@ import { assertRole, type AppUser } from '../utils/auth';
 import { incrementOperationalCounter, recordIncident, scanOperationalIncidents } from './incidents';
 import { deliverLearningReminder, scheduleLearningReminders } from './reminders';
 import { expireDueAttempts } from './assessment';
+import { expireAnalytics } from './analytics';
+import { jobObservation, logObservation, runWithObservation, safeDeliveryCode } from '../utils/observability';
 
 export function secretEquals(value: string, expected: string | undefined) {
   if (!expected || expected.length < 32) return false;
@@ -90,10 +92,13 @@ export async function processOutbox(options: { limit?: number; budgetMs?: number
       const row = await queryOne(`SELECT * FROM outbox WHERE status IN ('pending','processing') AND available_at<=? AND (lease_until IS NULL OR lease_until<?)${extra} ORDER BY created_at LIMIT 1`, args, tx);
       if (!row) return undefined;
       const lease = id();
-      await execute('UPDATE outbox SET status=?,lease_token=?,lease_until=?,attempts=attempts+1,updated_at=? WHERE id=?', ['processing', lease, new Date(Date.now() + 120000).toISOString(), nowIso(), row.id], tx);
-      return { ...row, lease_token: lease, attempts: row.attempts + 1 };
+      const observation = jobObservation(row);
+      await execute('UPDATE outbox SET status=?,lease_token=?,lease_until=?,attempts=attempts+1,updated_at=?,correlation_id=COALESCE(correlation_id,?) WHERE id=?', ['processing', lease, new Date(Date.now() + 120000).toISOString(), nowIso(), observation.correlationId, row.id], tx);
+      return { ...row, lease_token: lease, attempts: row.attempts + 1, observation };
     });
     if (!job) break;
+    const jobStarted = Date.now();
+    await runWithObservation(job.observation, async () => {
     try {
       let completionStatus = 'delivered';
       if (job.type === 'crm.lead') { if (!options.allowExternal || process.env.OT_CRM_DELIVERY_ENABLED !== '1') fail(503, 'EXTERNAL_DELIVERY_DISABLED'); await deliverLead(job.aggregate_id, fetch, undefined, Math.max(1, budget - (Date.now() - started))); }
@@ -107,11 +112,12 @@ export async function processOutbox(options: { limit?: number; budgetMs?: number
       if (completionStatus === 'delivered') {
         // A telemetry outage must never turn a completed delivery into a retry.
         try { await incrementOperationalCounter('outbox_delivered'); }
-        catch { console.warn(JSON.stringify({ event: 'operational_observation_unavailable', code: 'COUNTER_WRITE_FAILED' })); }
+        catch { logObservation({ event: 'telemetry_write_failed' }); }
       }
+      logObservation({ event: completionStatus === 'cancelled' ? 'outbox_cancelled' : 'outbox_delivered', elapsedMs: Date.now() - jobStarted });
       results.push({ id: job.id, status: completionStatus });
     } catch (error: any) {
-      const code = /^[A-Z0-9_]+$/.test(error?.statusMessage || '') ? error.statusMessage : 'DELIVERY_FAILED';
+      const code = safeDeliveryCode(error);
       const status = job.attempts >= 8 ? 'failed' : 'pending';
       const delay = Math.min(3600000, 30000 * 2 ** Math.min(job.attempts, 7));
       await execute('UPDATE outbox SET status=?,available_at=?,last_error=?,lease_token=NULL,lease_until=NULL,updated_at=? WHERE id=? AND lease_token=?', [status, new Date(Date.now() + delay).toISOString(), code, nowIso(), job.id, job.lease_token]);
@@ -121,9 +127,11 @@ export async function processOutbox(options: { limit?: number; budgetMs?: number
         else if (job.type !== 'operations.alert' && (status === 'failed' || job.type === 'crm.lead' && options.allowExternal && process.env.OT_CRM_DELIVERY_ENABLED === '1')) {
           await recordIncident({ kind: status === 'failed' ? 'outbox_failed' : 'outbox_stalled', targetId: job.id, severity: status === 'failed' ? 'critical' : 'warning', code, attempts: job.attempts });
         }
-      } catch { console.warn(JSON.stringify({ event: 'operational_observation_unavailable', code: 'INCIDENT_WRITE_FAILED' })); }
+      } catch { logObservation({ event: 'telemetry_write_failed' }); }
+      logObservation({ event: 'outbox_failed', code, elapsedMs: Date.now() - jobStarted });
       results.push({ id: job.id, status, code });
     }
+    });
   }
   return { processed: results.length, elapsedMs: Date.now() - started, results };
 }
@@ -134,7 +142,8 @@ export async function runOperationalTick(options: { allowExternal?: boolean } = 
   const reminders = await scheduleLearningReminders({ limit: 20, budgetMs: 3000 });
   const queue = await processOutbox({ limit: 10, budgetMs: Math.max(100, 30000 - (Date.now() - started)), allowExternal: options.allowExternal });
   const incidents = await scanOperationalIncidents({ limit: 20, budgetMs: Math.max(100, Math.min(5000, 40000 - (Date.now() - started))) });
-  return { ...queue, incidents, reminders, attempts, elapsedMs: Date.now() - started };
+  const analyticsRetention = await expireAnalytics().catch(() => { logObservation({ event: 'telemetry_write_failed' }); return { completed: false }; });
+  return { ...queue, incidents, reminders, attempts, analyticsRetention, elapsedMs: Date.now() - started };
 }
 export async function updateConsent(userId: string, data: unknown) {
   const body = parse(z.object({ marketing: z.boolean(), version: z.string().min(1).max(50) }).strict(), data);
@@ -164,9 +173,4 @@ export async function markNotificationRead(userId: string, notificationId: strin
   if (!result.rowsAffected) fail(404, 'NOTIFICATION_NOT_FOUND');
   return { read: true };
 }
-const analyticsSchema = z.object({ id: z.string().uuid(), name: z.enum(['program_view', 'selection_start', 'selection_complete', 'contact_click', 'lead_form_start', 'checkout_view', 'lesson_open', 'support_open']), dimensions: z.object({ programId: z.string().regex(/^[a-z0-9-]{1,80}$/).optional(), locale: z.enum(['ru', 'kk']).optional(), city: z.string().regex(/^[a-z-]{1,50}$/).optional(), format: z.enum(['online', 'classroom', 'onsite']).optional(), audience: z.enum(['b2c', 'b2b']).optional() }).strict() }).strict();
-export async function recordAnalytics(data: unknown) {
-  const event = parse(analyticsSchema, data);
-  await execute('INSERT OR IGNORE INTO analytics_events(id,name,dimensions_json,created_at) VALUES(?,?,?,?)', [event.id, event.name, JSON.stringify(event.dimensions), nowIso()]);
-  return { accepted: true };
-}
+export { recordClientAnalytics as recordAnalytics } from './analytics';

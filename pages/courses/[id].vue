@@ -17,6 +17,10 @@ if (lmsErrorStatus(error.value) === 404)
 const program = computed<LmsProgram | undefined>(
   () => data.value?.program || data.value,
 );
+const { track } = useLmsAnalytics();
+onMounted(() => {
+  watch(() => program.value?.id, value => { if (value) track('program_view', { programId: value }); }, { immediate: true });
+});
 const selected = ref("");
 const busy = ref(false);
 const failure = ref("");
@@ -239,6 +243,7 @@ async function enroll() {
             ><NuxtLink
               class="lms-button secondary w-full"
               :to="{ path: path('/contacts'), query: { program: program.id } }"
+              @click="track('contact_click', { programId: program.id })"
               >{{ tr("Обсудить обучение", "Оқуды талқылау") }}</NuxtLink
             ><NuxtLink class="block text-center text-sm" :to="path('/b2b')">{{
               tr(

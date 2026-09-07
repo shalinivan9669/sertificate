@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 import { PDFDocument, PDFName, PDFString, StandardFonts } from 'pdf-lib';
 import nodemailer from 'nodemailer';
-import { closeDb, enqueue, execute, getDb, queryOne, withTransaction } from '../server/db';
+import { closeDb, enqueue, execute, getDb, queryAll, queryOne, withTransaction } from '../server/db';
 import { createVersion, publishVersion, reviewVersion, type ProgramData } from '../server/services/catalog';
 import { createEnrollment, completeLesson } from '../server/services/learning';
 import { startAttempt, saveAnswer, submitAttempt } from '../server/services/assessment';
@@ -16,6 +16,8 @@ import { approveCredentialTemplate, createCredentialTemplate, downloadCredential
 import { acceptLead, deliverLead } from '../server/services/leads';
 import { operationsOverview, processOutbox, recordAnalytics, retryJob, secretEquals, updateConsent } from '../server/services/operations';
 import type { AppUser } from '../server/utils/auth';
+import { analyticsConfiguration, analyticsReport, expireAnalytics, recordClientAnalytics } from '../server/services/analytics';
+import { serverAnalyticsEvents } from '../shared/analytics';
 
 let directory: string;
 const envKeys = ['OT_DATABASE_PATH', 'NODE_ENV', 'VERCEL', 'VERCEL_ENV', 'TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN', 'OT_PAYMENT_PROVIDER', 'OT_APP_ENV', 'OT_PAYMENT_TERMS_APPROVED', 'OT_PAYMENT_TERMS_VERSION', 'OT_SANDBOX_WEBHOOK_SECRET', 'OT_SANDBOX_MERCHANT', 'AMO_BASE_URL', 'AMO_ACCESS_TOKEN', 'NUXT_PUBLIC_SITE_URL', 'OT_CRM_DELIVERY_ENABLED', 'OT_EMAIL_DELIVERY_ENABLED', 'SMTP_URL', 'MAIL_FROM'];
@@ -329,8 +331,11 @@ test('outbox leases prevent simultaneous handlers, retries retain failure state,
 });
 
 test('analytics cannot accept browser purchase/grade truth or PII; consent withdrawal cancels queued marketing', async () => {
+  const priorFlag = process.env.OT_ANALYTICS_ENABLED, priorDays = process.env.OT_ANALYTICS_RETENTION_DAYS;
+  process.env.OT_ANALYTICS_ENABLED = '1'; process.env.OT_ANALYTICS_RETENTION_DAYS = '14';
+  try {
   const event = { id: randomUUID(), name: 'program_view', dimensions: { programId: 'ohrana-truda', locale: 'kk' } };
-  await recordAnalytics(event); await recordAnalytics(event); assert.equal((await queryOne('SELECT COUNT(*) n FROM analytics_events WHERE id=?', [event.id]))!.n, 1);
+  await recordAnalytics(event, 'analytics-v1'); await recordAnalytics(event, 'analytics-v1'); assert.equal((await queryOne('SELECT COUNT(*) n FROM analytics_events WHERE id=?', [event.id]))!.n, 1);
   await rejectsCode(recordAnalytics({ ...event, name: 'purchase' }), 'VALIDATION_ERROR');
   await rejectsCode(recordAnalytics({ ...event, dimensions: { email: learner.email } }), 'VALIDATION_ERROR');
   await updateConsent(learner.id, { marketing: true, version: 'isolated-test-v1' });
@@ -338,6 +343,92 @@ test('analytics cannot accept browser purchase/grade truth or PII; consent withd
   await updateConsent(learner.id, { marketing: false, version: 'isolated-test-v1' });
   assert.equal((await queryOne('SELECT COUNT(*) n FROM consent_records WHERE user_id=? AND purpose=? AND withdrawn_at IS NULL', [learner.id, 'marketing']))!.n, 0);
   assert.equal((await queryOne('SELECT COUNT(*) n FROM notifications WHERE user_id=? AND purpose=? AND status=?', [learner.id, 'marketing', 'queued']))!.n, 0);
+  } finally { if (priorFlag === undefined) delete process.env.OT_ANALYTICS_ENABLED; else process.env.OT_ANALYTICS_ENABLED = priorFlag; if (priorDays === undefined) delete process.env.OT_ANALYTICS_RETENTION_DAYS; else process.env.OT_ANALYTICS_RETENTION_DAYS = priorDays; }
+});
+
+test('analytics stays disabled without explicit policy and refuses collection without separate consent', async () => {
+  const priorFlag = process.env.OT_ANALYTICS_ENABLED, priorDays = process.env.OT_ANALYTICS_RETENTION_DAYS;
+  const event = { id: randomUUID(), name: 'program_view', dimensions: { programId: 'ohrana-truda' } };
+  try {
+    delete process.env.OT_ANALYTICS_ENABLED; delete process.env.OT_ANALYTICS_RETENTION_DAYS;
+    assert.equal(analyticsConfiguration().enabled, false); assert.equal((await recordClientAnalytics(event, 'analytics-v1')).accepted, false);
+    process.env.OT_ANALYTICS_ENABLED = '1';
+    for (const days of ['', '0', '91', 'NaN', '14.5', '100000']) { process.env.OT_ANALYTICS_RETENTION_DAYS = days; assert.equal(analyticsConfiguration().enabled, false); }
+    process.env.OT_ANALYTICS_RETENTION_DAYS = '14'; assert.equal(analyticsConfiguration().enabled, true);
+    assert.deepEqual(await recordClientAnalytics(event, undefined), { accepted: false, reason: 'consent_required' });
+    assert.deepEqual(await recordClientAnalytics(event, 'marketing-v1'), { accepted: false, reason: 'consent_required' });
+    assert.equal((await queryOne('SELECT COUNT(*) n FROM analytics_events WHERE id=?', [event.id]))!.n, 0);
+    for (const dimensions of [{ programId: 'private-person-canary' }, { city: 'private-city-canary' }, { email: learner.email }, { token: 'PRIVATE_QUERY_TOKEN' }, { selectedOptionIds: ['right'] }]) await rejectsCode(recordClientAnalytics({ ...event, dimensions }, 'analytics-v1'), 'VALIDATION_ERROR');
+    for (const name of serverAnalyticsEvents) await rejectsCode(recordClientAnalytics({ ...event, name }, 'analytics-v1'), 'VALIDATION_ERROR');
+    await Promise.all(Array.from({ length: 10 }, () => recordClientAnalytics(event, 'analytics-v1')));
+    assert.equal((await queryOne('SELECT COUNT(*) n FROM analytics_events WHERE id=?', [event.id]))!.n, 1);
+  } finally { if (priorFlag === undefined) delete process.env.OT_ANALYTICS_ENABLED; else process.env.OT_ANALYTICS_ENABLED = priorFlag; if (priorDays === undefined) delete process.env.OT_ANALYTICS_RETENTION_DAYS; else process.env.OT_ANALYTICS_RETENTION_DAYS = priorDays; }
+});
+
+test('real service transitions generate all eleven server analytics events once without private domain data', async () => {
+  const priorFlag = process.env.OT_ANALYTICS_ENABLED, priorDays = process.env.OT_ANALYTICS_RETENTION_DAYS;
+  process.env.OT_ANALYTICS_ENABLED = '1'; process.env.OT_ANALYTICS_RETENTION_DAYS = '14';
+  const from = new Date().toISOString();
+  try {
+    const lead = await acceptLead({ name: 'PRIVATE_ANALYTICS_NAME', email: 'private-analytics@example.test', phone: '+77770000123', city: 'karaganda', programId: 'ohrana-truda', comment: 'PRIVATE_ANALYTICS_COMMENT', locale: 'kk' }, randomUUID()); assert.ok('submissionId' in lead);
+    await deliverLead(lead.submissionId!, async (url, options) => url.includes('/notes') ? Response.json({ _embedded: { notes: options.method === 'GET' ? [] : [{ id: 991 }] } }) : Response.json({ _embedded: { leads: options.method === 'GET' ? [] : [{ id: 992 }] } }));
+    await deliverLead(lead.submissionId!, async () => { throw new Error('Delivered lead must not call provider twice'); });
+    const { order, event } = await paidOrder(); const raw = JSON.stringify(event); await processPaymentWebhook(raw, signature(raw)); await processPaymentWebhook(raw, signature(raw));
+    const enrollmentId = (await getOrder(order.id, learner.id)).enrollmentId;
+    await completeLesson(learner, enrollmentId, 'test-lesson', 0);
+    let attempt = await startAttempt(learner, enrollmentId, randomUUID()); attempt = await saveAnswer(learner, attempt.id, 'test-question', ['right'], attempt.revision);
+    await submitAttempt(learner, attempt.id); await submitAttempt(learner, attempt.id);
+    await approvedTestTemplate(); const issued = await issueCredential(admin.id, enrollmentId, 'ISOLATED analytics test issue');
+    await renderCredential(issued.credential.id); await renderCredential(issued.credential.id);
+    await revokeCredential(admin.id, issued.credential.id, 'ISOLATED analytics test revocation');
+    await refundOrder(order.id, admin.id, 'ISOLATED analytics confirmed refund');
+    const rows = await queryAll<{ id: string; name: string; dimensions_json: string }>("SELECT id,name,dimensions_json FROM analytics_events WHERE id LIKE 'server:%' AND created_at>=?", [from]);
+    assert.deepEqual(rows.map(row => row.name).sort(), [...serverAnalyticsEvents].sort());
+    const serialized = JSON.stringify(rows);
+    for (const privateValue of ['PRIVATE_ANALYTICS_NAME', 'private-analytics@example.test', '+77770000123', 'PRIVATE_ANALYTICS_COMMENT', learner.email, learner.id, enrollmentId, attempt.id, 'correctOptionIds', 'test-question', 'verificationUrl', 'right']) assert.equal(serialized.includes(privateValue), false, privateValue);
+    assert.ok(rows.every(row => /^server:[a-f0-9]{64}$/.test(row.id)));
+    const payment = rows.find(row => row.name === 'payment_confirmed')!; assert.equal(JSON.parse(payment.dimensions_json).channel, 'sandbox');
+  } finally { if (priorFlag === undefined) delete process.env.OT_ANALYTICS_ENABLED; else process.env.OT_ANALYTICS_ENABLED = priorFlag; if (priorDays === undefined) delete process.env.OT_ANALYTICS_RETENTION_DAYS; else process.env.OT_ANALYTICS_RETENTION_DAYS = priorDays; }
+});
+
+test('a failed optional analytics write preserves committed learning and its mandatory audit', async () => {
+  const priorFlag = process.env.OT_ANALYTICS_ENABLED, priorDays = process.env.OT_ANALYTICS_RETENTION_DAYS;
+  const version = await publication(); const { enrollment } = await createEnrollment(learner, { userId: learner.id, versionId: version.id }, randomUUID(), true);
+  process.env.OT_ANALYTICS_ENABLED = '1'; process.env.OT_ANALYTICS_RETENTION_DAYS = '14';
+  const logs: string[] = []; const originalInfo = console.info;
+  try {
+    await execute("CREATE TRIGGER analytics_test_failure BEFORE INSERT ON analytics_events BEGIN SELECT RAISE(ABORT, 'PRIVATE_ANALYTICS_STORAGE_CANARY'); END");
+    console.info = value => { logs.push(String(value)); };
+    await completeLesson(learner, enrollment.id, 'test-lesson', 0);
+    assert.equal((await queryOne('SELECT completed FROM lesson_progress WHERE enrollment_id=? AND lesson_id=?', [enrollment.id, 'test-lesson']))!.completed, 1);
+    assert.equal((await queryOne("SELECT COUNT(*) n FROM audit_events WHERE action='learning.lesson_completed' AND target=?", [`${enrollment.id}/test-lesson`]))!.n, 1);
+    assert.equal(logs.length, 1); assert.equal(JSON.parse(logs[0]!).errorCode, 'OBSERVATION_UNAVAILABLE');
+    for (const value of ['PRIVATE_ANALYTICS_STORAGE_CANARY', learner.email, enrollment.id]) assert.equal(logs.join('').includes(value), false);
+  } finally {
+    console.info = originalInfo; await execute('DROP TRIGGER IF EXISTS analytics_test_failure');
+    if (priorFlag === undefined) delete process.env.OT_ANALYTICS_ENABLED; else process.env.OT_ANALYTICS_ENABLED = priorFlag;
+    if (priorDays === undefined) delete process.env.OT_ANALYTICS_RETENTION_DAYS; else process.env.OT_ANALYTICS_RETENTION_DAYS = priorDays;
+  }
+});
+
+test('analytics report uses an explicit UTC window and event counts; retention never deletes academic or audit facts', async () => {
+  const priorFlag = process.env.OT_ANALYTICS_ENABLED, priorDays = process.env.OT_ANALYTICS_RETENTION_DAYS;
+  process.env.OT_ANALYTICS_ENABLED = '1'; process.env.OT_ANALYTICS_RETENTION_DAYS = '14';
+  const now = Date.now() + 1000, oldId = randomUUID(), boundaryId = randomUUID(), futureId = randomUUID();
+  try {
+    for (const [id, timestamp] of [[oldId, new Date(now - 15 * 86400000).toISOString()], [boundaryId, new Date(now - 14 * 86400000).toISOString()], [futureId, new Date(now).toISOString()]]) await execute('INSERT INTO analytics_events VALUES(?,?,?,?)', [id!, 'program_view', '{}', timestamp!]);
+    await rejectsCode(analyticsReport(learner, {}), 'FORBIDDEN'); await rejectsCode(analyticsReport({ ...admin, mfaVerifiedAt: null }, {}), 'MFA_REQUIRED');
+    await rejectsCode(analyticsReport(admin, { days: '32' }), 'ANALYTICS_WINDOW_INVALID');
+    const report = await analyticsReport(admin, { days: '31' }, now); assert.equal(report.window.days, 14); assert.equal(report.window.bounds, '[from,until)'); assert.equal(report.conversionRate, null); assert.equal(report.uniqueVisitorsMeasured, false);
+    assert.ok(!JSON.stringify(report).includes(learner.email));
+    const expected = (await queryOne('SELECT COUNT(*) n FROM analytics_events WHERE created_at>=? AND created_at<?', [report.window.from, report.window.until]))!.n;
+    assert.equal(report.totals.client + report.totals.server, expected);
+    const academic = await queryOne('SELECT (SELECT COUNT(*) FROM audit_events) AS audit,(SELECT COUNT(*) FROM attempts) AS attempts,(SELECT COUNT(*) FROM credentials) AS credentials');
+    assert.equal((await expireAnalytics(now)).deleted, 1); assert.equal(await queryOne('SELECT id FROM analytics_events WHERE id=?', [oldId]), undefined);
+    assert.ok(await queryOne('SELECT id FROM analytics_events WHERE id=?', [boundaryId]));
+    assert.deepEqual(await queryOne('SELECT (SELECT COUNT(*) FROM audit_events) AS audit,(SELECT COUNT(*) FROM attempts) AS attempts,(SELECT COUNT(*) FROM credentials) AS credentials'), academic);
+    process.env.OT_ANALYTICS_ENABLED = '0'; assert.equal((await expireAnalytics(now + 60 * 86400000)).deleted, 0);
+  } finally { if (priorFlag === undefined) delete process.env.OT_ANALYTICS_ENABLED; else process.env.OT_ANALYTICS_ENABLED = priorFlag; if (priorDays === undefined) delete process.env.OT_ANALYTICS_RETENTION_DAYS; else process.env.OT_ANALYTICS_RETENTION_DAYS = priorDays; }
 });
 
 test('operations overview enforces staff MFA and exposes only the arrays authorized for each staff role', async () => {

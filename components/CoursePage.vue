@@ -24,6 +24,14 @@ const { locale, t, tm } = useI18n();
 const localePath = useLocalePath();
 const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
+const { track } = useLmsAnalytics();
+const recordContact = () => track('contact_click', { programId: resolveCourseDirection(props.course.slug)?.id, city: resolvedCity.value?.slug });
+onMounted(() => {
+  watch(() => [props.course.slug, resolvedCity.value?.slug], () => {
+    const direction = resolveCourseDirection(props.course.slug);
+    if (direction) track('program_view', { programId: direction.id, city: resolvedCity.value?.slug });
+  }, { immediate: true });
+});
 
 const courseName = computed(() => props.course.name[locale.value] || props.course.name.ru);
 const cityName = computed(
@@ -529,12 +537,14 @@ useHead(() => ({
         <NuxtLink
           class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition"
           :to="localePath('/contacts')"
+          @click="recordContact"
         >
           {{ locale === 'kk' ? 'Кеңеске өтінім' : 'Заявка на консультацию' }}
         </NuxtLink>
         <a
           class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition"
           href="tel:+77755619871"
+          @click="recordContact"
         >
           {{ t('cta.call') }}
         </a>
@@ -648,7 +658,7 @@ useHead(() => ({
         >
           {{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}
         </NuxtLink>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871">{{ t('cta.call') }}</a>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871" @click="recordContact">{{ t('cta.call') }}</a>
       </div>
     </section>
 

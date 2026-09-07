@@ -38,4 +38,5 @@ export const outbox = sqliteTable('outbox', {
   payload_json: text('payload_json').notNull(), status: text('status').notNull().default('pending'),
   attempts: integer('attempts').notNull().default(0), available_at: text('available_at').notNull(),
   last_error: text('last_error'), created_at: text('created_at').notNull(), updated_at: text('updated_at').notNull(),
+  request_id: text('request_id'), correlation_id: text('correlation_id'), origin_request_id: text('origin_request_id'), source_job_id: text('source_job_id'),
 });

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { audit, enqueue, execute, queryAll, queryOne, withTransaction, type Db } from '../db';
 import { businessFail as fail, id, idempotent, nowIso, parse, sha256 } from '../utils/business';
 import { incrementOperationalCounter, recordWebhookRejection } from './incidents';
+import { logObservation } from '../utils/observability';
 import { assertProgramIntakeOpen } from './program-intake';
 
 export function paymentMode() {
@@ -94,13 +95,13 @@ export async function processPaymentWebhook(raw: string, signature: string) {
     const result = await verifiedPaymentWebhook(raw, signature);
     if ('duplicate' in result && result.duplicate) {
       try { await incrementOperationalCounter('webhook_duplicate'); }
-      catch { console.warn(JSON.stringify({ event: 'operational_observation_unavailable', code: 'COUNTER_WRITE_FAILED' })); }
+      catch { logObservation({ event: 'telemetry_write_failed' }); }
     }
     return result;
   } catch (error: any) {
     // Logging happens outside the rejected domain transaction. Neither raw body nor signature is retained.
     try { await recordWebhookRejection(error?.data?.code || error?.statusMessage || ''); }
-    catch { console.warn(JSON.stringify({ event: 'operational_observation_unavailable', code: 'INCIDENT_WRITE_FAILED' })); }
+    catch { logObservation({ event: 'telemetry_write_failed' }); }
     throw error;
   }
 }

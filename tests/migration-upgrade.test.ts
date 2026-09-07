@@ -19,13 +19,13 @@ async function snapshot(db: Client, names: string[]) {
   return data;
 }
 
-test('additive migration upgrade 001-005 to 001-009 preserves every old row, private payload and immutable/FK constraint', async () => {
+test('additive migration upgrade 001-005 to 001-010 preserves every old value and adds only nullable operational context', async () => {
   const directory = await mkdtemp(join(tmpdir(),'ot-migration-upgrade-'));
   const historicalDirectory = join(directory,'migrations-through-005'); await mkdir(historicalDirectory);
   const currentDirectory = resolve('server/db/migrations');
   const names = (await readdir(currentDirectory)).filter(name=>/^\d+[-_].*\.sql$/.test(name)).sort();
   const historical = names.filter(name=>Number(name.slice(0,3))<=5);
-  assert.equal(historical.length,5); assert.equal(names.length,9,'This explicitly bounded regression targets schema 009');
+  assert.equal(historical.length,5); assert.equal(names.length,10,'This explicitly bounded regression targets schema 010');
   for (const name of historical) await copyFile(join(currentDirectory,name),join(historicalDirectory,name));
   const db = createClient({url:'file:'+join(directory,'upgrade.sqlite').replaceAll('\\','/'),concurrency:1,intMode:'number'});
   const exec = (sql: string,args: any[] = [])=>db.execute({sql,args});
@@ -56,10 +56,13 @@ test('additive migration upgrade 001-005 to 001-009 preserves every old row, pri
     await migrate(db,currentDirectory);
     const after = await snapshot(db,oldTables);
     const exported = JSON.parse(await readFile(snapshotPath,'utf8'));
-    for (const name of oldTables.filter(name=>name!=='schema_migrations')) assert.deepEqual(after[name],exported[name],`${name}: all rows and private values unchanged`);
+    for (const name of oldTables.filter(name=>name!=='schema_migrations')) {
+      const expected = ['audit_events','outbox'].includes(name) ? exported[name].map((row: Record<string, unknown>) => ({ ...row, request_id: null, correlation_id: null, origin_request_id: null, source_job_id: null })) : exported[name];
+      assert.deepEqual(after[name],expected,`${name}: every old value unchanged; new context columns intentionally NULL`);
+    }
     assert.deepEqual(after.schema_migrations!.slice(0,5),exported.schema_migrations);
     assert.deepEqual(after.schema_migrations!.slice(5).map((row:any)=>row.name),names.slice(5));
-    assert.equal(after.schema_migrations!.length,9);
+    assert.equal(after.schema_migrations!.length,10);
     const newTables = (await tableNames(db)).filter(name=>!oldTables.includes(name));
     assert.deepEqual(newTables,['credential_batch_items','credential_batches','learning_reminder_deliveries','learning_reminder_preferences','learning_reminders','operational_counters','operational_incidents','program_intake_controls','support_notes']);
     for (const name of newTables) assert.equal(Number((await exec(`SELECT COUNT(*) n FROM ${identifier(name)}`)).rows[0]!.n),0,`${name}: no seeded controls, reminders, alerts, notes or batch actions`);

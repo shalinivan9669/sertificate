@@ -12,6 +12,7 @@ import { issueCredential } from '../server/services/credentials';
 import { createOrganization } from '../server/services/organizations';
 import { cancelInvoice, confirmInvoice, createInvoice, getInvoice, invoiceConfiguration, listFinanceInvoices, listInvoices, renderInvoice } from '../server/services/invoices';
 import type { AppUser } from '../server/utils/auth';
+import { expireAnalytics } from '../server/services/analytics';
 
 let directory: string;
 const envKeys = ['OT_DATABASE_PATH', 'NODE_ENV', 'VERCEL', 'TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN', 'OT_INVOICE_ENABLED', 'OT_INVOICE_ISSUER_JSON'];
@@ -191,4 +192,59 @@ test('one-minor-unit organization fee allocates exact totals including zero-cost
   const totals = await queryOne('SELECT COUNT(*) n,SUM(amount_minor) amount FROM orders WHERE organization_id=? AND version_id=? AND status=?', [organization.id, version.id, 'succeeded']);
   assert.equal(totals!.n, 3); assert.equal(totals!.amount, 1);
   assert.equal((await queryOne('SELECT SUM(p.amount_minor) amount FROM payments p JOIN orders o ON o.id=p.order_id WHERE o.organization_id=?', [organization.id]))!.amount, 1);
+});
+
+test('opted-in aggregate invoice analytics records one confirmed payment and exact activated seats; rejects/replays/retention never invent transitions', async () => {
+  const settings = { OT_ANALYTICS_ENABLED: process.env.OT_ANALYTICS_ENABLED, OT_ANALYTICS_RETENTION_DAYS: process.env.OT_ANALYTICS_RETENTION_DAYS };
+  process.env.OT_ANALYTICS_ENABLED = '1'; process.env.OT_ANALYTICS_RETENTION_DAYS = '14';
+  const baselineIds = new Set((await queryAll('SELECT id FROM analytics_events')).map(row => row.id));
+  const currentEvents = async () => (await queryAll<{ id: string; name: string; dimensions_json: string }>('SELECT id,name,dimensions_json FROM analytics_events')).filter(row => !baselineIds.has(row.id));
+  const confirmed: { invoiceId: string; evidence: ReturnType<typeof confirmation>; version: number; seats: number }[] = [];
+  try {
+    const declined = await setup([manager.id, learner.id]);
+    const declinedInvoice = (await createInvoice(manager, declined.organization.id, declined.body, randomUUID())).invoice;
+    await cancelInvoice(manager, declinedInvoice.id, { reason: 'Synthetic declined invoice, no transfer' });
+    await rejectsCode(confirmInvoice(finance, declinedInvoice.id, confirmation(declinedInvoice.amountMinor)), 'INVOICE_CANCELLED');
+    assert.deepEqual(await currentEvents(), [], 'Creation, cancellation and rejected confirmation are not payments or activations');
+
+    for (const seats of [2, 100]) {
+      let userIds = [manager.id, learner.id];
+      if (seats === 100) {
+        userIds = Array.from({ length: seats }, () => randomUUID());
+        // Synthetic identity fixtures only; orders, access and their events use the real invoice services.
+        await execute(`INSERT INTO "user"(id,name,email,emailVerified,createdAt,updatedAt,role) VALUES ${userIds.map(() => '(?,?,?,1,1,1,?)').join(',')}`,
+          userIds.flatMap(id => [id, 'PRIVATE_ANALYTICS_INVOICE_LEARNER', `${id}@example.test`, 'learner']));
+      }
+      const data = await setup(userIds, { ...fixture(), billingBasis: seats === 100 ? 'organization' : 'learner', priceMinor: 125003 });
+      const before = await currentEvents();
+      const invoice = (await createInvoice(manager, data.organization.id, data.body, randomUUID())).invoice;
+      const evidence = confirmation(invoice.amountMinor, `PRIVATE_ANALYTICS_BANK_REFERENCE_${seats}`);
+      await rejectsCode(confirmInvoice(manager, invoice.id, evidence), 'FORBIDDEN');
+      await rejectsCode(confirmInvoice({ ...finance, mfaVerifiedAt: null }, invoice.id, evidence), 'MFA_REQUIRED');
+      await rejectsCode(confirmInvoice(finance, invoice.id, { ...evidence, amountMinor: invoice.amountMinor + 1 }), 'INVOICE_AMOUNT_MISMATCH');
+      assert.deepEqual(await currentEvents(), before, 'Wrong amount/authorization must not write metrics');
+      const [first, replay] = await Promise.all([confirmInvoice(finance, invoice.id, evidence), confirmInvoice(finance, invoice.id, evidence)]);
+      assert.equal(first.invoice.status, 'confirmed'); assert.deepEqual(replay, first);
+      const events = (await currentEvents()).filter(row => !before.some(old => old.id === row.id));
+      assert.equal(events.filter(row => row.name === 'payment_confirmed').length, 1, 'A corporate transfer is one payment event, not one per seat');
+      assert.equal(events.filter(row => row.name === 'enrollment_activated').length, seats);
+      assert.equal(events.length, seats + 1);
+      assert.equal((await queryOne('SELECT COUNT(*) count FROM enrollments WHERE organization_id=? AND status=?', [data.organization.id, 'active']))!.count, seats);
+      for (const row of events) assert.deepEqual(JSON.parse(row.dimensions_json), { programId: 'ohrana-truda', locale: 'ru', audience: 'b2b', version: data.version.version, channel: 'manual_invoice' });
+      const serialized = JSON.stringify(events);
+      for (const privateValue of ['PRIVATE_ANALYTICS_INVOICE_LEARNER', 'PRIVATE_ANALYTICS_BANK_REFERENCE', '@example.test', issuer.name, issuer.bin, issuer.iban, issuer.address, buyer.name, buyer.bin, buyer.address, invoice.id, data.organization.id, ...userIds]) assert.equal(serialized.includes(privateValue), false);
+      await confirmInvoice(finance, invoice.id, evidence); assert.deepEqual(await currentEvents(), [...before, ...events]);
+      confirmed.push({ invoiceId: invoice.id, evidence, version: data.version.version, seats });
+    }
+    const events = await currentEvents(); assert.equal(events.length, 104);
+    const historical = new Date(Date.now() - 15 * 86400000).toISOString();
+    await execute(`UPDATE analytics_events SET created_at=? WHERE id IN (${events.map(() => '?').join(',')})`, [historical, ...events.map(row => row.id)]);
+    assert.equal((await expireAnalytics()).deleted, events.length);
+    const factsBeforeReplay = await queryOne("SELECT COUNT(*) n FROM audit_events WHERE action='invoice.payment_confirmed_manually'");
+    for (const result of confirmed) await confirmInvoice(finance, result.invoiceId, result.evidence);
+    assert.deepEqual(await currentEvents(), [], 'Replay after optional analytics expiry must not backfill an old transition as a new payment');
+    assert.deepEqual(await queryOne("SELECT COUNT(*) n FROM audit_events WHERE action='invoice.payment_confirmed_manually'"), factsBeforeReplay);
+  } finally {
+    for (const [key, value] of Object.entries(settings)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
 });

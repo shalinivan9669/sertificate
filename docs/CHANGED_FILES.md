@@ -2,7 +2,7 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 227
+Всего файлов: 253
 
 - `.env.example`
 - `.gitattributes`
@@ -11,6 +11,7 @@
 - `components/CoursePage.vue`
 - `components/FormatLanding.vue`
 - `components/HomePage.vue`
+- `components/lms/LmsAnalyticsConsent.vue`
 - `components/lms/LmsAuthForm.vue`
 - `components/lms/LmsAuthoringGuide.vue`
 - `components/lms/LmsExamPage.vue`
@@ -46,6 +47,7 @@
 - `components/redesign-flow/success/SuccessMainCard.vue`
 - `components/redesign-flow/success/SuccessScoreSidebar.vue`
 - `components/SeoUniqueBlocks.vue`
+- `composables/useLmsAnalytics.ts`
 - `composables/useLmsApi.ts`
 - `composables/useLmsSelection.ts`
 - `composables/useProgramFlowMock.js`
@@ -64,18 +66,23 @@
 - `content/public-city-content.ts`
 - `docs/ACCEPTANCE_EXTRA_BROWSER.md`
 - `docs/ACCEPTANCE_STATUS.csv`
+- `docs/ANALYTICS_CLIENT.md`
+- `docs/ANALYTICS_SERVER.md`
 - `docs/ARCHITECTURE-DECISIONS.md`
 - `docs/BACKLOG_STATUS.csv`
 - `docs/BUSINESS-QA.md`
 - `docs/CHANGED_FILES.md`
+- `docs/CI_CLASSIC_PRESERVATION.md`
 - `docs/CORE_BACKEND.md`
 - `docs/CORE_INVOICES.md`
 - `docs/CORE_RESTORE_DRILL.json`
 - `docs/CORE_SOURCE_CATALOG.md`
 - `docs/DEPENDENCY-REVIEW.md`
 - `docs/DOCUMENT-OPERATIONS-PILOT.md`
+- `docs/KEYBOARD_LEARNING_PILOT.md`
 - `docs/LMS_NAV_LAYOUT_LAB.md`
 - `docs/LMS-BROWSER-QA.md`
+- `docs/OBSERVABILITY.md`
 - `docs/ORGANIZATION_REPORT_AND_REMINDERS.md`
 - `docs/PDF-CONTENT-AUDIT.md`
 - `docs/PERFORMANCE_LOCAL_LAB_2026-09-07.md`
@@ -84,6 +91,7 @@
 - `docs/PUBLIC_BUNDLE_AUDIT_2026-09-07.md`
 - `docs/ROLLBACK_DRILL.md`
 - `docs/RUNBOOK.md`
+- `docs/RUNTIME_PRIVACY_AUDIT.md`
 - `docs/SEO-POLICY.md`
 - `docs/STATUS_MATRIX_METHOD.md`
 - `docs/VISUAL-ACCESSIBILITY-QA.md`
@@ -99,6 +107,7 @@
 - `pages/[city]/[course].vue`
 - `pages/[city]/[slug].vue`
 - `pages/[city]/index.vue`
+- `pages/admin/analytics.vue`
 - `pages/admin/document-batches.vue`
 - `pages/admin/documents.vue`
 - `pages/admin/incidents.vue`
@@ -131,6 +140,7 @@
 - `pages/learn/[id]/success.vue`
 - `pages/payment/[courseId].vue`
 - `pages/payment/pending.vue`
+- `pages/privacy.vue`
 - `pages/program-selection.vue`
 - `pages/second.vue`
 - `pages/verify/[token].vue`
@@ -148,6 +158,7 @@
 - `scripts/performance-lab.mjs`
 - `scripts/rollback-drill.ts`
 - `scripts/rollback-preflight.ts`
+- `scripts/runtime-privacy-audit.mjs`
 - `scripts/seo-build-check.mjs`
 - `scripts/seo-http-check.mjs`
 - `scripts/seo-uniqueness-check.ts`
@@ -168,11 +179,14 @@
 - `server/db/migrations/007-learning-reminders.sql`
 - `server/db/migrations/008-program-intake.sql`
 - `server/db/migrations/009-staff-workflows.sql`
+- `server/db/migrations/010-observability.sql`
 - `server/db/required-migrations.ts`
 - `server/handlers/business.ts`
 - `server/handlers/core.ts`
 - `server/middleware/security.ts`
+- `server/plugins/observability.ts`
 - `server/plugins/private-response.ts`
+- `server/services/analytics.ts`
 - `server/services/assessment.ts`
 - `server/services/auth.ts`
 - `server/services/catalog.ts`
@@ -187,16 +201,25 @@
 - `server/services/organizations.ts`
 - `server/services/program-intake.ts`
 - `server/services/reminders.ts`
+- `server/services/request-observations.ts`
 - `server/services/staff-workflows.ts`
 - `server/utils/auth.ts`
 - `server/utils/business.ts`
+- `server/utils/observability.ts`
 - `server/utils/request-body.ts`
 - `server/utils/validation.ts`
+- `shared/analytics.ts`
 - `shared/course-registry.ts`
 - `shared/source-products.ts`
 - `tests/acceptance-extra-browser.mjs`
 - `tests/acceptance-extra-fixtures.ts`
+- `tests/analytics-browser-fixtures.ts`
+- `tests/analytics-browser.mjs`
+- `tests/analytics-client.test.ts`
 - `tests/business-integration.test.ts`
+- `tests/classic-browser.mjs`
+- `tests/classic-design-contract.mjs`
+- `tests/classic-design.test.mjs`
 - `tests/contact-browser.mjs`
 - `tests/core-auth.test.ts`
 - `tests/core-backup.test.ts`
@@ -210,12 +233,14 @@
 - `tests/e2e-reset-learning.ts`
 - `tests/http-security.test.ts`
 - `tests/invoices.test.ts`
+- `tests/keyboard-learning-browser.mjs`
 - `tests/learning-reminders.test.ts`
 - `tests/lms-admin-browser.mjs`
 - `tests/lms-auth-browser.mjs`
 - `tests/lms-browser.mjs`
 - `tests/migration-upgrade.test.ts`
 - `tests/notifications.test.ts`
+- `tests/observability.test.ts`
 - `tests/operational-incidents.test.ts`
 - `tests/organization-report-browser.mjs`
 - `tests/organization-report-fixtures.ts`
@@ -230,4 +255,5 @@
 - `tests/source-products.test.ts`
 - `tests/support-notes.test.ts`
 - `tsconfig.json`
+- `utils/lms-analytics-client.ts`
 - `vercel.json`

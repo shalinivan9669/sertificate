@@ -2,6 +2,8 @@
 const route = useRoute();
 const path = useLocalePath();
 const { api, tr, errorText } = useLmsApi();
+const { track } = useLmsAnalytics();
+let viewedLesson = '';
 const id = String(route.params.id);
 const { data, pending, error, refresh } = await useAsyncData(
   "lms-enrollment-" + id,
@@ -46,6 +48,15 @@ async function openLesson(lessonId: string) {
     if (selected.value === lessonId) loadingLesson.value = false;
   }
 }
+onMounted(() => {
+  watch(() => [lessonData.value?.lesson?.id, loadingLesson.value], () => {
+    const lessonId = lessonData.value?.lesson?.id;
+    if (lessonId && !loadingLesson.value && viewedLesson !== lessonId) {
+      viewedLesson = lessonId;
+      track('lesson_open', { programId: enrollment.value?.programId });
+    }
+  }, { immediate: true });
+});
 watch(
   lessons,
   (items) => {

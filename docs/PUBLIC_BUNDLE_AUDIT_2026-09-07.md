@@ -1,5 +1,15 @@
 # Final local public bundle audit — 2026-09-07
 
+## Analytics and observability package
+
+The final sequential builds are Node **`c4d9bf39-890d-4f44-8562-0075ce696d08`** and Vercel **`05782487-f284-4714-bebc-e8828c7859e3`**. Both passed550 public-page contracts,551 HTML files,16,976 asset references,zero missing resources and one build identity. The Node artifact was copied to an isolated owned directory before Vercel's supported cleanup, preserving the exact inspected files.
+
+The complete public audit finished **2026-09-07 17:06:52.945 UTC**: **93 JS files,6 CSS files,1,209 public text files per artifact**. All99 JS/CSS paths and SHA256 hashes match, all93 JS ASTs parsed, no public source maps/references and no matches among **113 private canaries** (17 fixture/session,19 academic,67 synthetic email,3 PDF identity,7 private rate phrase). No real provider secret was available for exact comparison. Evidence: `artifacts/privacy/public-bundle-audit-c4d9bf39-05782487.json`, command log `implementation-analytics-release-bundle-audit.log`.
+
+Every positive signature was reviewed in context. `_nuxt/DxmIlFk3.js` contains the question editor's empty `correctOptionIds:[]`, checkbox bindings and remove-option filtering: one empty array and four member accesses, with no populated exam keys. `_nuxt/DV4hE_NC.js` retains the same guarded optional `globalThis.process?.getBuiltinModule?.('node:async_hooks')` shared helper. It carries no app server implementation or credential. Privileged editor data remains behind independent API authorization. This is evidence for these exact local artifacts, with the same transformed-secret/hosted limits described below.
+
+Runtime evidence is separate: `RUNTIME_PRIVACY_AUDIT.md` records28/28 actual negative-response/log checks on Node c4d9bf39. Earlier comprehensive UI results name cb3895e4, before the handled-auth401 observation fix; they are not silently relabelled as the final server artifact.
+
 ## Additional workflow package: final build inspection
 
 The later audit inspected **Node `4855f35b-6913-4002-a0fa-7c87ad77c0a7`** and **Vercel `ca57b6d3-18bb-45e9-93e2-afaf737785b9`** after the additional organization, reminder and staff workflows. Each artifact contains **89 JavaScript and 5 CSS files**; all 94 paths and SHA-256 hashes match across builds. All 89 JS files parsed, all 1,204 public textual files were scanned, and both build identity checks passed. There are no public source maps or map references. The 102 known-value comparisons (17 fixture/session, 19 academic test, 56 synthetic email, 3 private PDF identities, 7 exact private rate phrases) found no matches. No real provider secrets were configured for an exact production-secret comparison.

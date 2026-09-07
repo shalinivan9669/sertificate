@@ -5,6 +5,7 @@ import { assertProgramIntakeOpen } from './program-intake';
 import { businessFail as fail, id, idempotent, nowIso, parse } from '../utils/business';
 import { requireMembership } from './organizations';
 import { getVersion, type ProgramData } from './catalog';
+import { currentObservation } from '../utils/observability';
 
 const label = z.string().trim().min(2).max(250);
 const buyerSchema = z.object({ name: label, bin: z.string().regex(/^\d{12}$/), address: z.string().trim().min(5).max(500) }).strict();
@@ -137,7 +138,8 @@ export async function confirmInvoice(actor: AppUser, invoiceId: string, data: un
     await execute('UPDATE corporate_invoices SET status=?,confirmed_by=?,confirmed_at=?,confirmation_json=?,payment_reference=? WHERE id=?', ['confirmed', actor.id, timestamp, JSON.stringify(body), body.reference, invoiceId], tx);
     await execute('DELETE FROM corporate_invoice_reservations WHERE invoice_id=?', [invoiceId], tx);
     // One SQL statement queues bounded per-seat internal notifications; external delivery stays separately gated.
-    await execute(`INSERT INTO outbox(id,type,aggregate_id,payload_json,available_at,created_at,updated_at) VALUES ${fulfilled.map(() => '(?,?,?,?,?,?,?)').join(',')}`, fulfilled.flatMap(item => [id(), 'learning.enrolled', item.enrollmentId, JSON.stringify({ userId: item.line.user_id, enrollmentId: item.enrollmentId, invoiceId }), timestamp, timestamp, timestamp]), tx);
+    const observation = currentObservation();
+    await execute(`INSERT INTO outbox(id,type,aggregate_id,payload_json,available_at,created_at,updated_at,request_id,correlation_id,origin_request_id,source_job_id) VALUES ${fulfilled.map(() => '(?,?,?,?,?,?,?,?,?,?,?)').join(',')}`, fulfilled.flatMap(item => [id(), 'learning.enrolled', item.enrollmentId, JSON.stringify({ userId: item.line.user_id, enrollmentId: item.enrollmentId, invoiceId }), timestamp, timestamp, timestamp, observation?.requestId || null, observation?.correlationId || null, observation?.originRequestId || null, observation?.sourceJobId || null]), tx);
     await enqueue('notification.invoice_confirmed', invoiceId, { userId: invoice.created_by, invoiceId }, tx);
     await audit(actor.id, 'invoice.payment_confirmed_manually', invoiceId, `${body.reference}: ${body.reason}`, invoice.organization_id, tx);
     return details(actor, invoiceId, tx);

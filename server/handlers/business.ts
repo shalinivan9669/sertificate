@@ -1,4 +1,4 @@
-import { defineEventHandler, getHeader, getMethod, getRequestIP, getRequestURL, readBody, readRawBody, setHeader, setResponseStatus } from 'h3';
+import { defineEventHandler, getCookie, getHeader, getMethod, getRequestIP, getRequestURL, readBody, readRawBody, setHeader, setResponseStatus } from 'h3';
 import { requireUser, assertRole } from '../utils/auth';
 import { businessFail as fail, limit } from '../utils/business';
 import { queryAll, queryOne } from '../db';
@@ -11,6 +11,8 @@ import { acceptLead } from '../services/leads';
 import * as invoices from '../services/invoices';
 import * as incidents from '../services/incidents';
 import * as staffWorkflows from '../services/staff-workflows';
+import * as analytics from '../services/analytics';
+import { analyticsCookieName } from '../../shared/analytics';
 export default defineEventHandler(async event => {
   const path = getRequestURL(event).pathname.replace(/^\/api\/v1\//, ''); const parts = path.split('/'); const method = getMethod(event); const segment = (index: number) => parts[index] || "";
   const ip = process.env.VERCEL ? getHeader(event, 'x-vercel-forwarded-for') || 'unknown' : getRequestIP(event) || 'unknown'; const key = getHeader(event, 'idempotency-key') || '';
@@ -23,7 +25,8 @@ export default defineEventHandler(async event => {
     if ('submissionId' in result && process.env.OT_CRM_DELIVERY_ENABLED === '1') event.waitUntil(operations.processOutbox({ aggregateId: result.submissionId, limit: 1, budgetMs: 30000, allowExternal: true }).catch(() => undefined));
     return result;
   }
-  if (method === 'POST' && path === 'analytics') { await limit(`analytics:${ip}`, 60, 60000); return operations.recordAnalytics(await readBody(event)); }
+  if (method === 'GET' && path === 'analytics/config') return analytics.analyticsConfiguration();
+  if (method === 'POST' && path === 'analytics') return analytics.recordClientAnalytics(await readBody(event), getCookie(event, analyticsCookieName), () => limit(`analytics:${ip}`, 60, 60000));
   if (path === 'operations/tick' && method === 'GET') {
     if (!operations.secretEquals((getHeader(event, 'authorization') || '').replace(/^Bearer /, ''), process.env.CRON_SECRET)) fail(401, 'UNAUTHORIZED');
     return operations.runOperationalTick({ allowExternal: true });
@@ -73,6 +76,7 @@ export default defineEventHandler(async event => {
   if (path === 'me/consents' && method === 'GET') return { marketing: Boolean(await queryOne('SELECT id FROM consent_records WHERE user_id=? AND purpose=? AND withdrawn_at IS NULL LIMIT 1', [user.id, 'marketing'])) };
   if (path === 'me/consents' && method === 'POST') return operations.updateConsent(user.id, await readBody(event));
   if (segment(0) === 'admin') {
+    if (path === 'admin/analytics' && method === 'GET') return analytics.analyticsReport(user, Object.fromEntries(getRequestURL(event).searchParams));
     if (segment(1) === 'support-notes' && parts.length === 3 && method === 'GET') return staffWorkflows.listSupportNotes(user, segment(2), Object.fromEntries(getRequestURL(event).searchParams));
     if (segment(1) === 'support-notes' && parts.length === 3 && method === 'POST') return staffWorkflows.appendSupportNote(user, segment(2), await readBody(event));
     if (path === 'admin/credential-batches' && method === 'GET') return staffWorkflows.listCredentialBatches(user, Object.fromEntries(getRequestURL(event).searchParams));

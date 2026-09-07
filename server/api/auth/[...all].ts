@@ -1,8 +1,9 @@
 import { defineEventHandler, setHeader, toWebRequest, getHeader } from 'h3';
 import { authConfiguration, getAuth, withAuthMailContext } from '../../services/auth';
 import { fail } from '../../utils/validation';
+import { runWithRequestObservation } from '../../utils/observability';
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(event => runWithRequestObservation(event, async () => {
   setHeader(event, 'Cache-Control', 'private, no-store'); setHeader(event, 'X-Robots-Tag', 'noindex, nofollow');
   if (Number(getHeader(event, 'content-length') || 0) > 20_000) fail(413, 'BODY_TOO_LARGE', 'Authentication request is too large');
   const { result, userIds } = await withAuthMailContext(async () => (await getAuth()).handler(toWebRequest(event)));
@@ -16,4 +17,4 @@ export default defineEventHandler(async (event) => {
     else await delivery;
   }
   return result;
-});
+}));

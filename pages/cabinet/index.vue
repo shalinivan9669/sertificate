@@ -178,6 +178,7 @@ async function logout() {
         </div></LmsState
       >
     </section>
+    <LmsAnalyticsConsent v-if="me?.user" />
     <LmsNotifications v-if="me?.user" />
   </LmsShell>
 </template>

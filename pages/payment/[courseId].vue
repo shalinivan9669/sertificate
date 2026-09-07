@@ -15,6 +15,10 @@ const program = computed(() => data.value?.program || data.value);
 const version = computed(() =>
   program.value?.versions?.find((v: any) => v.id === route.query.versionId),
 );
+const { track } = useLmsAnalytics();
+onMounted(() => {
+  watch(() => version.value?.id, value => { if (value && program.value?.id) track('checkout_view', { programId: program.value.id, audience: version.value?.billingBasis === 'organization' ? 'b2b' : 'b2c' }); }, { immediate: true });
+});
 async function createOrder() {
   if (!version.value || version.value.billingBasis === "organization") return;
   busy.value = true;

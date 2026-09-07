@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { audit, enqueue, execute, queryAll, queryOne, withTransaction, type Db } from '../db';
 import { businessFail as fail, id, nowIso, parse } from '../utils/business';
 import { assertRole, type AppUser } from '../utils/auth';
+import { safeOperationalCode } from '../utils/observability';
 
 const kinds = ['outbox_failed', 'outbox_stalled', 'lead_undelivered', 'credential_pending', 'payment_pending', 'webhook_rejected'] as const;
 type IncidentKind = typeof kinds[number];
@@ -12,7 +13,7 @@ const scopes: Record<IncidentKind, { targetType: string; role: OwnerRole }> = {
   lead_undelivered: { targetType: 'lead', role: 'admin' }, credential_pending: { targetType: 'credential', role: 'issuer' },
   payment_pending: { targetType: 'order', role: 'finance' }, webhook_rejected: { targetType: 'integration', role: 'finance' },
 };
-const safeCode = (value: unknown) => typeof value === 'string' && /^[A-Z0-9_]{1,80}$/.test(value) ? value : 'UNCLASSIFIED';
+const safeCode = safeOperationalCode;
 const iso = (value: Date) => { if (!Number.isFinite(value.valueOf())) fail(400, 'INVALID_OPERATION_TIME'); return value.toISOString(); };
 const age = (created: string, now: string) => Math.max(0, Math.floor((Date.parse(now) - Date.parse(created)) / 60000));
 function threshold(name: string, fallback: number) {

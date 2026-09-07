@@ -34,7 +34,7 @@ async function save() {
 }
 </script>
 <template>
-  <section class="lms-card max-w-2xl space-y-5">
+  <div class="space-y-6"><section class="lms-card max-w-2xl space-y-5">
     <h2 class="text-xl font-semibold">
       {{ tr("Необязательные уведомления", "Міндетті емес хабарламалар") }}
     </h2>
@@ -63,5 +63,5 @@ async function save() {
         <p v-if="message" class="lms-success" role="status">{{ message }}</p>
       </form></LmsState
     >
-  </section>
+  </section><LmsAnalyticsConsent /></div>
 </template>

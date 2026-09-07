@@ -306,7 +306,7 @@ export function safeLmsReturnTo(value: unknown, fallback = "/cabinet"): string {
     return fallback;
   const path = value.split(/[?#]/)[0] || "";
   if (
-    !/^\/(?:kk\/)?(?:cabinet(?:\/(?:organization|security|reminders))?|courses(?:\/[a-z0-9-]+)?|learn\/[a-zA-Z0-9_-]+(?:\/(?:exam|pre-test|confirm|success|failed))?|payment(?:\/[a-zA-Z0-9_-]+)?|certificates\/[a-zA-Z0-9_-]+|admin(?:\/(?:users|documents|incidents|support|document-batches|programs(?:\/[a-zA-Z0-9_-]+)?))?)\/?$/.test(
+    !/^\/(?:kk\/)?(?:cabinet(?:\/(?:organization|security|reminders))?|courses(?:\/[a-z0-9-]+)?|learn\/[a-zA-Z0-9_-]+(?:\/(?:exam|pre-test|confirm|success|failed))?|payment(?:\/[a-zA-Z0-9_-]+)?|certificates\/[a-zA-Z0-9_-]+|admin(?:\/(?:users|documents|incidents|support|analytics|document-batches|programs(?:\/[a-zA-Z0-9_-]+)?))?)\/?$/.test(
       path,
     )
   )

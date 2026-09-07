@@ -10,6 +10,17 @@ watch(
   { deep: true },
 );
 const step = ref(1);
+const { track } = useLmsAnalytics();
+let selectionStarted = false;
+let selectionCompleted = false;
+const analyticsContext = () => ({ programId: selection.value.direction, city: selection.value.city, format: selection.value.format, audience: selection.value.role === 'hr' ? 'b2b' : 'b2c' });
+function startSelection() {
+  if (!selectionStarted) { selectionStarted = true; track('selection_start', analyticsContext()); }
+}
+function changeStep(value: number) {
+  startSelection(); step.value = value;
+  if (value === 4 && chosen.value && !selectionCompleted) { selectionCompleted = true; track('selection_complete', analyticsContext()); }
+}
 const chosen = computed(() =>
   directions.find((d) => d.id === selection.value.direction),
 );
@@ -48,7 +59,7 @@ useHead(() => ({
               : 'border-slate-200 bg-white'
           "
           :aria-current="i + 1 === step ? 'step' : undefined"
-          @click="step = i + 1"
+          @click="changeStep(i + 1)"
         >
           {{ i + 1 }}. {{ s }}
         </button>
@@ -56,7 +67,8 @@ useHead(() => ({
     </ol>
     <form
       class="lms-card space-y-6"
-      @submit.prevent="step = Math.min(4, step + 1)"
+      @change="startSelection"
+      @submit.prevent="changeStep(Math.min(4, step + 1))"
     >
       <fieldset v-if="step === 1" class="space-y-4">
         <legend class="text-xl font-bold">{{ steps[0] }}</legend>
@@ -198,6 +210,7 @@ useHead(() => ({
           ><NuxtLink
             class="lms-button secondary"
             :to="selection.role === 'hr' ? path('/b2b') : path('/contacts')"
+            @click="track('support_open', analyticsContext())"
             >{{ tr("Помощь специалиста", "Маманның көмегі") }}</NuxtLink
           >
         </div>
@@ -210,7 +223,7 @@ useHead(() => ({
           class="lms-button secondary"
           type="button"
           :disabled="step === 1"
-          @click="step--"
+          @click="changeStep(step - 1)"
         >
           {{ tr("Назад", "Артқа") }}</button
         ><button

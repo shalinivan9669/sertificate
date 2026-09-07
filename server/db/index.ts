@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { courseDirections } from '../../shared/course-registry';
+import { currentObservation, logObservation } from '../utils/observability';
 
 export type Db = Client | Transaction;
 let database: Promise<Client> | undefined;
@@ -107,13 +108,20 @@ export async function closeDb() { const current = database; database = undefined
 
 export async function audit(actorId: string | null, action: string, target: string, reason = '', organizationId: string | null = null, db?: Db) {
   const id = randomUUID();
-  await execute('INSERT INTO audit_events (id,actor_id,organization_id,action,target,reason,created_at) VALUES (?,?,?,?,?,?,?)', [id, actorId, organizationId, action, target, reason, new Date().toISOString()], db);
+  const context = currentObservation();
+  const createdAt = new Date().toISOString();
+  await execute('INSERT INTO audit_events (id,actor_id,organization_id,action,target,reason,created_at,request_id,correlation_id,origin_request_id,source_job_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)', [id, actorId, organizationId, action, target, reason, createdAt, context?.requestId || null, context?.correlationId || null, context?.originRequestId || null, context?.sourceJobId || null], db);
+  if (process.env.OT_ANALYTICS_ENABLED === '1') {
+    try { await (await import('../services/analytics')).projectServerAnalytics({ action, target, createdAt }, db); }
+    catch { logObservation({ event: 'telemetry_write_failed' }); }
+  }
   return id;
 }
 
 export async function enqueue(type: string, aggregateId: string, payload: unknown, db?: Db) {
   const id = randomUUID();
   const now = new Date().toISOString();
-  await execute('INSERT INTO outbox (id,type,aggregate_id,payload_json,available_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?)', [id, type, aggregateId, JSON.stringify(payload), now, now, now], db);
+  const context = currentObservation();
+  await execute('INSERT INTO outbox (id,type,aggregate_id,payload_json,available_at,created_at,updated_at,request_id,correlation_id,origin_request_id,source_job_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)', [id, type, aggregateId, JSON.stringify(payload), now, now, now, context?.requestId || null, context?.correlationId || null, context?.originRequestId || null, context?.sourceJobId || null], db);
   return id;
 }
