@@ -1,5 +1,17 @@
 # OT Center — статус реализации
 
+### Успешный CI и выпуск f5c8a08 — 8 сентября 2026
+
+[Quality 34225381057](https://github.com/shalinivan9669/sertificate/actions/runs/34225381057), job `102058098018`, завершился **success** на точном `f5c8a0899a3d193599298d781ccafe08fa65dac5`. Fetch/checkout SHA и все terminal steps проверены независимо; последняя строка job log — 12:27:28.4859554 UTC. Тесты **302/302**, 0 failed/cancelled/skipped/todo, **32.996258411 s**; lint/typecheck — success, npm audit — **0 vulnerabilities**. Core browser — **6 suites** (staff 17), analytics — **20**, runtime privacy — **35/35** за 12.871 s, refund/recovery — **10**, public journey — **10**, lead workspace — **9**. Все обязательные шаги прошли; skipped только два failure-only шага подготовки/загрузки отчётов.
+
+Node build `3c27354c-1a59-4049-9e99-8e809d8c9ea3` и Vercel build `dda28c5b-306d-4f7e-bef4-359ddfbf99ac`: каждый **550 public / 551 HTML / 18 672 asset references / 0 missing / один build ID**. Это идентификаторы CI-сборок, не идентификатор hosted production. Браузерный предпросмотр RU/KK прошёл с исходным строгим условием видимости. Первоначальный сбой 34223816421 остаётся в истории; его причина не установлена, диагностическое изменение не выдано за исправление.
+
+После свежего fetch main (`a007577`) точный проверенный `f5c8a08` отправлен в main без force. [Production 5YsNHuzjPJJAn6FEsFWZq8392RJp](https://vercel.com/shalinivan9669s-projects/sertificate/5YsNHuzjPJJAn6FEsFWZq8392RJp) — **Ready**, источник **main/f5c8a08**, домен **www.otcenter.kz**, завершение **12:30:11 UTC**, **1m28s**. Уникальный адрес: `https://sertificate-2w1sgoyq4-shalinivan9669s-projects.vercel.app/`. Новый Preview `3WbHQN8dubsPxqGQ9W2ofah1oiob` также Ready: 12:20:21 UTC, 1m25s, тот же исходный commit. Тариф Hobby, маршруты, миграции и ограничения доставки не изменены.
+
+После Ready выполнен публичный production smoke **8/8**, 12:30:25–12:30:29 UTC: `artifacts/production-public-smoke-f5c8a08-report.json`. Главная HTTP 200 и canonical www; health ok; schema readiness ready; auth available с emailDeliveryConfigured:false; analytics disabled; БД каталога доступна, **20 направлений / 20 цен по запросу / 0 опубликованных учебных версий**. Apex contacts сохраняет путь/параметры через 307 и получает 200 на www. Только положительные публичные GET, без входа, POST, фиктивных production-пользователей, оплаты, выдачи документов или отправки сообщений. SHA подтверждён отдельно Vercel UI; HTTP smoke сам commit не возвращает.
+
+Завершающее дополнение меняет только этот журнал и две поясняющие Markdown-страницы; приложение остаётся побайтно на проверенном f5c8a08. Матрицы сохраняют **44/0/12/2 из58** и **80/0/3/1 из84**, обе CSV побайтно прежние. T079 не повышен после остановки Computer Use, независимое утверждение учебного черновика/шаблона, provider-интеграция, человеческая KK-приёмка, активация внешнего backup и составные эксплуатационные критерии остаются незавершёнными. Полный master prompt не объявляется выполненным. Перечень324путей независимо сверен; HomePageClassic/index совпадают с413ad4a; `.serena` и приватные артефакты в Git не добавлены.
+
 ### Проверка выпуска 1c0c74a — 8 сентября 2026
 
 Коммит `1c0c74aaf208dfbd602393b2a6b16998f77fa094` отправлен в `codex/ot-center-learning`. Vercel Preview `DszQsY8KmhMEnecQR5dk2rPeqU4G` — Ready, источник `1c0c74a`, завершение 12:03:23 UTC, 1m24s. Это не production-публикация: main пока `a007577`.
