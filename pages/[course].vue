@@ -4,6 +4,7 @@ import { createError, useHead, useRoute } from '#imports';
 import { courses } from '~/config/courses';
 import SeoUniqueBlocks from '~/components/SeoUniqueBlocks.vue';
 import CoursePage from '~/components/CoursePage.vue';
+import ComplianceCourseNotice from '~/components/ComplianceCourseNotice.vue';
 import { getCityContentBySlug, useSeoContent } from '~/composables/useSeoContent';
 
 const route = useRoute();
@@ -38,5 +39,8 @@ useHead(() => {
     :content="seoContent"
     :cta-query="{ source: 'seo-city', slug: courseSlug }"
   />
-  <CoursePage v-else :course="course" />
+  <div v-else>
+    <ComplianceCourseNotice :course="course" />
+    <CoursePage :course="course" />
+  </div>
 </template>

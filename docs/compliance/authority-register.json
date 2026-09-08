@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-08T05:46:00+06:00",
+  "authorities": [
+    {
+      "id": "authority-industrial-safety-kz07vek00018551",
+      "documentType": "industrial_safety_attestation",
+      "legalName": "ТОО «Аттестационный центр Стандарт»",
+      "bin": "160440010815",
+      "brand": "OT Center",
+      "brandOperatorRelationshipStatus": "pending_verification",
+      "documentTitle": "Аттестат на право проведения работ в области промышленной безопасности",
+      "documentNumber": "KZ07VEK00018551",
+      "issuer": "Комитет промышленной безопасности Министерства по чрезвычайным ситуациям Республики Казахстан",
+      "issuedAt": "2026-02-09",
+      "validity": {
+        "type": "fixed_term",
+        "years": 5,
+        "expiresAt": null,
+        "expiresAtStatus": "calculate_only_after_elicense_verification"
+      },
+      "scope": [
+        "Подготовка, переподготовка руководителей, специалистов, работников в области промышленной безопасности"
+      ],
+      "coversCourseSlugs": [
+        "promyshlennaya-bezopasnost"
+      ],
+      "doesNotByItselfCoverCourseSlugs": [
+        "ohrana-truda",
+        "ptm",
+        "elektrobezopasnost",
+        "raboty-na-vysote",
+        "gpm-stropalschiki",
+        "gazoopasnye-raboty",
+        "ekologicheskaya-bezopasnost",
+        "pervaya-pomoshch"
+      ],
+      "sourceId": "otcenter-attestat-kz07vek00018551",
+      "verification": {
+        "method": "eLicense",
+        "url": "https://www.elicense.kz/",
+        "status": "verification_available_not_automated"
+      },
+      "originalPath": "/documents/licenses/KZ07VEK00018551_ru.pdf",
+      "documentVerificationStatus": "reviewed_from_public_pdf",
+      "status": "pending_verification",
+      "publicationPolicy": "May be shown with exact legal entity, document title, number and scope. Do not present it as a generic OT Center license until the OT Center ↔ legal-entity relationship is documented.",
+      "lastReviewedAt": "2026-09-08T05:46:00+06:00"
+    },
+    {
+      "id": "claimed-pending-document-001",
+      "documentType": "unknown",
+      "legalName": "",
+      "bin": "",
+      "brand": "OT Center",
+      "brandOperatorRelationshipStatus": "pending_verification",
+      "documentTitle": "Наименование ожидается от владельца",
+      "documentNumber": "",
+      "issuer": "",
+      "issuedAt": "",
+      "validity": {
+        "type": "unknown",
+        "years": null,
+        "expiresAt": null,
+        "expiresAtStatus": "unknown"
+      },
+      "scope": [],
+      "coversCourseSlugs": [],
+      "doesNotByItselfCoverCourseSlugs": [],
+      "sourceId": null,
+      "verification": {
+        "method": "manual_then_registry_if_available",
+        "url": "",
+        "status": "not_started"
+      },
+      "originalPath": "",
+      "documentVerificationStatus": "not_verified",
+      "status": "claimed_pending_scan",
+      "publicationPolicy": "Internal record only until scan and authority are verified.",
+      "lastReviewedAt": ""
+    }
+  ]
+}
