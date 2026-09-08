@@ -4,6 +4,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 
+// Native focus scrolling uses integer scroll positions while DOM bounds retain
+// fractions (observed settled top: -0.3125px). Allow only one CSS pixel of rounding.
+const VIEWPORT_SCROLL_ROUNDING_PX = 1;
+
 /** Runs inside the real, MFA-authenticated local editor session. It never saves a version. */
 export async function checkLessonPreview(page, { language = 'ru', content, outputDirectory } = {}) {
   const base = new URL(page.url()).origin;
@@ -71,12 +75,12 @@ export async function checkLessonPreview(page, { language = 'ru', content, outpu
                 name: element.getAttribute('aria-label') || element.textContent.trim().slice(0, 200) };
             });
             samples.push(state);
-            return state.top >= 0 && state.bottom <= state.viewportHeight;
+            return state.top >= -VIEWPORT_SCROLL_ROUNDING_PX && state.bottom <= state.viewportHeight + VIEWPORT_SCROLL_ROUNDING_PX;
           }).toBe(true);
         } catch (error) {
           if (outputDirectory) {
             await mkdir(outputDirectory, { recursive: true });
-            await writeFile(resolve(outputDirectory, `lesson-preview-focus-failure-${language}.json`), JSON.stringify({ language, tabCount: count, samples }, null, 2));
+            await writeFile(resolve(outputDirectory, `lesson-preview-focus-failure-${language}.json`), JSON.stringify({ language, tabCount: count, viewportRoundingTolerancePx: VIEWPORT_SCROLL_ROUNDING_PX, samples }, null, 2));
             await page.screenshot({ path: resolve(outputDirectory, `lesson-preview-focus-failure-${language}.png`) });
           }
           throw new Error('Focused preview control is outside the viewport: ' + JSON.stringify(samples.at(-1)), { cause: error });
@@ -144,7 +148,7 @@ export async function checkLessonPreview(page, { language = 'ru', content, outpu
     assert.deepEqual(await afterResponse.json(), before, 'Preview does not save, review or publish any version');
     assert.deepEqual(requests, [], 'Preview sends no domain writes and makes no external media requests');
     checkpoints.push('Practice preview has no completion control; hours/review remain unset and persistent versions unchanged');
-    return { language, status: 'passed', checkpoints, keyboardChecks, lessons: lessons.length, firstLessonBodySha256: createHash('sha256').update(firstLesson.body).digest('hex'), domainWrites: 0, externalMediaRequests: 0, screenReader: 'not_run' };
+    return { language, status: 'passed', checkpoints, keyboardChecks, viewportRoundingTolerancePx: VIEWPORT_SCROLL_ROUNDING_PX, lessons: lessons.length, firstLessonBodySha256: createHash('sha256').update(firstLesson.body).digest('hex'), domainWrites: 0, externalMediaRequests: 0, screenReader: 'not_run' };
   } finally {
     page.off('request', observe);
   }
