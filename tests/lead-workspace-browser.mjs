@@ -82,9 +82,12 @@ try {
 
   await openLead(admin, corporate.submissionId); await qualify(admin, corporate.submissionId, 'in_review'); await qualify(admin, corporate.submissionId, 'qualified');
   await workspace(admin).getByRole('button', { name: 'Зарегистрировать отправленное предложение', exact: true }).click();
-  const sent = new Date(Date.now() - 1000); const localIso = new Date(sent.getTime() - sent.getTimezoneOffset() * 60_000).toISOString().slice(0, 19);
-  await actionPanel(admin).getByLabel('Когда предложение действительно отправлено (местное время)', { exact: true }).fill(localIso); await actionPanel(admin).getByLabel('Номер или ссылка на подтверждение отправки', { exact: true }).fill('TEST-ONLY-PROPOSAL-RECORDED');
+  // Chromium omits zero seconds in datetime-local.value; preserve the instant rather than round before lead creation.
+  const sent = new Date(Date.now() - 1000); const localIso = new Date(sent.getTime() - sent.getTimezoneOffset() * 60_000).toISOString().slice(0, 19).replace(/:00$/, '');
+  const sentField = actionPanel(admin).getByLabel('Когда предложение действительно отправлено (местное время)', { exact: true });
+  await sentField.fill(localIso); await expect(sentField).toHaveValue(localIso); await actionPanel(admin).getByLabel('Номер или ссылка на подтверждение отправки', { exact: true }).fill('TEST-ONLY-PROPOSAL-RECORDED');
   const createdProposal = await commit(admin, `/api/v1/admin/leads/${corporate.submissionId}/proposals`, 'Зафиксировать отправленное предложение'); const proposalId = createdProposal.lead.proposals[0].id;
+  assert.equal(createdProposal.lead.proposals[0].sentAt, new Date(localIso).toISOString());
   await workspace(admin).getByRole('button', { name: 'Выбрать организацию', exact: true }).click(); await pickTarget(admin, fixture.organization.id); await commit(admin, `/api/v1/admin/leads/${corporate.submissionId}/proposals/${proposalId}/organization`, 'Связать предложение с организацией');
   await workspace(admin).getByRole('button', { name: 'Указать назначения', exact: true }).click(); await pickTarget(admin, fixture.outsideAssignmentId); await commit(admin, `/api/v1/admin/leads/${corporate.submissionId}/proposals/${proposalId}/assignments`, 'Указать назначения по предложению', 409); await expect(workspace(admin).getByRole('alert')).toBeVisible(); assert.equal(Number((await row('SELECT COUNT(*) n FROM sales_links WHERE proposal_id=?', [proposalId])).n), 0);
   await actionPanel(admin).getByRole('button', { name: 'Отменить действие', exact: true }).click(); await workspace(admin).getByRole('button', { name: 'Указать назначения', exact: true }).click(); await pickTarget(admin, fixture.assignmentId); await commit(admin, `/api/v1/admin/leads/${corporate.submissionId}/proposals/${proposalId}/assignments`, 'Указать назначения по предложению');
