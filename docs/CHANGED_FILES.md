@@ -2,7 +2,7 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, базы, секреты, сборки и временные артефакты в изменения приложения не включены. Разрешённые владельцем цены опубликованы отдельным справочником; оригинал коммерческого предложения, его реквизиты и частные учебные материалы остаются закрытыми.
 
-Всего файлов: 328
+Всего файлов: 329
 
 - `.env.example`
 - `.gitattributes`
@@ -117,6 +117,7 @@
 - `docs/STATUS_MATRIX_METHOD.md`
 - `docs/VISUAL-ACCESSIBILITY-QA.md`
 - `eslint.config.mjs`
+- `i18n.config.js`
 - `IMPLEMENTATION_STATUS.md`
 - `layouts/default.vue`
 - `layouts/fullwidth.vue`
