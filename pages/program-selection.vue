@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { leadContextQuery } from '~/shared/lead-context';
 const { tr, locale } = useLmsApi();
 const path = useLocalePath();
 const route = useRoute();
@@ -209,7 +210,7 @@ useHead(() => ({
             >{{ tr("Посмотреть программу", "Бағдарламаны көру") }}</NuxtLink
           ><NuxtLink
             class="lms-button secondary"
-            :to="selection.role === 'hr' ? path('/b2b') : path('/contacts')"
+            :to="{ path: selection.role === 'hr' ? path('/b2b') : path('/contacts'), query: leadContextQuery(selection) }"
             @click="track('support_open', analyticsContext())"
             >{{ tr("Помощь специалиста", "Маманның көмегі") }}</NuxtLink
           >

@@ -16,7 +16,7 @@ const entry = resolve(artifactRoot, '.output/server/index.mjs');
 assert.ok(existsSync(entry), 'A completed Node build is required');
 const build = JSON.parse(await readFile(resolve(artifactRoot, '.output/public/_nuxt/builds/latest.json'), 'utf8'));
 const output = resolve('artifacts/core-browser', runId); await mkdir(output, { recursive: true });
-const suiteFiles = { classic: 'tests/classic-browser.mjs', auth: 'tests/lms-auth-browser.mjs', contact: 'tests/contact-browser.mjs', learner: 'tests/lms-browser.mjs', staff: 'tests/lms-admin-browser.mjs' };
+const suiteFiles = { classic: 'tests/classic-browser.mjs', auth: 'tests/lms-auth-browser.mjs', contact: 'tests/contact-browser.mjs', leadContext: 'tests/lead-context-browser.mjs', learner: 'tests/lms-browser.mjs', staff: 'tests/lms-admin-browser.mjs' };
 const suites = process.env.OT_CORE_BROWSER_SUITES ? process.env.OT_CORE_BROWSER_SUITES.split(',') : Object.keys(suiteFiles);
 assert.ok(suites.length && new Set(suites).size === suites.length && suites.every(suite => Object.hasOwn(suiteFiles, suite)), 'Choose explicit known browser suites; an empty or unknown scope is not a pass');
 const base = 'http://127.0.0.1:3105';

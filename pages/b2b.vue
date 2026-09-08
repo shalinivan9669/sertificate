@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { leadCities, leadCityLabel, leadCityValue, leadFormats, readLeadContext } from '~/shared/lead-context';
 const { tr, locale, request, errorText } = useLmsApi();
 const path = useLocalePath();
 const route = useRoute();
@@ -7,6 +8,7 @@ const failure = ref("");
 const success = ref(false);
 const consent = ref(false);
 let leadKey = "";
+let submittedPayload = "";
 const form = reactive({
   name: "",
   email: "",
@@ -14,43 +16,49 @@ const form = reactive({
   organizationName: "",
   participants: 1,
   programId: "",
-  format: "online",
+  city: "",
+  format: "",
   comment: "",
   website: "",
 });
+const initialContext = readLeadContext(route.query);
+onMounted(() => Object.assign(form, initialContext, { city: leadCityLabel(initialContext.city, locale.value) }));
 async function submit() {
   if (busy.value) return;
   busy.value = true;
   failure.value = "";
   success.value = false;
   try {
-    leadKey ||= crypto.randomUUID();
+    const context = readLeadContext(form);
+    const payload = {
+      ...form,
+      programId: context.programId,
+      format: context.format,
+      city: leadCityValue(form.city),
+      locale: locale.value === 'kk' ? 'kk' : 'ru',
+      sourcePath: route.path,
+      consentVersion: 'service-v1',
+      marketingConsent: false,
+    };
+    const fingerprint = JSON.stringify(payload);
+    if (!leadKey || fingerprint !== submittedPayload) {
+      leadKey = crypto.randomUUID();
+      submittedPayload = fingerprint;
+    }
     await request("/api/amo-lead", {
       method: "POST",
       headers: { "Idempotency-Key": leadKey },
-      body: {
-        ...form,
-        locale: locale.value,
-        sourcePath: route.path,
-        consentVersion: "service-v1",
-        marketingConsent: false,
-      },
+      body: payload,
     });
     success.value = true;
     leadKey = "";
+    submittedPayload = "";
   } catch (e) {
     failure.value = errorText(e);
   } finally {
     busy.value = false;
   }
 }
-watch(
-  form,
-  () => {
-    leadKey = "";
-  },
-  { deep: true },
-);
 useHead(() => ({
   title: tr(
     "Обучение сотрудников организаций — OT Center",
@@ -189,7 +197,17 @@ useHead(() => ({
                 {{ locale === "kk" ? d.kk : d.ru }}
               </option>
             </select></label
-          ><label class="sm:col-span-2 space-y-2"
+          ><label class="space-y-2">
+            <span>{{ tr('Город', 'Қала') }}</span>
+            <input v-model="form.city" list="b2b-cities" maxlength="80" autocomplete="address-level2" />
+            <datalist id="b2b-cities"><option v-for="city in leadCities" :key="city.id" :value="city.title[locale === 'kk' ? 'kk' : 'ru']" /></datalist>
+          </label><label class="space-y-2">
+            <span>{{ tr('Предпочтительный формат', 'Қалаулы формат') }}</span>
+            <select v-model="form.format">
+              <option value="">{{ tr('Обсудить со специалистом', 'Маманмен талқылау') }}</option>
+              <option v-for="format in leadFormats" :key="format.id" :value="format.id">{{ format.title[locale === 'kk' ? 'kk' : 'ru'] }}</option>
+            </select>
+          </label><label class="sm:col-span-2 space-y-2"
             ><span>{{
               tr("Задача и удобный формат", "Міндет және ыңғайлы формат")
             }}</span
@@ -198,14 +216,14 @@ useHead(() => ({
               rows="4"
               maxlength="3000"
             /></label
-          ><input
+          ><div class="hidden" aria-hidden="true"><input
             v-model="form.website"
             type="text"
             tabindex="-1"
             autocomplete="off"
             class="hidden"
             aria-hidden="true"
-          /><label class="sm:col-span-2 flex items-start gap-3 text-sm"
+          /></div><label class="sm:col-span-2 flex items-start gap-3 text-sm"
             ><input
               v-model="consent"
               required

@@ -1,5 +1,13 @@
 # Final local public bundle audit — 2026-09-07
 
+## Lead workflow package — final inspection 2026-09-08
+
+Final Node **`70a16ebb-3355-431a-b18c-7b45f7f23560`** and Vercel **`64ea0c37-1d81-4095-9653-9f7a45160ebf`** each passed 550 public pages, 551 HTML files, 17,327 references, zero missing resources and one build identity. The preserved Node copy includes both final mobile template fixes. The complete audit finished **03:36:20.174 UTC** with **94 JS + 6 CSS**, 100 identical paths/SHA256, 94 parsed JS ASTs and 1,210 public textual files per artifact. Public source maps/references are absent. All **117 canaries** had zero matches: 17 fixture/session, 19 academic, 71 synthetic email, 3 PDF identity and 7 exact private rate phrases. Actual provider credentials were unavailable for exact comparison.
+
+The only positive chunks, `_nuxt/DV4hE_NC.js` (SHA256 `28ccde867c389fc33fde0cfa5dd6795f8f9089c994c71fcbbb8d6959c3369429`) and `_nuxt/DxmIlFk3.js` (`74d3c8c3628eca99b4fcc9f36498e3531535c321ea5896e5dc4bbb99827854f8`), are byte-identical to the manually reviewed c4d9 chunks below. The latter has one empty editor array and four member accesses, with no populated answer bank. Numeric rate coincidences remain in that unchanged editor's form constraints. Evidence: `artifacts/privacy/public-bundle-audit-70a16ebb-64ea0c37.json`, `implementation-lead-final-public-bundle-audit.log`. The earlier 74c7c762/625d3b99 audit at 03:21:47 UTC is retained as a separate prior artifact, with the same 100-file/117-canary scope.
+
+This is an inspection of these complete local build outputs. It does not establish the contents of a later hosted rebuild/CDN or rule out arbitrary transformed secrets. Runtime privacy on final Node70a16ebb separately passed 28 checks, as recorded in `RUNTIME_PRIVACY_AUDIT.md`.
+
 ## Analytics and observability package
 
 The final sequential builds are Node **`c4d9bf39-890d-4f44-8562-0075ce696d08`** and Vercel **`05782487-f284-4714-bebc-e8828c7859e3`**. Both passed550 public-page contracts,551 HTML files,16,976 asset references,zero missing resources and one build identity. The Node artifact was copied to an isolated owned directory before Vercel's supported cleanup, preserving the exact inspected files.

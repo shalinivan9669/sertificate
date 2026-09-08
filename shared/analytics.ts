@@ -9,6 +9,17 @@ export const analyticsPrograms = courseDirections.map(direction => direction.id)
 export type ClientAnalyticsEvent = typeof clientAnalyticsEvents[number];
 export type ClientAnalyticsDimensions = { programId?: string; locale?: 'ru' | 'kk'; city?: string; format?: 'online' | 'classroom' | 'onsite'; audience?: 'b2c' | 'b2b' };
 
+/** Operational lead counts, separate from optional browser/server event telemetry. */
+export type LeadCohortCounts = { accepted: number; delivered: number; pending: number; notePending: number; invalid: number; deliveryRate: number | null };
+export type LeadCohortReport = {
+  unit: 'accepted_leads';
+  window: { from: string; until: string; bounds: '[from,until)' };
+  asOf: string;
+  statusTime: 'current';
+  totals: LeadCohortCounts;
+  audiences: Array<LeadCohortCounts & { audience: 'b2c' | 'b2b' | 'unknown' }>;
+};
+
 /** No arbitrary strings, route/query values, names or persistent visitor identifier. */
 export function safeClientAnalyticsDimensions(input: ClientAnalyticsDimensions): ClientAnalyticsDimensions {
   return {

@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
 import { getCityName, getCityPrepositional } from '~/composables/useCity';
 import { resolveCourseDirection } from '~/shared/course-registry';
+import { leadContextQuery } from '~/shared/lead-context';
 import { directionDetails } from '~/content/direction-details';
 
 const props = defineProps({
@@ -26,6 +27,10 @@ const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
 const { track } = useLmsAnalytics();
 const recordContact = () => track('contact_click', { programId: resolveCourseDirection(props.course.slug)?.id, city: resolvedCity.value?.slug });
+const consultationRoute = computed(() => ({
+  path: localePath('/contacts'),
+  query: leadContextQuery({ programId: props.course.slug, city: resolvedCity.value?.slug || route.query.city, format: route.query.format }),
+}));
 onMounted(() => {
   watch(() => [props.course.slug, resolvedCity.value?.slug], () => {
     const direction = resolveCourseDirection(props.course.slug);
@@ -291,6 +296,7 @@ const specialContent = computed(() => {
         ? section.links.map((link) => ({
             ...link,
             to: localePath(link.to),
+            consultation: link.to === '/contacts',
           }))
         : undefined,
     })),
@@ -322,7 +328,7 @@ const programSelectionRoute = computed(() => ({
   path: localePath('/program-selection'),
   query: {
     direction: resolveCourseDirection(props.course.slug)?.id,
-    city: resolvedCity.value?.slug || '',
+    ...leadContextQuery({ city: resolvedCity.value?.slug || route.query.city, format: route.query.format }),
     source: 'course',
   },
 }));
@@ -536,7 +542,7 @@ useHead(() => ({
         </NuxtLink>
         <NuxtLink
           class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition"
-          :to="localePath('/contacts')"
+          :to="consultationRoute"
           @click="recordContact"
         >
           {{ locale === 'kk' ? 'Кеңеске өтінім' : 'Заявка на консультацию' }}
@@ -565,7 +571,7 @@ useHead(() => ({
         <NuxtLink
           v-for="link in section.links"
           :key="link.to"
-          :to="link.to"
+          :to="link.consultation ? consultationRoute : link.to"
           class="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 hover:border-brand hover:text-brand transition"
         >
           {{ link.label }}

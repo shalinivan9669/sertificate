@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { clientAnalyticsEvents, serverAnalyticsEvents } from '~/shared/analytics';
+import { clientAnalyticsEvents, serverAnalyticsEvents, type LeadCohortReport } from '~/shared/analytics';
 
 type EventName = typeof clientAnalyticsEvents[number] | typeof serverAnalyticsEvents[number];
 interface AnalyticsReport {
@@ -13,6 +13,7 @@ interface AnalyticsReport {
   client: Array<{ name: EventName; events: number }>;
   server: Array<{ name: EventName; events: number }>;
   totals: { client: number; server: number };
+  leadCohort: LeadCohortReport;
 }
 const { api, tr, locale } = useLmsApi();
 const path = useLocalePath();
@@ -72,9 +73,10 @@ useHead(() => ({ title: tr('Статистика действий — OT Center'
             <h2 class="text-xl font-semibold">{{ group.title }}</h2>
             <p class="text-sm text-slate-600">{{ group.description }}</p>
             <p class="font-semibold">{{ tr('Всего событий:', 'Оқиғалар саны:') }} {{ group.total }}</p>
-            <table class="w-full text-sm"><caption class="sr-only">{{ group.title }}</caption><thead><tr class="border-b text-left"><th scope="col" class="py-3 pr-3">{{ tr('Действие', 'Әрекет') }}</th><th scope="col" class="py-3 text-right">{{ tr('События', 'Оқиғалар') }}</th></tr></thead><tbody><tr v-for="row in group.rows" :key="row.name" class="border-b last:border-0"><th scope="row" class="py-3 pr-3 text-left font-normal">{{ titles[row.name] || tr('Другой тип события', 'Оқиғаның басқа түрі') }}</th><td class="py-3 text-right tabular-nums">{{ row.events }}</td></tr></tbody></table>
+            <table class="w-full text-sm"><caption class="sr-only">{{ group.title }}</caption><thead><tr class="border-b text-left"><th scope="col" class="py-3 pr-3">{{ tr('Действие', 'Әрекет') }}</th><th scope="col" class="whitespace-nowrap py-3 text-right">{{ tr('События', 'Оқиғалар') }}</th></tr></thead><tbody><tr v-for="row in group.rows" :key="row.name" class="border-b last:border-0"><th scope="row" class="py-3 pr-3 text-left font-normal">{{ titles[row.name] || tr('Другой тип события', 'Оқиғаның басқа түрі') }}</th><td class="py-3 text-right tabular-nums">{{ row.events }}</td></tr></tbody></table>
           </section>
         </div>
+        <LmsLeadCohort v-if="data.leadCohort" :report="data.leadCohort" />
       </template>
     </LmsState>
     <NuxtLink v-if="lmsErrorStatus(error) === 403" class="lms-button secondary" :to="path('/cabinet/security')">{{ tr('Проверить подтверждение безопасности входа', 'Кіру қауіпсіздігін растауды тексеру') }}</NuxtLink>

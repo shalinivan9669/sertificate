@@ -2,7 +2,7 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 253
+Всего файлов: 262
 
 - `.env.example`
 - `.gitattributes`
@@ -16,6 +16,7 @@
 - `components/lms/LmsAuthoringGuide.vue`
 - `components/lms/LmsExamPage.vue`
 - `components/lms/LmsInvoices.vue`
+- `components/lms/LmsLeadCohort.vue`
 - `components/lms/LmsLearningReminders.vue`
 - `components/lms/LmsNotifications.vue`
 - `components/lms/LmsPreferences.vue`
@@ -77,9 +78,11 @@
 - `docs/CORE_INVOICES.md`
 - `docs/CORE_RESTORE_DRILL.json`
 - `docs/CORE_SOURCE_CATALOG.md`
+- `docs/CRM_RESPONSE_INTEGRITY.md`
 - `docs/DEPENDENCY-REVIEW.md`
 - `docs/DOCUMENT-OPERATIONS-PILOT.md`
 - `docs/KEYBOARD_LEARNING_PILOT.md`
+- `docs/LEAD_CONTEXT.md`
 - `docs/LMS_NAV_LAYOUT_LAB.md`
 - `docs/LMS-BROWSER-QA.md`
 - `docs/OBSERVABILITY.md`
@@ -195,6 +198,7 @@
 - `server/services/credentials.ts`
 - `server/services/incidents.ts`
 - `server/services/invoices.ts`
+- `server/services/lead-cohort.ts`
 - `server/services/leads.ts`
 - `server/services/learning.ts`
 - `server/services/operations.ts`
@@ -210,6 +214,7 @@
 - `server/utils/validation.ts`
 - `shared/analytics.ts`
 - `shared/course-registry.ts`
+- `shared/lead-context.ts`
 - `shared/source-products.ts`
 - `tests/acceptance-extra-browser.mjs`
 - `tests/acceptance-extra-fixtures.ts`
@@ -225,6 +230,7 @@
 - `tests/core-backup.test.ts`
 - `tests/core-domain.test.ts`
 - `tests/credential-repair.test.ts`
+- `tests/crm-response-integrity.test.ts`
 - `tests/database-safety.test.ts`
 - `tests/document-pilot-browser.mjs`
 - `tests/document-pilot-fixtures.ts`
@@ -234,6 +240,9 @@
 - `tests/http-security.test.ts`
 - `tests/invoices.test.ts`
 - `tests/keyboard-learning-browser.mjs`
+- `tests/lead-cohort.test.ts`
+- `tests/lead-context-browser.mjs`
+- `tests/lead-context.test.ts`
 - `tests/learning-reminders.test.ts`
 - `tests/lms-admin-browser.mjs`
 - `tests/lms-auth-browser.mjs`

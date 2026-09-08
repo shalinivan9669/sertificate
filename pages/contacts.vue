@@ -1,5 +1,7 @@
 <script setup>
-import { ref, useHead, useI18n, useLocalePath, useRoute } from '#imports';
+import { onMounted, reactive, ref, useHead, useI18n, useLocalePath, useRoute } from '#imports';
+import { courseDirections } from '~/shared/course-registry';
+import { leadCities, leadCityLabel, leadCityValue, leadFormats, readLeadContext } from '~/shared/lead-context';
 
 const { t, locale } = useI18n();
 const path = useLocalePath();
@@ -9,6 +11,10 @@ const { track } = useLmsAnalytics();
 const isSubmitting = ref(false);
 const status = ref('');
 const failure = ref('');
+const context = reactive({ programId: '', city: '', format: '' });
+const initialContext = readLeadContext(route.query);
+const resetContext = () => Object.assign(context, initialContext, { city: leadCityLabel(initialContext.city, locale.value) });
+onMounted(resetContext);
 let submissionKey = '';
 let submittedPayload = '';
 
@@ -20,14 +26,17 @@ const handleSubmit = async (event) => {
   }
 
   const formData = new FormData(form);
-  const city = String(formData.get('city') || '').trim();
+  const city = leadCityValue(String(formData.get('city') || ''));
   const comment = String(formData.get('comment') || '').trim();
+  const selectedContext = readLeadContext({ programId: formData.get('programId'), format: formData.get('format') });
 
   const payload = {
     name: String(formData.get('name') || '').trim(),
     phone: String(formData.get('phone') || '').trim(),
     email: String(formData.get('email') || '').trim(),
     city,
+    programId: selectedContext.programId,
+    format: selectedContext.format,
     comment,
     company: String(formData.get('company') || '').trim(),
     locale: locale.value === 'kk' ? 'kk' : 'ru',
@@ -63,6 +72,7 @@ const handleSubmit = async (event) => {
     });
 
     form.reset();
+    Object.assign(context, { programId: '', city: '', format: '' });
     submissionKey = '';
     submittedPayload = '';
     status.value = tr('Заявка принята. Сотрудник центра свяжется с вами после её обработки.', 'Өтінім қабылданды. Орталық қызметкері оны өңдегеннен кейін сізбен байланысады.');
@@ -109,7 +119,25 @@ useHead(() => ({
           <input type="tel" name="phone" maxlength="30" autocomplete="tel" :aria-label="t('contacts.phonePlaceholder')" :placeholder="t('contacts.phonePlaceholder')" class="rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent" />
           <input type="email" name="email" maxlength="254" autocomplete="email" :aria-label="t('contacts.emailPlaceholder')" :placeholder="t('contacts.emailPlaceholder')" class="rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent" />
           <input type="text" name="company" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true" />
-          <input type="text" name="city" maxlength="80" autocomplete="address-level2" :aria-label="t('contacts.cityPlaceholder')" :placeholder="t('contacts.cityPlaceholder')" class="rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent" />
+          <label class="space-y-1 text-sm text-slate-700">
+            <span>{{ tr('Город', 'Қала') }}</span>
+            <input v-model="context.city" type="text" name="city" list="contact-cities" maxlength="80" autocomplete="address-level2" :aria-label="t('contacts.cityPlaceholder')" :placeholder="t('contacts.cityPlaceholder')" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent" />
+            <datalist id="contact-cities"><option v-for="city in leadCities" :key="city.id" :value="city.title[locale === 'kk' ? 'kk' : 'ru']" /></datalist>
+          </label>
+          <label class="space-y-1 text-sm text-slate-700">
+            <span>{{ tr('Направление', 'Бағыт') }}</span>
+            <select v-model="context.programId" name="programId" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent">
+              <option value="">{{ tr('Нужна помощь с выбором', 'Таңдауға көмек керек') }}</option>
+              <option v-for="direction in courseDirections" :key="direction.id" :value="direction.id">{{ direction.title[locale === 'kk' ? 'kk' : 'ru'] }}</option>
+            </select>
+          </label>
+          <label class="space-y-1 text-sm text-slate-700">
+            <span>{{ tr('Предпочтительный формат', 'Қалаулы формат') }}</span>
+            <select v-model="context.format" name="format" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent">
+              <option value="">{{ tr('Обсудить со специалистом', 'Маманмен талқылау') }}</option>
+              <option v-for="format in leadFormats" :key="format.id" :value="format.id">{{ format.title[locale === 'kk' ? 'kk' : 'ru'] }}</option>
+            </select>
+          </label>
           <textarea name="comment" maxlength="3000" :aria-label="t('contacts.commentPlaceholder')" :placeholder="t('contacts.commentPlaceholder')" rows="3" class="md:col-span-2 rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent"></textarea>
           <label class="md:col-span-2 flex items-start gap-2 text-sm text-slate-700">
             <input type="checkbox" name="consent" required class="mt-1 shrink-0" />

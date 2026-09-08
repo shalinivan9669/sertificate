@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { leadContextQuery } from '~/shared/lead-context';
 const route = useRoute();
 const path = useLocalePath();
 const { api, tr, locale, money, date, errorText } = useLmsApi();
@@ -17,6 +18,7 @@ if (lmsErrorStatus(error.value) === 404)
 const program = computed<LmsProgram | undefined>(
   () => data.value?.program || data.value,
 );
+const consultationQuery = computed(() => leadContextQuery({ programId: program.value?.id, city: route.query.city, format: route.query.format }));
 const { track } = useLmsAnalytics();
 onMounted(() => {
   watch(() => program.value?.id, value => { if (value) track('program_view', { programId: value }); }, { immediate: true });
@@ -242,10 +244,10 @@ async function enroll() {
               </p></template
             ><NuxtLink
               class="lms-button secondary w-full"
-              :to="{ path: path('/contacts'), query: { program: program.id } }"
+              :to="{ path: path('/contacts'), query: consultationQuery }"
               @click="track('contact_click', { programId: program.id })"
               >{{ tr("Обсудить обучение", "Оқуды талқылау") }}</NuxtLink
-            ><NuxtLink class="block text-center text-sm" :to="path('/b2b')">{{
+            ><NuxtLink class="block text-center text-sm" :to="{ path: path('/b2b'), query: consultationQuery }">{{
               tr(
                 "Обучение сотрудников организации",
                 "Ұйым қызметкерлерін оқыту",

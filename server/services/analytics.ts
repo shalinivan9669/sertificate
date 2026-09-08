@@ -5,6 +5,7 @@ import { businessFail as fail, parse } from '../utils/business';
 import { assertRole, type AppUser } from '../utils/auth';
 import { analyticsCities, analyticsConsentVersion, analyticsPrograms, clientAnalyticsEvents, safeClientAnalyticsDimensions, serverAnalyticsEvents, type ClientAnalyticsDimensions } from '../../shared/analytics';
 import { resolveCourseDirection } from '../../shared/course-registry';
+import { leadDeliveryCohort } from './lead-cohort';
 
 const clientSchema = z.object({ id: z.string().uuid(), name: z.enum(clientAnalyticsEvents), dimensions: z.object({
   programId: z.enum(analyticsPrograms as [string, ...string[]]).optional(), locale: z.enum(['ru', 'kk']).optional(),
@@ -110,8 +111,9 @@ export async function analyticsReport(actor: AppUser, query: Record<string, unkn
   const counts = new Map(rows.map(row => [row.name, Number(row.events)]));
   const client = clientAnalyticsEvents.map(name => ({ name, events: counts.get(name) || 0 }));
   const server = serverAnalyticsEvents.map(name => ({ name, events: counts.get(name) || 0 }));
+  const leadCohort = await leadDeliveryCohort(from, until, new Date().toISOString());
   return { configuration, window: { from, until, days, timezone: 'UTC', bounds: '[from,until)' }, unit: 'deduplicated_events', clientPopulation: 'opted_in_browser_actions', serverPopulation: 'confirmed_service_transitions', uniqueVisitorsMeasured: false, conversionRate: null,
-    client, server, totals: { client: client.reduce((n, row) => n + row.events, 0), server: server.reduce((n, row) => n + row.events, 0) } };
+    client, server, totals: { client: client.reduce((n, row) => n + row.events, 0), server: server.reduce((n, row) => n + row.events, 0) }, leadCohort };
 }
 
 /** Only optional analytics records; never audit, attempts, payments, files or consent history. */

@@ -33,7 +33,7 @@ const fixture = JSON.parse(await readFile(env.OT_ANALYTICS_FIXTURE_PATH, 'utf8')
 const log = createWriteStream(resolve(directory, 'server-private.log'), { flags: 'wx' });
 const server = spawn(process.execPath, [resolve(directory, '.output/server/index.mjs')], { cwd: directory, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }); server.stdout.pipe(log); server.stderr.pipe(log);
 const db = createClient({ url: 'file:' + env.OT_DATABASE_PATH.replaceAll('\\', '/'), concurrency: 1 });
-const checks = [], errors = [], requests = [], events = [], reportWindows = [];
+const checks = [], errors = [], requests = [], events = [], reportWindows = [], leadCohortChecks = [];
 const eventNames = ['program_view', 'selection_start', 'selection_complete', 'contact_click', 'lead_form_start', 'checkout_view', 'lesson_open', 'support_open'];
 const windowsChrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const useWindowsChrome = process.platform === 'win32' && existsSync(windowsChrome);
@@ -200,13 +200,74 @@ try {
   assert.ok(await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await admin.screenshot({ path: resolve(output, 'report-kk-360.png'), fullPage: true });
   passed('Admin manual 7/14/30-day reports reflect actual server UTC bounds and retention clamp; KK360 has19 rows without horizontal overflow');
+
+  // These two service submissions occur only AFTER all existing eight-emitter,
+  // event-count, revocation and 19-row assertions. They are HTTP writes, not form-UI evidence.
+  assert.equal(env.OT_CRM_DELIVERY_ENABLED, '0');
+  const emptyCohort = initialReport.leadCohort;
+  assert.ok(emptyCohort); assert.equal(emptyCohort.unit, 'accepted_leads');
+  assert.deepEqual(emptyCohort.totals, { accepted: 0, delivered: 0, pending: 0, notePending: 0, invalid: 0, deliveryRate: null });
+  const emptyRegion = admin.getByRole('region', { name: 'Қабылданған өтінімдерді жеткізу', exact: true });
+  await expect(emptyRegion.getByRole('status')).toHaveText('Таңдалған аралықта қабылданған өтінімдер жоқ.');
+  await expect(emptyRegion.getByText('Есептеу үшін өтінімдер жоқ', { exact: true }).first()).toBeVisible();
+  leadCohortChecks.push({ case: 'empty', totals: emptyCohort.totals });
+  passed('Lead cohort initially shows zero accepted leads and no rate denominator in the real admin UI');
+
+  const cohortLeads = [
+    { name: 'PRIVATE_COHORT_B2C_' + runId, email: 'cohort-b2c-' + runId + '@example.test', phone: '+77000001001', programId: fixture.programId, locale: 'ru', sourcePath: '/contacts', consentVersion: 'service-v1', marketingConsent: false },
+    { name: 'PRIVATE_COHORT_B2B_' + runId, email: 'cohort-b2b-' + runId + '@example.test', phone: '+77000001002', organizationName: 'PRIVATE_COHORT_COMPANY_' + runId, participants: 2, programId: fixture.programId, locale: 'kk', sourcePath: '/kk/b2b', consentVersion: 'service-v1', marketingConsent: false },
+  ];
+  const acceptedIds = [];
+  for (const lead of cohortLeads) {
+    const response = await admin.request.post(base + '/api/amo-lead', { headers: { Origin: base, 'Idempotency-Key': randomUUID() }, data: lead });
+    assert.equal(response.status(), 202, 'Two local synthetic lead submissions must be durably accepted');
+    const body = await response.json(); assert.equal(body.status, 'accepted'); assert.equal(typeof body.submissionId, 'string'); acceptedIds.push(body.submissionId);
+  }
+  assert.equal(new Set(acceptedIds).size, 2);
+  const acceptedRows = await rows('SELECT id,status,crm_lead_id,crm_note_id FROM lead_submissions');
+  assert.equal(acceptedRows.length, 2);
+  for (const lead of acceptedRows) { assert.ok(acceptedIds.includes(lead.id)); assert.equal(lead.status, 'accepted'); assert.equal(lead.crm_lead_id, null); assert.equal(lead.crm_note_id, null); }
+  passed('Two genuine local HTTP submissions create one B2C and one B2B lead with CRM delivery disabled; no form-UI creation is claimed');
+
+  const contactCanaries = cohortLeads.flatMap(lead => [lead.name, lead.email, lead.phone, lead.organizationName].filter(Boolean));
+  async function checkCohort(locale) {
+    const kk = locale === 'kk';
+    await go(admin, kk ? '/kk/admin/analytics' : '/admin/analytics');
+    const report = await uiResponse(admin, '/api/v1/admin/analytics', 'GET', () => admin.getByRole('button', { name: kk ? 'Есепті жаңарту' : 'Обновить отчёт', exact: true }).click());
+    const cohort = report.leadCohort; assert.ok(cohort);
+    assert.equal(cohort.unit, 'accepted_leads'); assert.equal(cohort.statusTime, 'current');
+    assert.deepEqual(cohort.window, { from: report.window.from, until: report.window.until, bounds: '[from,until)' });
+    assert.ok(Number.isFinite(Date.parse(cohort.asOf)) && Date.parse(cohort.asOf) >= Date.parse(cohort.window.until));
+    assert.deepEqual(cohort.totals, { accepted: 2, delivered: 0, pending: 2, notePending: 0, invalid: 0, deliveryRate: 0 });
+    for (const audience of ['b2c', 'b2b']) assert.deepEqual(cohort.audiences.find(row => row.audience === audience), { audience, accepted: 1, delivered: 0, pending: 1, notePending: 0, invalid: 0, deliveryRate: 0 });
+    assert.equal(cohort.audiences.find(row => row.audience === 'unknown')?.accepted ?? 0, 0);
+    const region = admin.getByRole('region', { name: kk ? 'Қабылданған өтінімдерді жеткізу' : 'Доставка принятых заявок', exact: true });
+    await expect(region).toBeVisible(); await expect(region.getByRole('status')).toHaveCount(0);
+    const totalBlock = region.getByRole('heading', { name: kk ? 'Барлық өтініштер' : 'Все обращения', exact: true }).locator('..');
+    async function checkCounts(block, count) {
+      for (const [label, value] of [[kk ? 'Қабылданды' : 'Принято', count], [kk ? 'CRM жүйесіне жеткізілді' : 'Доставлено в CRM', 0], [kk ? 'Жеткізу расталмаған' : 'Доставка не подтверждена', count]]) {
+        await expect(block.getByText(label, { exact: true }).locator('..').locator('dd')).toHaveText(String(value));
+      }
+      await expect(block.getByText(kk ? 'Қабылданғандардың ішіндегі жеткізілгендер үлесі' : 'Доля доставленных от принятых', { exact: true }).locator('..').locator('dd')).toHaveText(/^0\s*%$/);
+    }
+    await checkCounts(totalBlock, 2);
+    await checkCounts(region.getByRole('article', { name: kk ? 'Жеке өтініштер' : 'Индивидуальные обращения', exact: true }), 1);
+    await checkCounts(region.getByRole('article', { name: kk ? 'Компаниялардың өтініштері' : 'Обращения компаний', exact: true }), 1);
+    const rendered = await admin.locator('body').innerText(), serialized = JSON.stringify(report);
+    for (const value of contactCanaries) { assert.equal(rendered.includes(value), false, 'Contact canary must not be rendered in the aggregate'); assert.equal(serialized.includes(value), false, 'Contact canary must not enter the report DTO'); }
+    assert.ok(await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    await admin.screenshot({ path: resolve(output, `lead-cohort-${locale}-360.png`), fullPage: true });
+    leadCohortChecks.push({ case: locale + '-360', unit: cohort.unit, window: cohort.window, asOf: cohort.asOf, totals: cohort.totals, audiences: cohort.audiences, contactsRendered: false });
+    passed(`Actual admin ${locale.toUpperCase()}360 lead cohort reload shows2 accepted/0 delivered/2 pending,1 per audience,0 percent and no contacts`);
+  }
+  await checkCohort('ru'); await checkCohort('kk');
   assert.deepEqual(errors, []); passed('No JavaScript errors during the complete isolated eight-emitter and actual-MFA report pilot');
 } catch (error) {
   failure = error.stack;
   if (currentPage) await currentPage.screenshot({ path: resolve(output, 'failure.png'), fullPage: true }).catch(() => {});
   throw error;
 } finally {
-  await writeFile(resolve(output, 'report.json'), JSON.stringify({ status: failure ? 'failed' : 'passed', runId, buildId: build.id, base, finishedAt: new Date().toISOString(), browserSelection, browserPlatform: process.platform, syntheticOnly: true, externalDelivery: false, collectionEnabledOnlyLocally: true, checks, errors, failure, emittedNames: [...new Set(events.map(event => event.name))], eventRequestCount: events.length, distinctEventIds: new Set(events.map(event => event.id)).size, reportWindows, privateDirectory: relative(root, directory).replaceAll('\\', '/') }, null, 2));
+  await writeFile(resolve(output, 'report.json'), JSON.stringify({ status: failure ? 'failed' : 'passed', runId, buildId: build.id, base, finishedAt: new Date().toISOString(), browserSelection, browserPlatform: process.platform, syntheticOnly: true, externalDelivery: false, collectionEnabledOnlyLocally: true, checks, errors, failure, emittedNames: [...new Set(events.map(event => event.name))], eventRequestCount: events.length, distinctEventIds: new Set(events.map(event => event.id)).size, reportWindows, leadCohortChecks, privateDirectory: relative(root, directory).replaceAll('\\', '/') }, null, 2));
   console.log('Browser report:', resolve(output, 'report.json'));
   if (browser) await browser.close(); db.close();
   if (server.exitCode === null) { const stopped = once(server, 'exit'); server.kill('SIGTERM'); await stopped; } log.end();
