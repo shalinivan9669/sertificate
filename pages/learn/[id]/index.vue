@@ -1,396 +1,291 @@
-<script setup>
-import { computed, watch } from 'vue';
-import LearningArticle from '~/components/redesign-flow/learning/LearningArticle.vue';
-import LearningFooterBar from '~/components/redesign-flow/learning/LearningFooterBar.vue';
-import LearningSidebar from '~/components/redesign-flow/learning/LearningSidebar.vue';
-import LearningTopBar from '~/components/redesign-flow/learning/LearningTopBar.vue';
-import {
-  logRedesignFlow,
-  summarizeCompletionState,
-  summarizeLearningState,
-} from '~/composables/useRedesignFlowDebug';
-import {
-  countCompletedRequiredSections,
-  getLearningCompletionState,
-} from '~/composables/useRedesignLearningProgress';
-import { getRuntimeFlowFixture } from '~/composables/useRedesignRuntimeMock';
-
-definePageMeta({ layout: 'fullwidth' });
-
+<script setup lang="ts">
 const route = useRoute();
-const { paths, flow, syncCourseId } = useRedesignRoutes();
-
-const courseId = computed(() => (Array.isArray(route.params.id) ? route.params.id[0] : route.params.id));
-const runtime = computed(() => getRuntimeFlowFixture(courseId.value));
-const learningFixture = computed(() => runtime.value.learningExperience);
-const logLearning = (event, payload = {}) =>
-  logRedesignFlow('learning-page', event, {
-    courseId: courseId.value,
-    path: route.fullPath,
-    ...payload,
-  });
-
-syncCourseId();
-
-const getLearningProgress = (sectionIds = []) => {
-  const completedCount = countCompletedRequiredSections(learningFixture.value, sectionIds);
-  const initialCount = learningFixture.value.initialCompletedSectionIds.length;
-  const totalCount = learningFixture.value.modules
-    .filter((module) => learningFixture.value.requiredModuleIds.includes(module.id))
-    .reduce((total, module) => total + module.sections.length, 0);
-
-  if (completedCount <= initialCount) {
-    return learningFixture.value.progressStart;
+const path = useLocalePath();
+const { api, tr, errorText } = useLmsApi();
+const { track } = useLmsAnalytics();
+let viewedLesson = '';
+const id = String(route.params.id);
+const { data, pending, error, refresh } = await useAsyncData(
+  "lms-enrollment-" + id,
+  () => api<any>("/enrollments/" + encodeURIComponent(id)),
+);
+const enrollment = computed<LmsEnrollment | undefined>(
+  () => data.value?.enrollment || data.value,
+);
+const selected = ref(
+  typeof route.query.lesson === "string" ? route.query.lesson : "",
+);
+const lessonData = ref<any>(null);
+const loadingLesson = ref(false);
+const lessonError = ref<any>(null);
+const saving = ref(false);
+const saveError = ref("");
+const saveMessage = ref("");
+const lessons = computed(
+  () => enrollment.value?.modules?.flatMap((m) => m.lessons) || [],
+);
+const current = computed(() =>
+  lessons.value.find((l) => l.id === selected.value),
+);
+async function openLesson(lessonId: string) {
+  selected.value = lessonId;
+  loadingLesson.value = true;
+  lessonError.value = null;
+  lessonData.value = null;
+  saveError.value = "";
+  saveMessage.value = "";
+  try {
+    const result = await api(
+      "/enrollments/" +
+        encodeURIComponent(id) +
+        "/lessons/" +
+        encodeURIComponent(lessonId),
+    );
+    if (selected.value === lessonId) lessonData.value = result;
+  } catch (e) {
+    if (selected.value === lessonId) lessonError.value = e;
+  } finally {
+    if (selected.value === lessonId) loadingLesson.value = false;
   }
-
-  const ratio = (completedCount - initialCount) / Math.max(totalCount - initialCount, 1);
-  return Math.min(100, Math.round(learningFixture.value.progressStart + ratio * (100 - learningFixture.value.progressStart)));
-};
-
-const ensureLearningState = () => {
-  const currentLearning = flow.flow.value.learning || {};
-  const completedModuleIds =
-    Array.isArray(currentLearning.completedModuleIds) && currentLearning.completedModuleIds.length
-      ? currentLearning.completedModuleIds
-      : [...learningFixture.value.initialCompletedModuleIds];
-  const completedSectionIds =
-    Array.isArray(currentLearning.completedSectionIds) && currentLearning.completedSectionIds.length
-      ? currentLearning.completedSectionIds
-      : [...learningFixture.value.initialCompletedSectionIds];
-
-  flow.patchFlow({
-    stage: 'learning',
-    learning: {
-      activeModuleId: currentLearning.activeModuleId || learningFixture.value.initialActiveModuleId,
-      activeSectionId: currentLearning.activeSectionId || learningFixture.value.initialActiveSectionId,
-      completedModuleIds,
-      completedSectionIds,
-      acknowledged: Boolean(currentLearning.acknowledged),
-    },
-    overview: {
-      ...(flow.flow.value.overview || {}),
-      currentStep: 'learning',
-      progress: getLearningProgress(completedSectionIds),
-    },
-  });
-
-  logLearning('ensure-learning-state', {
-    learning: summarizeLearningState({
-      ...currentLearning,
-      completedModuleIds,
-      completedSectionIds,
-    }),
-  });
-};
-
-ensureLearningState();
-
-const learningState = computed(() => flow.flow.value.learning || {});
-const activeModuleId = computed(() => learningState.value.activeModuleId || learningFixture.value.initialActiveModuleId);
-const activeSectionId = computed(() => learningState.value.activeSectionId || learningFixture.value.initialActiveSectionId);
-const completedModuleIds = computed(() => learningState.value.completedModuleIds || []);
-const completedSectionIds = computed(() => learningState.value.completedSectionIds || []);
-
-const requiredModules = computed(() =>
-  learningFixture.value.modules.filter((module) => learningFixture.value.requiredModuleIds.includes(module.id)),
-);
-
-const sectionSequence = computed(() =>
-  requiredModules.value.flatMap((module) =>
-    module.sections.map((section) => ({
-      moduleId: module.id,
-      sectionId: section.id,
-    })),
-  ),
-);
-
-const activeModule = computed(
-  () =>
-    learningFixture.value.modules.find((module) => module.id === activeModuleId.value) ||
-    learningFixture.value.modules[0],
-);
-
-const activeSection = computed(
-  () =>
-    activeModule.value.sections.find((section) => section.id === activeSectionId.value) ||
-    activeModule.value.sections[0],
-);
-
-const breadcrumbModuleTitle = computed(() => {
-  const moduleNumber = activeModule.value.navTitle.match(/\d+/)?.[0] || '01';
-  return `Module ${moduleNumber.padStart(2, '0')}`;
+}
+onMounted(() => {
+  watch(() => [lessonData.value?.lesson?.id, loadingLesson.value], () => {
+    const lessonId = lessonData.value?.lesson?.id;
+    if (lessonId && !loadingLesson.value && viewedLesson !== lessonId) {
+      viewedLesson = lessonId;
+      track('lesson_open', { programId: enrollment.value?.programId });
+    }
+  }, { immediate: true });
 });
-
-const breadcrumbSectionTitle = computed(() => {
-  const sectionNumber = activeSection.value.navTitle.match(/^\d+\.\d+/)?.[0] || activeSection.value.navTitle;
-  return `Section ${sectionNumber}`;
-});
-
-const activeSequenceIndex = computed(() =>
-  sectionSequence.value.findIndex((item) => item.moduleId === activeModuleId.value && item.sectionId === activeSectionId.value),
-);
-
-const learningCompletionState = computed(() =>
-  getLearningCompletionState(learningFixture.value, learningState.value),
-);
-const projectedLearningCompletionState = computed(() =>
-  getLearningCompletionState(learningFixture.value, learningState.value, { includeActiveSection: true }),
-);
-const progressText = computed(() => `${getLearningProgress(completedSectionIds.value)}%`);
-const allRequiredSectionsCompleted = computed(() => learningCompletionState.value.allRequiredCompleted);
-const projectedCompletedModuleIds = computed(() => new Set(projectedLearningCompletionState.value.completedModuleIds));
-const isLastRequiredSection = computed(() => activeSequenceIndex.value === sectionSequence.value.length - 1);
-const nextButtonLabel = computed(() =>
-  allRequiredSectionsCompleted.value || isLastRequiredSection.value
-    ? 'Proceed to Test'
-    : 'Next Section',
-);
-const forcedPretestPath = computed(() => `${paths.value.pretest}?fromLearning=1`);
-
 watch(
-  () => route.fullPath,
-  (nextPath, previousPath) => {
-    logLearning('route-changed', {
-      from: previousPath || null,
-      to: nextPath,
-      stage: flow.flow.value.stage,
-    });
+  lessons,
+  (items) => {
+    if (items.length && !lessonData.value && !loadingLesson.value)
+      void openLesson(
+        items.find((l) => l.id === selected.value)?.id ||
+          items.find((l) => !l.completed)?.id ||
+          items[0]!.id,
+      );
   },
   { immediate: true },
 );
-
-const goToPretest = async (completionState = projectedLearningCompletionState.value) => {
-  logLearning('go-to-pretest:start', {
-    target: forcedPretestPath.value,
-    learning: summarizeLearningState(learningState.value),
-    completion: summarizeCompletionState(completionState),
-  });
-
-  flow.patchFlow({
-    stage: 'pretest',
-    learning: {
-      ...learningState.value,
-      activeModuleId: activeModule.value.id,
-      activeSectionId: activeSection.value.id,
-      completedModuleIds: completionState.completedModuleIds,
-      completedSectionIds: completionState.completedSectionIds,
-      acknowledged: Boolean(learningState.value.acknowledged),
-    },
-    overview: {
-      ...(flow.flow.value.overview || {}),
-      currentStep: 'pretest',
-      progress: 100,
-    },
-  });
-
-  logLearning('go-to-pretest:patched-flow', {
-    stage: flow.flow.value.stage,
-    learning: summarizeLearningState(flow.flow.value.learning || {}),
-  });
-
+async function complete() {
+  if (!current.value || saving.value) return;
+  saving.value = true;
+  saveError.value = "";
   try {
-    const navigationResult = await navigateTo(forcedPretestPath.value);
-    logLearning('go-to-pretest:navigate-resolved', {
-      target: forcedPretestPath.value,
-      navigationResult: navigationResult ?? null,
-    });
-  } catch (error) {
-    console.error('[redesign-flow] learning-page:go-to-pretest:error', error);
-    throw error;
+    await api(
+      "/enrollments/" +
+        encodeURIComponent(id) +
+        "/progress/" +
+        encodeURIComponent(current.value.id),
+      {
+        method: "PUT",
+        body: { revision: lessonData.value.progress.revision, completed: true },
+      },
+    );
+    await refresh();
+    await openLesson(selected.value);
+    saveMessage.value = tr(
+      "Завершение урока сохранено.",
+      "Сабақты аяқтау сақталды.",
+    );
+  } catch (e) {
+    saveError.value = errorText(e);
+  } finally {
+    saving.value = false;
   }
-};
-
-const moduleCards = computed(() =>
-  learningFixture.value.modules.map((module, index, items) => {
-    const previousModule = items[index - 1];
-    const previousCompleted = !previousModule || projectedCompletedModuleIds.value.has(previousModule.id);
-    const state = module.examEntry
-      ? projectedLearningCompletionState.value.allRequiredCompleted
-        ? 'available'
-        : 'locked'
-      : learningCompletionState.value.completedModuleIds.includes(module.id)
-        ? 'completed'
-        : activeModuleId.value === module.id
-          ? 'active'
-          : previousCompleted
-            ? 'available'
-            : 'locked';
-
-    return {
-      ...module,
-      state,
-      sections: module.sections.map((section) => ({
-        ...section,
-        active: module.id === activeModuleId.value && section.id === activeSectionId.value,
-      })),
-    };
-  }),
-);
-
-const patchLearning = (updates) => {
-  const nextLearning = {
-    ...learningState.value,
-    ...updates,
-  };
-
-  flow.patchFlow({
-    learning: nextLearning,
-    overview: {
-      ...(flow.flow.value.overview || {}),
-      currentStep: 'learning',
-      progress: getLearningProgress(nextLearning.completedSectionIds || []),
-    },
-  });
-
-  logLearning('patch-learning', {
-    updates,
-    nextLearning: summarizeLearningState(nextLearning),
-  });
-};
-
-const moveToLocation = (moduleId, sectionId, completionState = null) => {
-  patchLearning({
-    activeModuleId: moduleId,
-    activeSectionId: sectionId,
-    ...(completionState
-      ? {
-          completedModuleIds: completionState.completedModuleIds,
-          completedSectionIds: completionState.completedSectionIds,
-        }
-      : {}),
-  });
-};
-
-const openModule = async (moduleId) => {
-  const targetModule = learningFixture.value.modules.find((module) => module.id === moduleId);
-  if (!targetModule) {
-    logLearning('open-module:missing-target', { moduleId });
-    return;
-  }
-
-  if (targetModule.id === activeModuleId.value) {
-    logLearning('open-module:already-active', { moduleId });
-    return;
-  }
-
-  const completionState = projectedLearningCompletionState.value;
-  logLearning('open-module', {
-    moduleId,
-    examEntry: Boolean(targetModule.examEntry),
-    completion: summarizeCompletionState(completionState),
-  });
-
-  if (targetModule.examEntry) {
-    if (completionState.allRequiredCompleted) {
-      await goToPretest(completionState);
-    } else {
-      logLearning('open-module:blocked-exam-entry', {
-        moduleId,
-        completion: summarizeCompletionState(completionState),
-      });
-    }
-    return;
-  }
-
-  if (!targetModule.sections?.length) {
-    return;
-  }
-
-  const firstIncompleteSection = targetModule.sections.find(
-    (section) => !completionState.completedSectionIds.includes(section.id),
-  );
-  moveToLocation(moduleId, (firstIncompleteSection || targetModule.sections[0]).id, completionState);
-};
-
-const openSection = ({ moduleId, sectionId }) => {
-  if (moduleId === activeModuleId.value && sectionId === activeSectionId.value) {
-    logLearning('open-section:already-active', { moduleId, sectionId });
-    return;
-  }
-
-  logLearning('open-section', {
-    moduleId,
-    sectionId,
-    completion: summarizeCompletionState(projectedLearningCompletionState.value),
-  });
-  moveToLocation(moduleId, sectionId, projectedLearningCompletionState.value);
-};
-
-const goBack = () => {
-  const currentIndex = activeSequenceIndex.value;
-  if (currentIndex > 0) {
-    const previous = sectionSequence.value[currentIndex - 1];
-    logLearning('go-back:previous-section', {
-      currentIndex,
-      previous,
-    });
-    moveToLocation(previous.moduleId, previous.sectionId, projectedLearningCompletionState.value);
-    return;
-  }
-
-  logLearning('go-back:course-page');
-  navigateTo(paths.value.course);
-};
-
-const saveAndExit = () => navigateTo(paths.value.cabinet);
-
-const goNext = async () => {
-  const completionState = projectedLearningCompletionState.value;
-  const currentIndex = activeSequenceIndex.value;
-
-  logLearning('go-next', {
-    currentIndex,
-    activeModuleId: activeModuleId.value,
-    activeSectionId: activeSectionId.value,
-    completion: summarizeCompletionState(completionState),
-  });
-
-  if (completionState.allRequiredCompleted || currentIndex === sectionSequence.value.length - 1 || currentIndex === -1) {
-    await goToPretest(completionState);
-    return;
-  }
-
-  const nextStep = sectionSequence.value[currentIndex + 1];
-  patchLearning({
-    activeModuleId: nextStep.moduleId,
-    activeSectionId: nextStep.sectionId,
-    completedModuleIds: completionState.completedModuleIds,
-    completedSectionIds: completionState.completedSectionIds,
-  });
-};
+}
+useHead(() => ({
+  title: (enrollment.value?.title || tr("Обучение", "Оқу")) + " — OT Center",
+  meta: [{ name: "robots", content: "noindex, nofollow" }],
+}));
 </script>
-
 <template>
-  <div class="flex h-screen flex-col overflow-hidden bg-surface text-on-surface">
-    <LearningTopBar
-      :course-title="runtime.runtime.currentCourseTitle"
-      :participant-meta="`Safety Inspector ID: ${runtime.runtime.participant.inspectorId}`"
-      :participant-name="runtime.runtime.participant.profileName"
-      :progress-text="progressText"
-    />
-
-    <div class="flex flex-1 overflow-hidden">
-      <LearningSidebar
-        :pretest-to="forcedPretestPath"
-        :modules="moduleCards"
-        @open-module="openModule"
-        @open-section="openSection"
-      />
-
-      <LearningArticle
-        :module-title="breadcrumbModuleTitle"
-        :root-breadcrumb="learningFixture.rootBreadcrumb"
-        :section="activeSection"
-        :section-title="breadcrumbSectionTitle"
-      />
-    </div>
-
-    <LearningFooterBar
-      :can-go-back="true"
-      :next-label="nextButtonLabel"
-      @back="goBack"
-      @next="goNext"
-      @save="saveAndExit"
-    />
-  </div>
+  <LmsShell :title="enrollment?.title || tr('Обучение', 'Оқу')" back="/cabinet"
+    ><LmsState :pending="pending" :error="error" @retry="refresh"
+      ><template v-if="enrollment">
+        <div class="lms-note flex flex-wrap justify-between gap-3">
+          <span
+            >{{ tr("Подтверждённый прогресс", "Расталған оқу барысы") }}:
+            {{ enrollment.progress.completed }} /
+            {{ enrollment.progress.total }} ·
+            {{ enrollment.progress.percent }}%</span
+          ><NuxtLink :to="path('/learn/' + id + '/pre-test')"
+            >{{
+              tr("Условия проверки знаний", "Білімді тексеру шарттары")
+            }}
+            →</NuxtLink
+          >
+        </div>
+        <div class="grid items-start gap-6 lg:grid-cols-[290px_1fr]">
+          <aside class="lms-card space-y-5">
+            <h2 class="font-bold">{{ tr("Содержание", "Мазмұны") }}</h2>
+            <section
+              v-for="m in enrollment.modules"
+              :key="m.id"
+              class="space-y-2"
+            >
+              <h3 class="text-sm font-semibold text-slate-700">
+                {{ m.title }}
+              </h3>
+              <button
+                v-for="l in m.lessons"
+                :key="l.id"
+                class="flex min-h-[44px] w-full items-start gap-2 rounded-lg px-3 py-3 text-left text-sm"
+                :class="
+                  selected === l.id
+                    ? 'bg-brand-soft text-brand-accent font-semibold'
+                    : 'hover:bg-slate-50'
+                "
+                :aria-current="selected === l.id ? 'true' : undefined"
+                @click="openLesson(l.id)"
+              >
+                <span aria-hidden="true">{{ l.completed ? "✓" : "○" }}</span
+                ><span
+                  >{{ l.title
+                  }}<small class="block text-slate-500">{{
+                    l.completed
+                      ? tr("Сохранено", "Сақталды")
+                      : l.required
+                        ? tr("Обязательный урок", "Міндетті сабақ")
+                        : tr("Дополнительный материал", "Қосымша материал")
+                  }}</small></span
+                >
+              </button>
+            </section>
+          </aside>
+          <article class="lms-card min-w-0 space-y-6">
+            <LmsState
+              :pending="loadingLesson"
+              :error="lessonError"
+              :empty="!lessons.length"
+              :empty-text="
+                tr(
+                  'Материалы назначения пока недоступны. Свяжитесь с учебным центром.',
+                  'Тағайындалған оқу материалдары әзірге қолжетімсіз. Оқу орталығына хабарласыңыз.',
+                )
+              "
+              @retry="openLesson(selected)"
+              ><template v-if="lessonData"
+                ><h2 class="font-headline text-2xl font-bold">
+                  {{ lessonData.lesson.title }}
+                </h2>
+                <p class="whitespace-pre-wrap leading-7 text-slate-700">
+                  {{ lessonData.lesson.body }}
+                </p>
+                <div
+                  v-for="(media, index) in lessonData.lesson.media"
+                  :key="index"
+                  class="space-y-3"
+                >
+                  <img
+                    v-if="media.kind === 'image'"
+                    :src="media.url"
+                    :alt="media.alt"
+                    class="max-w-full rounded-xl"
+                    loading="lazy"
+                  /><video
+                    v-if="media.kind === 'video'"
+                    :src="media.url"
+                    controls
+                    preload="metadata"
+                    class="w-full rounded-xl"
+                    :aria-label="media.alt"
+                  />
+                  <details
+                    v-if="media.transcript"
+                    class="rounded-xl border p-4"
+                  >
+                    <summary class="cursor-pointer font-semibold">
+                      {{
+                        tr(
+                          "Текстовая расшифровка видео",
+                          "Бейненің мәтіндік нұсқасы",
+                        )
+                      }}
+                    </summary>
+                    <p class="mt-3 whitespace-pre-wrap text-sm leading-6">
+                      {{ media.transcript }}
+                    </p>
+                  </details>
+                  <a
+                    v-if="media.kind === 'attachment'"
+                    :href="media.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="lms-button secondary"
+                    >{{
+                      media.alt || tr("Открыть вложение", "Тіркемені ашу")
+                    }}
+                    ↗</a
+                  >
+                </div>
+                <div
+                  v-if="lessonData.lesson.kind === 'practice'"
+                  class="lms-note"
+                >
+                  {{
+                    tr(
+                      "Практическую часть подтверждает уполномоченный сотрудник после выполнения.",
+                      "Практикалық бөлім орындалғаннан кейін уәкілетті қызметкер растайды.",
+                    )
+                  }}
+                </div>
+                <p
+                  v-else-if="lessonData.progress.completed"
+                  class="lms-success"
+                >
+                  {{
+                    tr(
+                      "Урок завершён. Прогресс сохранён на сервере.",
+                      "Сабақ аяқталды. Оқу барысы серверде сақталды.",
+                    )
+                  }}
+                </p>
+                <button
+                  v-else
+                  class="lms-button"
+                  :disabled="saving"
+                  @click="complete"
+                >
+                  {{
+                    saving
+                      ? tr("Сохраняем…", "Сақталуда…")
+                      : tr(
+                          "Материал изучен — завершить урок",
+                          "Материал оқылды — сабақты аяқтау",
+                        )
+                  }}
+                </button>
+                <p v-if="saveMessage" class="lms-success" role="status">
+                  {{ saveMessage }}
+                </p>
+                <div v-if="saveError" class="lms-error space-y-3" role="alert">
+                  <p>
+                    {{ saveError }}
+                    {{
+                      tr("Завершение не подтверждено.", "Аяқтау расталмады.")
+                    }}
+                  </p>
+                  <button
+                    class="lms-button secondary"
+                    :disabled="saving"
+                    @click="openLesson(selected)"
+                  >
+                    {{
+                      tr(
+                        "Загрузить актуальный прогресс",
+                        "Ағымдағы оқу барысын жүктеу",
+                      )
+                    }}
+                  </button>
+                </div></template
+              ></LmsState
+            >
+          </article>
+        </div>
+      </template></LmsState
+    ></LmsShell
+  >
 </template>

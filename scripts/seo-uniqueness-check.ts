@@ -26,6 +26,7 @@ type DuplicateIssue = {
 };
 
 const OUTPUT_DIR = path.resolve('.output/public');
+const SSR_BASE_URL = process.env.SEO_BASE_URL;
 const SHINGLE_SIZE = 5;
 const SIMILARITY_THRESHOLDS: Record<PageType, number> = {
   city: 0.7,
@@ -69,7 +70,7 @@ const normalizeMeta = (value: string) => cleanText(value).toLowerCase();
 
 const extractTitle = (html: string) => {
   const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  return match ? cleanText(match[1]) : '';
+  return match?.[1] ? cleanText(match[1]) : '';
 };
 
 const extractMetaContent = (html: string, attrName: string, attrValue: string) => {
@@ -112,7 +113,7 @@ const extractCanonicalPath = (html: string) => {
 
 const extractMainText = (html: string) => {
   const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
-  let text = mainMatch ? mainMatch[1] : html;
+  let text = mainMatch?.[1] ?? html;
   text = text.replace(/<header[\s\S]*?<\/header>/gi, ' ');
   text = text.replace(/<footer[\s\S]*?<\/footer>/gi, ' ');
   text = text.replace(/<script[\s\S]*?<\/script>/gi, ' ');
@@ -122,9 +123,9 @@ const extractMainText = (html: string) => {
 
 const extractFirstH1 = (html: string) => {
   const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
-  const source = mainMatch ? mainMatch[1] : html;
+  const source = mainMatch?.[1] ?? html;
   const match = source.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-  return match ? cleanText(match[1]) : '';
+  return match?.[1] ? cleanText(match[1]) : '';
 };
 
 const wordRegex = /[\p{L}\p{N}]+/gu;
@@ -180,8 +181,16 @@ const buildRoutes = () => {
 
 const readEntry = async (localizedRoute: string, type: PageType) => {
   const filePath = routeToFilePath(localizedRoute);
-  const html = await fs.readFile(filePath, 'utf8');
+  const html = SSR_BASE_URL
+    ? await fetch(new URL(localizedRoute, SSR_BASE_URL), { signal: AbortSignal.timeout(30_000) }).then(async (response) => {
+      if (response.status !== 200) throw new Error(`${localizedRoute}: expected SSR 200, got ${response.status}`);
+      return response.text();
+    })
+    : await fs.readFile(filePath, 'utf8');
   const text = extractMainText(html);
+  if (!extractTitle(html) || !extractMetaContent(html, 'name', 'description') || !extractFirstH1(html)) {
+    throw new Error(`${localizedRoute}: missing rendered title, description or H1`);
+  }
   const words = toWords(text);
   const { citySlug, courseSlug } = parseRouteInfo(localizedRoute);
   const canonicalPath = extractCanonicalPath(html);
@@ -212,7 +221,7 @@ const buildEntries = async () => {
     for (const route of cityRoutes) {
       const localizedRoute = withLocale(route, locale);
       const { entry, canonicalPath } = await readEntry(localizedRoute, 'city');
-      if (canonicalPath && canonicalPath !== normalizeRoute(localizedRoute)) {
+      if (canonicalPath !== normalizeRoute(localizedRoute)) {
         canonicalIssues.push({ route: localizedRoute, canonicalPath });
       }
       entries.push(entry);
@@ -221,7 +230,7 @@ const buildEntries = async () => {
     for (const route of courseRoutes) {
       const localizedRoute = withLocale(route, locale);
       const { entry, canonicalPath } = await readEntry(localizedRoute, 'course');
-      if (canonicalPath && canonicalPath !== normalizeRoute(localizedRoute)) {
+      if (canonicalPath !== normalizeRoute(localizedRoute)) {
         canonicalIssues.push({ route: localizedRoute, canonicalPath });
       }
       entries.push(entry);
@@ -230,7 +239,7 @@ const buildEntries = async () => {
     for (const route of cityCourseRoutes) {
       const localizedRoute = withLocale(route, locale);
       const { entry, canonicalPath } = await readEntry(localizedRoute, 'city-course');
-      if (canonicalPath && canonicalPath !== normalizeRoute(localizedRoute)) {
+      if (canonicalPath !== normalizeRoute(localizedRoute)) {
         canonicalIssues.push({ route: localizedRoute, canonicalPath });
       }
       entries.push(entry);
@@ -314,11 +323,12 @@ const canIgnoreTemplateSimilarity = (a: PageEntry, b: PageEntry) => {
 };
 
 const run = async () => {
-  try {
-    await fs.access(OUTPUT_DIR);
-  } catch {
-    console.log(`Uniqueness check skipped: ${OUTPUT_DIR} not found. Run after static generate.`);
-    return;
+  if (!SSR_BASE_URL) {
+    try {
+      await fs.access(OUTPUT_DIR);
+    } catch {
+      throw new Error(`No rendered HTML found at ${OUTPUT_DIR}. Build first or set SEO_BASE_URL to a running SSR server.`);
+    }
   }
 
   const { entries, canonicalIssues } = await buildEntries();
@@ -334,30 +344,32 @@ const run = async () => {
   const topPairs: Array<{ a: string; b: string; similarity: number }> = [];
   const duplicateIssues: DuplicateIssue[] = [];
   let hasFailures = false;
+  let hasSimilarityWarnings = false;
 
   for (const [groupKey, list] of groups.entries()) {
     duplicateIssues.push(...collectDuplicateIssues(list));
 
     for (let i = 0; i < list.length; i += 1) {
       for (let j = i + 1; j < list.length; j += 1) {
-        const similarity = jaccardSimilarity(list[i].shingles, list[j].shingles);
-        const threshold = SIMILARITY_THRESHOLDS[list[i].type];
-        const ignoreTemplateSimilarity = canIgnoreTemplateSimilarity(list[i], list[j]);
+        const left = list[i]!; const right = list[j]!;
+        const similarity = jaccardSimilarity(left.shingles, right.shingles);
+        const threshold = SIMILARITY_THRESHOLDS[left.type];
+        const ignoreTemplateSimilarity = canIgnoreTemplateSimilarity(left, right);
 
         if (similarity >= threshold && !ignoreTemplateSimilarity) {
-          hasFailures = true;
+          hasSimilarityWarnings = true;
         }
 
         topPairs.push({
-          a: list[i].route,
-          b: list[j].route,
+          a: left.route,
+          b: right.route,
           similarity,
         });
       }
     }
 
     console.log(
-      `Checked ${groupKey} (${list.length} pages) with threshold ${SIMILARITY_THRESHOLDS[list[0].type]}`,
+      `Checked ${groupKey} (${list.length} pages) with threshold ${list[0] ? SIMILARITY_THRESHOLDS[list[0].type] : 'n/a'}`,
     );
   }
 
@@ -384,11 +396,12 @@ const run = async () => {
   });
 
   if (hasFailures) {
-    console.error('\nUniqueness check failed: metadata duplicates or similarity above threshold.');
+    console.error('\nUniqueness check failed: canonical or metadata contracts violated.');
     process.exitCode = 1;
   } else {
-    console.log('\nUniqueness check passed.');
+    console.log('\nCanonical and metadata checks passed.');
   }
+  if (hasSimilarityWarnings) console.warn('Content similarity needs editorial review; shingle similarity alone is not a correctness gate.');
 };
 
 run().catch((error) => {

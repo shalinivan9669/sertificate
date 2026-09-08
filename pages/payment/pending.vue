@@ -1,65 +1,112 @@
-<script setup>
-import { computed } from 'vue';
-import PendingInfoSidebar from '~/components/redesign-flow/pending/PendingInfoSidebar.vue';
-import PendingStatusCard from '~/components/redesign-flow/pending/PendingStatusCard.vue';
-import MarketingFooter from '~/components/redesign-flow/shared/MarketingFooter.vue';
-import MarketingHeader from '~/components/redesign-flow/shared/MarketingHeader.vue';
-import { getRuntimeFlowFixture } from '~/composables/useRedesignRuntimeMock';
-
-definePageMeta({ layout: 'fullwidth' });
-
-const { paths, flow, syncCourseId } = useRedesignRoutes();
-
-const courseId = computed(() => flow.flow.value.courseId);
-const runtime = computed(() => getRuntimeFlowFixture(courseId.value));
-const paymentState = computed(() => flow.flow.value.payment || {});
-
-syncCourseId();
-
-const estimate = computed(() => runtime.value.pending.estimateByMethod[paymentState.value.methodId] || '1-2 рабочих дня');
-
-flow.patchFlow({
-  stage: 'pending',
-  branch: 'pass',
-  overview: {
-    ...(flow.flow.value.overview || {}),
-    currentStep: 'pending',
-    progress: 100,
-  },
-});
-
-const goToCabinet = () => navigateTo(paths.value.cabinet);
-const contactSupport = () => navigateTo(paths.value.contacts);
+<script setup lang="ts">
+const route = useRoute();
+const path = useLocalePath();
+const { api, tr, money, date, statusLabel, errorText } = useLmsApi();
+const id = typeof route.query.order === "string" ? route.query.order : "";
+const busy = ref(false);
+const failure = ref("");
+const checkout = ref<any>(null);
+const { data, pending, error, refresh } = await useAsyncData(
+  "lms-order-" + id,
+  () =>
+    id ? api<any>("/orders/" + encodeURIComponent(id)) : Promise.resolve(null),
+);
+const { data: commerce } = await useAsyncData("lms-commerce", () =>
+  api<any>("/commerce/me"),
+);
+const order = computed(() => data.value?.order);
+async function startCheckout() {
+  if (!id) return;
+  busy.value = true;
+  failure.value = "";
+  try {
+    checkout.value = await api(
+      "/orders/" + encodeURIComponent(id) + "/checkout",
+      { method: "POST", body: {} },
+    );
+    await refresh();
+  } catch (e) {
+    failure.value = errorText(e);
+  } finally {
+    busy.value = false;
+  }
+}
+useHead(() => ({
+  title: tr("Статус заказа — OT Center", "Тапсырыс күйі — OT Center"),
+  meta: [{ name: "robots", content: "noindex, nofollow" }],
+}));
 </script>
-
 <template>
-  <div class="flex min-h-screen flex-col bg-surface font-body text-on-surface">
-    <MarketingHeader active="certificate" />
-
-    <main class="flex flex-grow items-center justify-center p-6 md:p-12">
-      <div class="grid w-full max-w-4xl grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        <div class="lg:col-span-7">
-          <PendingStatusCard
-            :description="runtime.pending.description"
-            :steps="runtime.pending.steps"
-            :title="runtime.pending.title"
-            @cabinet="goToCabinet"
-            @later="goToCabinet"
-          />
+  <LmsShell :title="tr('Статус заказа', 'Тапсырыс күйі')" back="/cabinet"
+    ><LmsState
+      :pending="pending"
+      :error="error"
+      :empty="!id"
+      :empty-text="
+        tr(
+          'Выберите заказ в личном кабинете.',
+          'Жеке кабинеттен тапсырысты таңдаңыз.',
+        )
+      "
+      @retry="refresh"
+      ><div v-if="order" class="lms-card max-w-2xl space-y-5">
+        <h2 class="text-xl font-semibold">{{ statusLabel(order.status) }}</h2>
+        <p class="text-3xl font-bold">
+          {{ money(order.amountMinor, order.currency) }}
+        </p>
+        <p class="text-sm text-slate-600">{{ date(order.createdAt) }}</p>
+        <p v-if="commerce?.paymentProvider === 'disabled'" class="lms-note">
+          {{
+            tr(
+              "Онлайн-оплата сейчас недоступна. Свяжитесь с учебным центром для согласования способа оплаты.",
+              "Онлайн төлем әзірге қолжетімсіз. Төлем тәсілін келісу үшін оқу орталығына хабарласыңыз.",
+            )
+          }}
+        </p>
+        <template v-if="commerce?.paymentProvider === 'sandbox'"
+          ><p class="lms-note">
+            {{
+              tr(
+                "Тестовый режим оплаты. Реальные деньги не списываются. Тестовый платёж не подтверждает реальную оплату.",
+                "Төлемнің тестілік режимі. Нақты ақша алынбайды. Тестілік төлем нақты төлемді растамайды.",
+              )
+            }}
+          </p>
+          <button
+            v-if="!['paid', 'succeeded', 'refunded'].includes(order.status)"
+            class="lms-button"
+            :disabled="busy"
+            @click="startCheckout"
+          >
+            {{
+              tr(
+                "Создать тестовую платёжную сессию",
+                "Тестілік төлем сеансын жасау",
+              )
+            }}
+          </button></template
+        >
+        <p v-if="checkout" class="lms-note" role="status">
+          {{
+            tr(
+              "Тестовая сессия создана. Ожидается подтверждение провайдера; переход по страницам не меняет статус оплаты.",
+              "Тестілік сеанс құрылды. Провайдердің растауы күтілуде; беттерге өту төлем күйін өзгертпейді.",
+            )
+          }}
+        </p>
+        <p v-if="failure" class="lms-error" role="alert">{{ failure }}</p>
+        <div class="flex flex-wrap gap-3">
+          <button
+            class="lms-button secondary"
+            :disabled="pending"
+            @click="refresh()"
+          >
+            {{ tr("Обновить статус", "Күйін жаңарту") }}</button
+          ><NuxtLink class="lms-button secondary" :to="path('/contacts')">{{
+            tr("Связаться с учебным центром", "Оқу орталығына хабарласу")
+          }}</NuxtLink>
         </div>
-
-        <div class="lg:col-span-5">
-          <PendingInfoSidebar
-            :course-name="runtime.pending.details.courseName"
-            :estimate="estimate"
-            :next-items="runtime.pending.nextItems"
-            :order-number="runtime.pending.details.orderNumber"
-            @support="contactSupport"
-          />
-        </div>
-      </div>
-    </main>
-
-    <MarketingFooter description="The official portal for industrial safety certification in the Republic of Kazakhstan. Ensuring operational excellence through rigorous technical assessment." />
-  </div>
+      </div></LmsState
+    ></LmsShell
+  >
 </template>

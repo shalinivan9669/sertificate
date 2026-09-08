@@ -1,7 +1,1 @@
-<script setup>
-definePageMeta({ layout: 'fullwidth' });
-</script>
-
-<template>
-  <NuxtPage />
-</template>
+<template><NuxtPage /></template>

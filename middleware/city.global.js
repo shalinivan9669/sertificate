@@ -1,8 +1,5 @@
-import { defineNuxtRouteMiddleware, navigateTo } from '#imports';
+import { createError, defineNuxtRouteMiddleware } from '#imports';
 import { isValidCitySlug } from '../composables/useCity';
-import { defaultCitySlug } from '../config/cities';
-
-const FALLBACK_CITY = defaultCitySlug; // change to '/' if нужно отправлять на общую главную
 
 export default defineNuxtRouteMiddleware((to) => {
   const param = to.params?.city;
@@ -16,5 +13,5 @@ export default defineNuxtRouteMiddleware((to) => {
     return;
   }
 
-  return navigateTo(`/${FALLBACK_CITY}`);
+  throw createError({ statusCode: 404, statusMessage: 'City not found' });
 });

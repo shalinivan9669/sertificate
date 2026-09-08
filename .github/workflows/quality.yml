@@ -1,0 +1,71 @@
+name: Quality
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OT_APP_ENV: test
+      OT_EMAIL_DELIVERY_ENABLED: '0'
+      OT_CRM_DELIVERY_ENABLED: '0'
+      OT_PAYMENT_PROVIDER: disabled
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm audit --audit-level=high
+      - run: npm run build
+      - run: npm run test:seo
+      - run: node scripts/build-asset-check.mjs .output/public
+      - run: npx playwright install --with-deps chromium
+      - name: Preserved classic design and isolated browser workflows
+        run: node tests/run-core-browser.mjs
+        env:
+          NODE_ENV: test
+          OT_ALLOW_TEST_SEED: '1'
+      - name: Consented interface analytics and administrator report
+        run: node tests/analytics-browser.mjs
+        env:
+          NODE_ENV: test
+          OT_ALLOW_TEST_SEED: '1'
+      - name: Negative API responses and runtime privacy samples
+        run: node scripts/runtime-privacy-audit.mjs .output
+        env:
+          NODE_ENV: test
+          OT_ALLOW_PRIVACY_AUDIT: '1'
+      - name: Consented public journey and lead attribution
+        run: node tests/lead-attribution-browser.mjs
+        env:
+          NODE_ENV: test
+          OT_ALLOW_TEST_SEED: '1'
+      - name: Protected lead workspace and sales report
+        run: node tests/lead-workspace-browser.mjs
+        env:
+          NODE_ENV: test
+          OT_ALLOW_TEST_SEED: '1'
+      - run: npm run build:vercel
+      - name: Prepare safe lead browser failure reports
+        if: failure()
+        run: node scripts/prepare-lead-browser-ci-reports.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: verification-artifacts
+          path: |
+            artifacts/
+            !artifacts/lead-attribution-browser/**
+            !artifacts/lead-workspace-browser/**
+            !artifacts/**/*.log
+            !artifacts/**/*.sqlite*
+            !artifacts/**/*-private.*
+          if-no-files-found: ignore

@@ -1,0 +1,5 @@
+{
+  "extends": "./.nuxt/tsconfig.json",
+  "compilerOptions": { "strict": true, "allowJs": true, "checkJs": false },
+  "exclude": ["node_modules", "dist", ".data", ".output", ".vercel", "artifacts", ".serena"]
+}
