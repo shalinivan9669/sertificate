@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { parseProgramDraftFile, PROGRAM_DRAFT_MAX_BYTES } from '~/shared/program-draft-import';
 const props = defineProps<{
   version?: any;
   actorRole?: string;
@@ -15,6 +16,9 @@ const programId = ref("");
 const current = ref<any>(null);
 const sources = ref("");
 const price = ref<number | null>(null);
+const imported = ref<ReturnType<typeof parseProgramDraftFile> | null>(null);
+const importFailure = ref('');
+let importReadGeneration = 0;
 const blank = () => ({
   title: "",
   language: "ru",
@@ -23,7 +27,7 @@ const blank = () => ({
   outcomes: "",
   limitations: "",
   format: "",
-  durationHours: 1,
+  durationHours: null,
   priceMinor: null,
   currency: "KZT",
   accessModel: "manual",
@@ -44,6 +48,9 @@ const blank = () => ({
 });
 const form = ref<any>(blank());
 function load(version: any) {
+  importReadGeneration++;
+  imported.value = null;
+  importFailure.value = '';
   current.value = version || null;
   form.value = version ? structuredClone(toRaw(version.data)) : blank();
   form.value.billingBasis ||= "learner";
@@ -80,6 +87,7 @@ const canPublish = computed(
 );
 const payload = computed(() => ({
   ...form.value,
+  durationHours: form.value.durationHours === '' ? null : form.value.durationHours,
   priceMinor:
     price.value == null || String(price.value) === ""
       ? null
@@ -89,6 +97,33 @@ const payload = computed(() => ({
     .map((s) => s.trim())
     .filter(Boolean),
 }));
+async function readDraftFile(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  const generation = ++importReadGeneration;
+  imported.value = null; importFailure.value = '';
+  try {
+    if (file.size > PROGRAM_DRAFT_MAX_BYTES) throw new Error('PROGRAM_DRAFT_TOO_LARGE');
+    const source = await file.text();
+    if (generation !== importReadGeneration) return;
+    imported.value = parseProgramDraftFile(source);
+  } catch {
+    if (generation !== importReadGeneration) return;
+    importFailure.value = tr('Не удалось прочитать учебный пакет. Нужен корректный файл OT Center JSON размером до 500 КБ.', 'Оқу пакетін оқу мүмкін болмады. Көлемі 500 КБ-тан аспайтын жарамды OT Center JSON файлы қажет.');
+  } finally { if (generation === importReadGeneration) input.value = ''; }
+}
+function applyImportedDraft() {
+  if (!imported.value || busy.value || !canEdit.value) return;
+  const value = imported.value;
+  load(null);
+  form.value = structuredClone(toRaw(value.data));
+  programId.value = value.programId;
+  sources.value = value.data.sourceRefs.join('\n');
+  price.value = value.data.priceMinor === null ? null : value.data.priceMinor / 100;
+  evidence.value = ''; imported.value = null;
+  message.value = tr('Пакет открыт как новый черновик. Проверьте содержание и сохраните его. Проверка и публикация выполняются отдельно.', 'Пакет жаңа жоба ретінде ашылды. Мазмұнын тексеріп, сақтаңыз. Тексеру мен жариялау бөлек орындалады.');
+}
 const unsaved = computed(
   () =>
     !current.value ||
@@ -263,6 +298,19 @@ async function workflow(action: "review" | "publish") {
         )
       }}
     </p>
+    <div v-if="canEdit" class="lms-card space-y-3">
+      <label class="block space-y-2"><span class="font-semibold">{{ tr('Загрузить учебный пакет', 'Оқу пакетін жүктеу') }}</span>
+        <input type="file" accept=".json,application/json" :disabled="busy" @change="readDraftFile" />
+      </label>
+      <p class="text-sm text-slate-600">{{ tr('Файл JSON до 500 КБ. Сначала покажем состав; существующая сохранённая версия останется доступной.', '500 КБ-қа дейінгі JSON файлы. Алдымен құрамын көрсетеміз; бұрын сақталған нұсқа қолжетімді болады.') }}</p>
+      <p v-if="importFailure" role="alert" class="text-red-700">{{ importFailure }}</p>
+      <div v-if="imported" class="space-y-2" role="status">
+        <p class="font-semibold">{{ imported.data.title }}</p>
+        <p>{{ imported.data.language.toUpperCase() }} · {{ tr('Уроков', 'Сабақтар') }}: {{ imported.lessonCount }} · {{ tr('Вопросов', 'Сұрақтар') }}: {{ imported.questionCount }}</p>
+        <p class="text-sm">{{ tr('Открытие пакета заменит несохранённые поля редактора. Файл не переносит утверждение или публикацию.', 'Пакетті ашу редактордың сақталмаған өрістерін ауыстырады. Файл бекітуді немесе жариялауды тасымалдамайды.') }}</p>
+        <button type="button" class="lms-button secondary" :disabled="busy" @click="applyImportedDraft">{{ tr('Открыть как новый черновик', 'Жаңа жоба ретінде ашу') }}</button>
+      </div>
+    </div>
     <form class="space-y-6" @submit.prevent="save">
       <fieldset class="space-y-6" :disabled="readOnly || busy || !canEdit">
         <div class="grid gap-5 md:grid-cols-2">
@@ -290,14 +338,14 @@ async function workflow(action: "review" | "publish") {
             ><input v-model="form.format" maxlength="300" /></label
           ><label class="space-y-2"
             ><span>{{
-              tr("Утверждённый объём, часы", "Бекітілген көлем, сағат")
+              tr("Объём, часы (в черновике можно оставить пустым)", "Көлемі, сағат (жобада бос қалдыруға болады)")
             }}</span
             ><input
               v-model.number="form.durationHours"
               type="number"
               min="1"
               max="5000"
-              required /></label
+              /></label
           ><label class="space-y-2"
             ><span>{{
               tr("Дата проверки содержания", "Мазмұнды тексеру күні")

@@ -185,6 +185,21 @@ test('T047 attempt limits and passed completion are enforced independently of co
   assert.equal((await submitAttempt(learner, attempt.id)).result?.pass, true);
   assert.equal((await enrollmentDetails(learner, otherEnrollment.id)).status, 'completed');
 });
+test('draft preserves unknown hours while review and publication require an approved duration', async () => {
+  const data = fixture(); data.durationHours = null;
+  const created = (await createVersion(editor, 'ohrana-truda', data)).version;
+  assert.equal(created.data.durationHours, null);
+  assert.equal(JSON.parse((await queryOne('SELECT data_json FROM program_versions WHERE id=?', [created.id]))!.data_json).durationHours, null);
+  await rejectsCode(reviewVersion(editor, created.id, created.revision), 'PUBLICATION_INCOMPLETE');
+  assert.equal((await queryOne('SELECT status FROM program_versions WHERE id=?', [created.id]))!.status, 'draft');
+  data.durationHours = 2;
+  const updated = (await updateVersion(editor, created.id, created.revision, data)).version;
+  const reviewed = (await reviewVersion(editor, updated.id, updated.revision)).version;
+  const published = (await publishVersion(reviewer, reviewed.id, reviewed.revision, 'Synthetic review confirms the explicit test duration')).version;
+  assert.equal(published.data.durationHours, 2);
+  assert.equal(published.status, 'published');
+});
+
 test('T078 content is plain text, and active SVG/HTML media are rejected', () => {
   const data = fixture(); data.modules[0]!.lessons[0]!.body = '<script>alert(1)</script>';
   assert.equal(validateProgramData(data).modules[0]!.lessons[0]!.body, '<script>alert(1)</script>');

@@ -225,6 +225,7 @@ try {
   await editor
     .getByLabel("Формат и практика", { exact: true })
     .fill("Synthetic test only");
+  await editor.getByLabel(/^Объём, часы/).fill("1");
   await editor
     .getByLabel("Дата проверки содержания", { exact: true })
     .fill(new Date().toISOString().slice(0, 10));
@@ -333,6 +334,161 @@ try {
   passed(
     "Independent reviewer with actual MFA publishes immutable version and public catalog updates",
   );
+  const publishedBeforeImport = (
+    await db.execute({
+      sql: "SELECT * FROM program_versions WHERE id=?",
+      args: [version.id],
+    })
+  ).rows[0];
+  for (const locale of ["ru", "kk"]) {
+    const labels =
+      locale === "ru"
+        ? {
+            title: "Название программы",
+            file: "Загрузить учебный пакет",
+            apply: "Открыть как новый черновик",
+            hours: /^Объём, часы/,
+            reviewed: "Дата проверки содержания",
+            save: "Сохранить черновик",
+            saved: "Черновик сохранён.",
+            review: "Проверить полноту и передать на рецензию",
+          }
+        : {
+            title: "Бағдарлама атауы",
+            file: "Оқу пакетін жүктеу",
+            apply: "Жаңа жоба ретінде ашу",
+            hours: /^Көлемі, сағат/,
+            reviewed: "Мазмұнды тексеру күні",
+            save: "Жобаны сақтау",
+            saved: "Жоба сақталды.",
+            review: "Толықтығын тексеріп, рецензияға жіберу",
+          };
+    const programPage = (locale === "kk" ? "/kk" : "") + "/admin/programs";
+    await go(editor, programPage);
+    await editor.getByRole("button").filter({ hasText: title }).click();
+    await expect(editor.getByLabel(labels.title, { exact: true })).toHaveValue(
+      title,
+    );
+    await expect(editor.getByLabel(labels.title, { exact: true })).toBeDisabled();
+    const importTitle = "[TEST ONLY] Imported " + locale + " package " + runId;
+    const importData = {
+      ...structuredClone(version.data),
+      title: importTitle,
+      language: locale,
+      durationHours: null,
+      reviewedAt: "2026-01-01",
+      accessModel: "manual",
+      priceMinor: null,
+    };
+    // Optional billing basis must acquire the same server default in the UI.
+    delete importData.billingBasis;
+    const envelope = {
+      format: "ot-center-program-draft-v1",
+      programId: "ohrana-truda",
+      data: importData,
+    };
+    const mutations = [];
+    const trackMutation = (request) => {
+      if (
+        new URL(request.url()).pathname.startsWith(
+          "/api/v1/admin/program-versions",
+        ) &&
+        !["GET", "HEAD"].includes(request.method())
+      )
+        mutations.push({ method: request.method(), url: request.url() });
+    };
+    editor.on("request", trackMutation);
+    try {
+      await editor.getByLabel(labels.file, { exact: true }).setInputFiles({
+        name: "synthetic-program-" + locale + ".json",
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify(envelope)),
+      });
+      await expect(
+        editor.getByRole("status").filter({ hasText: importTitle }),
+      ).toBeVisible();
+      await expect(editor.getByLabel(labels.title, { exact: true })).toHaveValue(
+        title,
+      );
+      await expect(editor.getByLabel(labels.hours)).toHaveValue("1");
+      await expect(editor.getByLabel(labels.title, { exact: true })).toBeDisabled();
+      assert.equal(mutations.length, 0, "File preview must not persist data");
+      await editor.getByRole("button", { name: labels.apply, exact: true }).click();
+      await expect(editor.getByLabel(labels.title, { exact: true })).toHaveValue(
+        importTitle,
+      );
+      await expect(editor.getByLabel(labels.title, { exact: true })).toBeEnabled();
+      await expect(editor.getByLabel(labels.hours)).toHaveValue("");
+      await expect(editor.getByLabel(labels.reviewed, { exact: true })).toHaveValue(
+        "",
+      );
+      assert.equal(mutations.length, 0, "Applying a preview only opens a draft");
+      const saveResponse = editor.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === "/api/v1/admin/program-versions" &&
+          response.request().method() === "POST",
+      );
+      await editor.getByRole("button", { name: labels.save, exact: true }).click();
+      const savedResponse = await saveResponse;
+      assert.ok(savedResponse.ok(), await savedResponse.text());
+      const importedVersion = (await savedResponse.json()).version;
+      await editor.getByText(labels.saved, { exact: true }).waitFor();
+      assert.equal(mutations.length, 1);
+      assert.equal(mutations[0].method, "POST");
+      assert.notEqual(importedVersion.id, version.id);
+      assert.equal(importedVersion.status, "draft");
+      assert.equal(importedVersion.createdBy, users.editor.id);
+      assert.equal(importedVersion.approvedBy, null);
+      assert.equal(importedVersion.publishedAt, null);
+      assert.deepEqual(importedVersion.data, {
+        ...importData,
+        billingBasis: "learner",
+        reviewedAt: "",
+      });
+      await go(editor, programPage);
+      await editor.getByRole("button").filter({ hasText: importTitle }).click();
+      await expect(editor.getByLabel(labels.title, { exact: true })).toHaveValue(
+        importTitle,
+      );
+      await expect(editor.getByLabel(labels.hours)).toHaveValue("");
+      await expect(editor.getByLabel(labels.reviewed, { exact: true })).toHaveValue(
+        "",
+      );
+      const reviewResponse = editor.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname ===
+            "/api/v1/admin/program-versions/" + importedVersion.id + "/review" &&
+          response.request().method() === "POST",
+      );
+      await editor.getByRole("button", { name: labels.review, exact: true }).click();
+      const rejectedReview = await reviewResponse;
+      assert.equal(rejectedReview.status(), 422);
+      assert.match(await rejectedReview.text(), /PUBLICATION_INCOMPLETE/);
+      await expect(editor.locator(".lms-error")).toBeVisible();
+      const reloadedVersionsResponse = await editor.request.get(
+        base + "/api/v1/admin/program-versions",
+      );
+      assert.equal(reloadedVersionsResponse.status(), 200);
+      const reloadedVersions = (await reloadedVersionsResponse.json()).versions;
+      const persistedImport = reloadedVersions.find(
+        (candidate) => candidate.id === importedVersion.id,
+      );
+      assert.deepEqual(persistedImport, importedVersion);
+      const publishedAfterImport = (
+        await db.execute({
+          sql: "SELECT * FROM program_versions WHERE id=?",
+          args: [version.id],
+        })
+      ).rows[0];
+      assert.deepEqual(publishedAfterImport, publishedBeforeImport);
+      passed(
+        locale.toUpperCase() +
+          " file import previews without writes, saves a separate unapproved draft, reloads null hours and rejects incomplete review without changing the published original",
+      );
+    } finally {
+      editor.off("request", trackMutation);
+    }
+  }
   admin = await session(users.admin);
   const adminDraftResponse = await post(admin, "/admin/program-versions", {
     programId: "ohrana-truda",

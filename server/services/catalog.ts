@@ -12,7 +12,7 @@ export type Lesson = {
 export type Question = { id: string; text: string; topic: string; options: { id: string; text: string }[]; correctOptionIds: string[] };
 export type ProgramData = {
   title: string; language: 'ru' | 'kk'; audience: string; prerequisites: string; outcomes: string;
-  limitations: string; format: string; durationHours: number; priceMinor: number | null; currency: 'KZT'; billingBasis?: 'learner' | 'organization';
+  limitations: string; format: string; durationHours: number | null; priceMinor: number | null; currency: 'KZT'; billingBasis?: 'learner' | 'organization';
   accessModel: 'free' | 'manual' | 'paid'; documentDescription: string; support: string;
   sourceRefs: string[]; reviewedAt: string;
   modules: { id: string; title: string; lessons: Lesson[] }[];
@@ -41,7 +41,10 @@ export function validateProgramData(value: unknown, publishing = false): Program
   if (input.billingBasis !== undefined && !['learner', 'organization'].includes(input.billingBasis)) fail(400, 'INVALID_CONTENT', 'Invalid billing basis');
   data.billingBasis = input.billingBasis ?? 'learner';
   for (const field of ['audience', 'prerequisites', 'outcomes', 'limitations', 'format', 'documentDescription', 'support']) data[field] = textValue(input[field] ?? '', field, 10_000, publishing && !['prerequisites', 'limitations'].includes(field));
-  data.durationHours = integer(input.durationHours, 'durationHours', 1, 5000);
+  if (input.durationHours === null) {
+    if (publishing) fail(422, 'PUBLICATION_INCOMPLETE', 'An approved duration is required before review or publication');
+    data.durationHours = null;
+  } else data.durationHours = integer(input.durationHours, 'durationHours', 1, 5000);
   data.priceMinor = input.priceMinor === null ? null : integer(input.priceMinor, 'priceMinor', 0, 1_000_000_000);
   if (data.accessModel === 'free' && data.priceMinor !== 0) fail(400, 'INVALID_CONTENT', 'Free programs must explicitly have zero price');
   if (publishing && data.accessModel === 'paid' && (!data.priceMinor || data.priceMinor < 1)) fail(422, 'PUBLICATION_INCOMPLETE', 'Paid programs require an approved positive price');
