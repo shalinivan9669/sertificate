@@ -69,7 +69,7 @@ async function eligibleEnrollment(enrollmentId: string, tx: Db) {
   const attempts = await queryAll('SELECT id,result_json FROM attempts WHERE enrollment_id=? AND status IN (?,?) ORDER BY submitted_at DESC', [enrollmentId, 'graded', 'expired'], tx);
   const passed = attempts.find(attempt => JSON.parse(attempt.result_json || '{}').pass === true);
   if (!passed) fail(409, 'ASSESSMENT_NOT_PASSED');
-  if (program.accessModel === 'paid' && !(await queryOne('SELECT id FROM orders WHERE enrollment_id=? AND status=?', [enrollmentId, 'succeeded'], tx))) fail(409, 'CONTRACTUAL_CONDITIONS_INCOMPLETE');
+  if (program.accessModel === 'paid' && !(await queryOne("SELECT id FROM orders WHERE enrollment_id=? AND status IN ('succeeded','partially_refunded')", [enrollmentId], tx))) fail(409, 'CONTRACTUAL_CONDITIONS_INCOMPLETE');
   return { enrollment, program, passed };
 }
 export async function credentialIssuancePreview(enrollmentId: string, db?: Db) {

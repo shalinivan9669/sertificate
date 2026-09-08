@@ -55,6 +55,10 @@ useHead(() => ({
           {{ money(order.amountMinor, order.currency) }}
         </p>
         <p class="text-sm text-slate-600">{{ date(order.createdAt) }}</p>
+        <LmsOrderAmounts :order="order" />
+        <p v-if="['partially_refunded', 'refunded'].includes(order.status)" class="lms-note">
+          {{ tr("Суммы и состояние возврата получены из финансовой записи на сервере. История обучения сохраняется; по условиям дальнейшего доступа обратитесь в учебный центр.", "Қайтару сомалары мен күйі сервердегі қаржылық жазбадан алынды. Оқу тарихы сақталады; кейінгі қолжетімділік шарттарын оқу орталығынан нақтылаңыз.") }}
+        </p>
         <p v-if="commerce?.paymentProvider === 'disabled'" class="lms-note">
           {{
             tr(
@@ -73,7 +77,7 @@ useHead(() => ({
             }}
           </p>
           <button
-            v-if="!['paid', 'succeeded', 'refunded'].includes(order.status)"
+            v-if="!['paid', 'succeeded', 'partially_refunded', 'refunded'].includes(order.status)"
             class="lms-button"
             :disabled="busy"
             @click="startCheckout"

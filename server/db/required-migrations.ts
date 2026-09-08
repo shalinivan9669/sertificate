@@ -12,4 +12,5 @@ export const requiredMigrations = [
   '010-observability.sql',
   '011-lead-attribution.sql',
   '012-sales-links.sql',
+  '013-partial-refunds.sql',
 ] as const;

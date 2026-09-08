@@ -10,6 +10,7 @@ import { deliverLearningReminder, scheduleLearningReminders } from './reminders'
 import { expireDueAttempts } from './assessment';
 import { expireAnalytics } from './analytics';
 import { expireLeadAttribution } from './lead-attribution';
+import { financeOrders } from './commerce';
 import { jobObservation, logObservation, runWithObservation, safeDeliveryCode } from '../utils/observability';
 
 export function secretEquals(value: string, expected: string | undefined) {
@@ -23,7 +24,7 @@ export async function operationsOverview(actor: AppUser) {
   const [leads, outbox, orders, credentials, templates, auditEvents, enrollments] = await Promise.all([
     permitted() ? queryAll('SELECT id,status,crm_lead_id AS crmLeadId,created_at AS createdAt FROM lead_submissions ORDER BY created_at DESC LIMIT 100') : [],
     permitted() ? queryAll('SELECT id,type,aggregate_id AS aggregateId,status,attempts,available_at AS availableAt,last_error AS lastError FROM outbox ORDER BY created_at DESC LIMIT 100') : [],
-    permitted('finance') ? queryAll('SELECT id,status,amount_minor AS amountMinor,currency,created_at AS createdAt FROM orders ORDER BY created_at DESC LIMIT 100') : [],
+    permitted('finance') ? financeOrders() : [],
     permitted('issuer') ? queryAll('SELECT id,enrollment_id AS enrollmentId,serial,status,issued_at AS issuedAt FROM credentials ORDER BY created_at DESC LIMIT 100') : [],
     permitted('issuer', 'reviewer') ? queryAll('SELECT id,program_id AS programId,name,status,created_by AS createdBy FROM credential_templates ORDER BY created_at DESC LIMIT 100') : [],
     permitted() ? queryAll('SELECT id,actor_id AS actorId,action,target,created_at AS createdAt FROM audit_events ORDER BY created_at DESC LIMIT 100') : [],

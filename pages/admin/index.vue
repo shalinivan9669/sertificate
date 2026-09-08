@@ -17,6 +17,40 @@ const target = ref("");
 const reason = ref("");
 const evidence = ref("");
 const confirmed = ref(false);
+const refundAmount = ref("");
+const refundInput = ref<HTMLInputElement | null>(null);
+const refundUncertain = ref(false);
+const refundNeedsRefresh = ref(false);
+let refundKey = "";
+let refundRequest: { orderId: string; key: string; body: { amountMinor: number; currency: "KZT"; reason: string } } | null = null;
+const refundOrder = computed(() => data.value?.orders?.find((order: any) => order.id === target.value));
+const refundAmountMinor = computed(() => lmsMoneyInputMinor(refundAmount.value));
+const refundAllowed = computed(() => !refundNeedsRefresh.value && refundOrder.value?.refundAllowed === true && refundOrder.value?.refundMode === "sandbox" && refundOrder.value?.currency === "KZT");
+const refundAmountValid = computed(() => refundAmountMinor.value !== null && Number.isSafeInteger(refundOrder.value?.refundableMinor) && refundAmountMinor.value <= refundOrder.value.refundableMinor);
+watch([refundAmount, reason, target], () => {
+  if (refundUncertain.value) return;
+  refundKey = "";
+  refundRequest = null;
+  if (action.value === "refund") confirmed.value = false;
+}, { flush: "sync" });
+function useFullRefundAmount() {
+  const minor = refundOrder.value?.refundableMinor;
+  refundAmount.value = Number.isSafeInteger(minor) && minor > 0 ? Math.floor(minor / 100) + "." + String(minor % 100).padStart(2, "0") : "";
+}
+async function refreshFinance() {
+  try {
+    await refresh();
+    if (error.value) throw error.value;
+    refundNeedsRefresh.value = false;
+    failure.value = "";
+    return true;
+  } catch (caught) {
+    failure.value = refundNeedsRefresh.value
+      ? tr("Возврат уже подтверждён сервером, но список не обновился. Обновите финансовые данные перед следующей операцией.", "Қайтару серверде расталды, бірақ тізім жаңармады. Келесі әрекет алдында қаржылық деректерді жаңартыңыз.")
+      : errorText(caught);
+    return false;
+  }
+}
 const organizationName = ref("");
 const ownerEmail = ref("");
 const enrollmentForm = reactive({
@@ -87,7 +121,7 @@ const actionTitle = computed(
         "PDF дайындауды қалпына келтіру",
       ),
       revoke: tr("Отозвать документ", "Құжаттың күшін жою"),
-      refund: tr("Зарегистрировать возврат", "Қайтаруды тіркеу"),
+      refund: tr("Зарегистрировать тестовый возврат", "Тестілік қайтаруды тіркеу"),
       activate: tr(
         "Подтвердить доступ к обучению",
         "Оқуға қолжетімділікті растау",
@@ -95,6 +129,7 @@ const actionTitle = computed(
     })[action.value] || "",
 );
 function choose(kind: string, id = "") {
+  if (busy.value || refundUncertain.value || (kind === "refund" && refundNeedsRefresh.value)) return;
   action.value = kind;
   target.value = id;
   reason.value = "";
@@ -103,6 +138,13 @@ function choose(kind: string, id = "") {
   failure.value = "";
   message.value = "";
   repairTemplateId.value = "";
+  refundKey = "";
+  refundRequest = null;
+  refundAmount.value = "";
+  if (kind === "refund") {
+    useFullRefundAmount();
+    void nextTick(() => refundInput.value?.focus());
+  }
 }
 async function run(fn: () => Promise<any>, label: string) {
   busy.value = true;
@@ -120,12 +162,43 @@ async function run(fn: () => Promise<any>, label: string) {
   }
 }
 async function executeAction() {
+  if (busy.value) return;
+  if (action.value === "refund") {
+    if (!confirmed.value || (!refundUncertain.value && (!refundAllowed.value || !refundAmountValid.value))) return;
+    if (!refundRequest) {
+      refundKey ||= crypto.randomUUID();
+      refundRequest = { orderId: target.value, key: refundKey, body: { amountMinor: refundAmountMinor.value!, currency: "KZT", reason: reason.value } };
+    }
+    const submitted = refundRequest;
+    busy.value = true;
+    failure.value = "";
+    message.value = "";
+    try {
+      const receipt = await api("/admin/orders/" + encodeURIComponent(submitted.orderId) + "/refund", {
+        method: "POST", headers: { "Idempotency-Key": submitted.key }, body: submitted.body,
+      });
+      if (receipt?.status !== "confirmed" || receipt?.mode !== "sandbox") throw new Error("Unconfirmed refund response");
+      refundUncertain.value = false;
+      refundNeedsRefresh.value = true;
+      refundKey = "";
+      refundRequest = null;
+      action.value = "";
+      message.value = tr("Тестовый возврат подтверждён сервером. Реальные деньги не переводились.", "Тестілік қайтару серверде расталды. Нақты ақша аударылған жоқ.");
+    } catch (caught) {
+      // A transport timeout or intermediary 408/425/5xx can arrive after commit.
+      // Only an explicit rejection permits editing this request and choosing a new key.
+      refundUncertain.value = ![400, 401, 403, 404, 409, 422, 429].includes(lmsErrorStatus(caught));
+      if (!refundUncertain.value) refundRequest = null;
+      failure.value = errorText(caught);
+    } finally { busy.value = false; }
+    if (refundNeedsRefresh.value) await refreshFinance();
+    return;
+  }
   const endpoints: Record<string, string> = {
     retry: "/admin/outbox/" + target.value + "/retry",
     issue: "/admin/credentials",
     reissue: "/admin/credentials",
     revoke: "/admin/credentials/" + target.value + "/revoke",
-    refund: "/admin/orders/" + target.value + "/refund",
     activate: "/admin/enrollments/" + target.value + "/activate",
     repair: "/admin/credentials/" + target.value + "/repair",
   };
@@ -269,7 +342,11 @@ useHead(() => ({
         )
       }}
     </p>
-    <LmsState :pending="pending" :error="error" @retry="refresh"
+    <div v-if="refundNeedsRefresh" class="lms-note space-y-3" role="status">
+      <p>{{ tr("Возврат уже подтверждён сервером. Обновите финансовые данные перед следующей операцией; повторять выполненный возврат не нужно.", "Қайтару серверде расталды. Келесі әрекет алдында қаржылық деректерді жаңартыңыз; орындалған қайтаруды қайталау қажет емес.") }}</p>
+      <button type="button" class="lms-button secondary" :disabled="busy || pending" @click="refreshFinance">{{ tr("Обновить финансовые данные", "Қаржылық деректерді жаңарту") }}</button>
+    </div>
+    <LmsState :pending="pending" :error="error" @retry="refreshFinance"
       ><p v-if="failure" class="lms-error" role="alert">{{ failure }}</p>
       <p v-if="message" class="lms-success" role="status">{{ message }}</p>
       <datalist id="lms-enrollment-options">
@@ -301,6 +378,8 @@ useHead(() => ({
             }}</span
             ><input
               v-model="target"
+              :readonly="action === 'refund'"
+              :disabled="(busy || refundUncertain) && action === 'refund'"
               :list="
                 ['issue', 'reissue', 'activate'].includes(action)
                   ? 'lms-enrollment-options'
@@ -348,6 +427,29 @@ useHead(() => ({
               )
             }}
           </p>
+          <div v-if="action === 'refund'" class="space-y-3">
+            <LmsOrderAmounts v-if="refundOrder" :order="refundOrder" />
+            <p v-if="!refundAllowed && !refundUncertain" class="lms-note">
+              {{ tr("Возврат для этого заказа сейчас недоступен. Обновите финансовые данные; форма работает только с разрешёнными тестовыми платежами.", "Бұл тапсырыс үшін қайтару қазір қолжетімсіз. Қаржылық деректерді жаңартыңыз; нысан тек рұқсат етілген тестілік төлемдермен жұмыс істейді.") }}
+            </p>
+            <label class="block space-y-2">
+              <span>{{ tr("Сумма возврата, ₸", "Қайтару сомасы, ₸") }}</span>
+              <input ref="refundInput" v-model="refundAmount" type="text" inputmode="decimal" required maxlength="19" :disabled="busy || refundUncertain || !refundAllowed" aria-describedby="lms-refund-amount-help" />
+            </label>
+            <p id="lms-refund-amount-help" class="text-sm text-slate-600">
+              {{ tr("Укажите всю оставшуюся сумму или её часть. Допускаются два знака после запятой; окончательный остаток проверит сервер.", "Қалған соманы толық немесе ішінара көрсетіңіз. Үтірден кейін екі таңбаға дейін рұқсат етіледі; соңғы қалдықты сервер тексереді.") }}
+            </p>
+            <p v-if="refundAmount && !refundAmountValid && !refundUncertain" class="lms-error" role="alert">
+              {{ tr("Введите сумму больше нуля и не больше остатка для возврата, максимум с двумя знаками после запятой.", "Нөлден үлкен және қайтаруға қалған сомадан аспайтын соманы, үтірден кейін ең көбі екі таңбамен енгізіңіз.") }}
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <button type="button" class="lms-button secondary" :disabled="busy || refundUncertain || !refundAllowed" @click="useFullRefundAmount">{{ tr("Весь остаток", "Қалған соманы толық") }}</button>
+              <button type="button" class="lms-button secondary" :disabled="busy || pending" @click="refreshFinance">{{ tr("Обновить финансовые данные", "Қаржылық деректерді жаңарту") }}</button>
+            </div>
+            <p v-if="refundUncertain" class="lms-note" role="status">
+              {{ tr("Ответ на предыдущий запрос не подтверждён. Сумма и основание сохранены. Повторите тот же запрос, чтобы уточнить результат без создания второго возврата.", "Алдыңғы сұраудың жауабы расталмады. Сома мен негіздеме сақталды. Екінші қайтаруды жасамай нәтижені нақтылау үшін сол сұрауды қайталаңыз.") }}
+            </p>
+          </div>
           <label class="block space-y-2"
             ><span>{{
               tr(
@@ -357,6 +459,7 @@ useHead(() => ({
             }}</span
             ><textarea
               v-model="reason"
+              :disabled="(busy || refundUncertain) && action === 'refund'"
               required
               minlength="10"
               maxlength="2000"
@@ -366,8 +469,8 @@ useHead(() => ({
           <p v-if="action === 'refund'" class="lms-note">
             {{
               tr(
-                "Возврат меняет финансовую запись. Академическая история не удаляется. Фактическое возвращение денег сверяется отдельно.",
-                "Қайтару қаржылық жазбаны өзгертеді. Академиялық тарих жойылмайды. Ақшаның нақты қайтарылуы бөлек салыстырылады.",
+                "Только тестовый режим: реальные деньги не возвращаются. Академическая история и ранее оформленные документы сохраняются; условия дальнейшего доступа рассматриваются отдельно.",
+                "Тек тестілік режим: нақты ақша қайтарылмайды. Академиялық тарих пен бұрын рәсімделген құжаттар сақталады; кейінгі қолжетімділік шарттары бөлек қаралады.",
               )
             }}
           </p>
@@ -382,6 +485,7 @@ useHead(() => ({
           <label class="flex items-start gap-3"
             ><input
               v-model="confirmed"
+              :disabled="(busy || refundUncertain) && action === 'refund'"
               required
               type="checkbox"
               class="mt-1"
@@ -393,11 +497,12 @@ useHead(() => ({
             }}</span></label
           >
           <div class="flex flex-wrap gap-3">
-            <button class="lms-button" :disabled="busy || !confirmed">
-              {{ actionTitle }}</button
+            <button class="lms-button" :disabled="busy || !confirmed || (action === 'refund' && !refundUncertain && (!refundAllowed || !refundAmountValid))">
+              {{ action === 'refund' && refundUncertain ? tr("Повторить тот же запрос", "Сол сұрауды қайталау") : actionTitle }}</button
             ><button
               type="button"
               class="lms-button secondary"
+              :disabled="(busy || refundUncertain) && action === 'refund'"
               @click="action = ''"
             >
               {{ tr("Отмена", "Болдырмау") }}
@@ -503,6 +608,9 @@ useHead(() => ({
         </section>
         <section v-if="can('finance')" class="lms-card space-y-4">
           <h2 class="text-xl font-bold">{{ tr("Заказы", "Тапсырыстар") }}</h2>
+          <p class="lms-note">
+            {{ tr("Возврат через эту форму доступен только для разрешённых тестовых платежей. Реальные деньги и поступления по банковским счетам она не возвращает.", "Бұл нысан арқылы қайтару тек рұқсат етілген тестілік төлемдер үшін қолжетімді. Нысан нақты ақша мен банк шотына түскен қаражатты қайтармайды.") }}
+          </p>
           <p v-if="!data?.orders?.length" class="text-sm text-slate-600">
             {{ tr("Заказов пока нет.", "Тапсырыстар әзірге жоқ.") }}
           </p>
@@ -515,12 +623,14 @@ useHead(() => ({
               {{ money(o.amountMinor ?? o.amount_minor, o.currency) }}
             </p>
             <p class="text-sm">{{ statusLabel(o.status) }} · {{ o.id }}</p>
+            <LmsOrderAmounts class="mt-3" :order="o" />
             <button
-              v-if="o.status === 'succeeded'"
+              v-if="o.refundAllowed === true && o.refundMode === 'sandbox'"
               class="lms-button secondary mt-3"
+              :disabled="busy || refundUncertain || refundNeedsRefresh"
               @click="choose('refund', o.id)"
             >
-              {{ tr("Возврат с основанием", "Негіздемемен қайтару") }}
+              {{ tr("Тестовый возврат с основанием", "Негіздемемен тестілік қайтару") }}
             </button>
           </article>
         </section>

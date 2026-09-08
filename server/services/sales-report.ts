@@ -35,7 +35,7 @@ async function linkTruth(leadIds:string[],asOf:string,tx:Db):Promise<Truth[]>{
         THEN 1 ELSE 0 END valid,
       CASE WHEN u.emailVerified=1 AND e.status IN ('active','learning_complete','assessment_eligible','completed') AND (e.access_until IS NULL OR e.access_until>?)
         AND (e.organization_id IS NULL OR EXISTS(SELECT 1 FROM memberships m JOIN organizations org ON org.id=m.organization_id WHERE m.organization_id=e.organization_id AND m.user_id=e.user_id AND m.status='active' AND org.status='active'))
-        AND CASE WHEN json_valid(v.data_json) THEN json_extract(v.data_json,'$.accessModel') IN ('free','manual') OR (json_extract(v.data_json,'$.accessModel')='paid' AND EXISTS(SELECT 1 FROM orders paid WHERE paid.enrollment_id=e.id AND paid.user_id=e.user_id AND paid.version_id=e.version_id AND paid.organization_id IS e.organization_id AND paid.status='succeeded')) ELSE 0 END
+        AND CASE WHEN json_valid(v.data_json) THEN json_extract(v.data_json,'$.accessModel') IN ('free','manual') OR (json_extract(v.data_json,'$.accessModel')='paid' AND EXISTS(SELECT 1 FROM orders paid WHERE paid.enrollment_id=e.id AND paid.user_id=e.user_id AND paid.version_id=e.version_id AND paid.organization_id IS e.organization_id AND paid.status IN ('succeeded','partially_refunded'))) ELSE 0 END
         THEN 1 ELSE 0 END access,
       CASE WHEN EXISTS(SELECT 1 FROM lesson_progress lp WHERE lp.enrollment_id=e.id AND lp.completed=1)
         OR EXISTS(SELECT 1 FROM attempts a WHERE a.enrollment_id=e.id AND a.status!='voided') THEN 1 ELSE 0 END started,

@@ -68,7 +68,7 @@ async function eligibleSeats(organizationId: string, userIds: string[], versionI
   const enrollments = await queryAll(`SELECT id,user_id,status,access_until FROM enrollments WHERE organization_id=? AND version_id=? AND user_id IN (${placeholders(userIds.length)}) AND status NOT IN ('cancelled','expired')`, [organizationId, versionId, ...userIds], tx);
   if (enrollments.some(row => row.status !== 'pending_access' || (row.access_until && row.access_until <= nowIso()))) fail(409, 'EMPLOYEE_ALREADY_ASSIGNED');
   if (new Set(enrollments.map(row => row.user_id)).size !== enrollments.length) fail(409, 'DUPLICATE_PENDING_ASSIGNMENTS');
-  const paid = await queryOne(`SELECT id FROM orders WHERE organization_id=? AND version_id=? AND status='succeeded' AND user_id IN (${placeholders(userIds.length)}) LIMIT 1`, [organizationId, versionId, ...userIds], tx);
+  const paid = await queryOne(`SELECT id FROM orders WHERE organization_id=? AND version_id=? AND status IN ('succeeded','partially_refunded') AND user_id IN (${placeholders(userIds.length)}) LIMIT 1`, [organizationId, versionId, ...userIds], tx);
   if (paid) fail(409, 'EMPLOYEE_ALREADY_PAID');
   return { members, enrollments };
 }

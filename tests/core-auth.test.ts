@@ -11,6 +11,7 @@ import { closeDb, execute, getDb, queryAll, queryOne } from '../server/db';
 import { authEmailLocale, resetAuthInstance } from '../server/services/auth';
 import authHandler from '../server/api/auth/[...all]';
 import coreHandler from '../server/handlers/core';
+import businessHandler from '../server/handlers/business';
 
 let directory: string; let server: Server; let origin: string;
 const password = 'Isolated-test-password-2026!';
@@ -38,7 +39,7 @@ before(async () => {
   directory = await mkdtemp(join(tmpdir(), 'ot-auth-test-'));
   process.env.OT_DATABASE_PATH = join(directory, 'test.sqlite'); process.env.NODE_ENV = 'test'; delete process.env.VERCEL; delete process.env.TURSO_DATABASE_URL;
   process.env.BETTER_AUTH_SECRET = 'Isolated-test-secret-at-least-thirty-two-characters';
-  const app = createApp(); app.use(defineEventHandler((event) => event.path.startsWith('/api/auth/') ? authHandler(event) : coreHandler(event)));
+  const app = createApp(); app.use(defineEventHandler((event) => event.path.startsWith('/api/auth/') ? authHandler(event) : event.path.startsWith('/api/v1/admin/orders/') ? businessHandler(event) : coreHandler(event)));
   server = createServer(toNodeListener(app)); await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   origin = `http://127.0.0.1:${(server.address() as any).port}`; process.env.BETTER_AUTH_URL = origin;
   await getDb();
@@ -100,6 +101,35 @@ test('T069 authentication limiter persists and ignores spoofed forwarding header
   const statuses = [];
   for (let index = 0; index < 6; index++) statuses.push((await request('/api/auth/sign-in/email', 'POST', { email: 'missing@example.test', password }, new Map(), { 'x-forwarded-for': `203.0.113.${index + 1}` })).status);
   assert.equal(statuses.at(-1), 429, statuses.join(',')); assert.ok((await queryAll('SELECT id FROM rateLimit')).length > 0);
+});
+
+test('refund API requires current finance role and real session MFA before strict amount/currency/key validation', async () => {
+  const actor = await account('refund-finance-test'), path = '/api/v1/admin/orders/isolated-missing-order/refund';
+  const body = { reason: 'ISOLATED refund authorization', amountMinor: 100, currency: 'KZT' };
+  let result = await request(path, 'POST', body, actor.jar); assert.equal(result.status, 403); assert.equal(result.data.data.code, 'FORBIDDEN');
+  await execute('UPDATE "user" SET role=? WHERE id=?', ['finance', actor.id]);
+  result = await request(path, 'POST', body, actor.jar); assert.equal(result.status, 403); assert.equal(result.data.data.code, 'MFA_REQUIRED');
+  const setup = await request('/api/auth/two-factor/enable', 'POST', { password, method: 'totp' }, actor.jar); assert.equal(setup.status, 200);
+  const secret = new TextDecoder().decode(base32.decode(new URL(setup.data.totpURI).searchParams.get('secret')!));
+  assert.equal((await request('/api/auth/two-factor/verify-totp', 'POST', { code: await createOTP(secret).totp() }, actor.jar)).status, 200);
+  const previous = { provider: process.env.OT_PAYMENT_PROVIDER, environment: process.env.OT_APP_ENV };
+  try {
+    process.env.OT_PAYMENT_PROVIDER = 'sandbox'; process.env.OT_APP_ENV = 'test';
+    for (const invalid of [{ reason: body.reason, amountMinor: body.amountMinor }, { ...body, currency: 'USD' }, { ...body, amountMinor: 1.5 }, { ...body, status: 'confirmed' }, { ...body, actorId: 'forged-finance' }]) {
+      result = await request(path, 'POST', invalid, actor.jar, { 'idempotency-key': 'isolated-refund-key' }); assert.equal(result.status, 400); assert.equal(result.data.data.code, 'VALIDATION_ERROR');
+    }
+    result = await request(path, 'POST', body, actor.jar); assert.equal(result.status, 400); assert.equal(result.data.data.code, 'IDEMPOTENCY_KEY_REQUIRED');
+    process.env.OT_PAYMENT_PROVIDER = 'disabled';
+    result = await request(path, 'POST', body, actor.jar, { 'idempotency-key': 'isolated-refund-key' }); assert.equal(result.status, 503); assert.equal(result.data.data.code, 'REFUND_PROVIDER_NOT_CONFIGURED');
+    await execute('UPDATE session SET mfaVerifiedAt=1 WHERE userId=?', [actor.id]);
+    result = await request(path, 'POST', body, actor.jar, { 'idempotency-key': 'isolated-refund-key' }); assert.equal(result.status, 403); assert.equal(result.data.data.code, 'MFA_REQUIRED');
+    await execute('UPDATE "user" SET role=? WHERE id=?', ['learner', actor.id]);
+    result = await request(path, 'POST', body, actor.jar); assert.equal(result.status, 403); assert.equal(result.data.data.code, 'FORBIDDEN');
+    assert.equal((await queryOne('SELECT COUNT(*) n FROM refunds'))!.n, 0);
+  } finally {
+    if (previous.provider === undefined) delete process.env.OT_PAYMENT_PROVIDER; else process.env.OT_PAYMENT_PROVIDER = previous.provider;
+    if (previous.environment === undefined) delete process.env.OT_APP_ENV; else process.env.OT_APP_ENV = previous.environment;
+  }
 });
 
 test('Kazakh verification/reset emails preserve trusted localized callbacks in the transactional outbox', async () => {

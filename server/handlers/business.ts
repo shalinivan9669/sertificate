@@ -1,6 +1,6 @@
 import { defineEventHandler, getCookie, getHeader, getMethod, getRequestIP, getRequestURL, readBody, readRawBody, setHeader, setResponseStatus } from 'h3';
 import { requireUser, assertRole } from '../utils/auth';
-import { businessFail as fail, limit } from '../utils/business';
+import { businessFail as fail, limit, parse } from '../utils/business';
 import { queryAll, queryOne } from '../db';
 import * as commerce from '../services/commerce';
 import * as organizations from '../services/organizations';
@@ -106,7 +106,7 @@ export default defineEventHandler(async event => {
     if (path === 'admin/organizations' && method === 'POST') { requireStaff(['admin']); return organizations.createOrganization(user.id, await readBody(event)); }
     if (segment(1) === 'outbox' && segment(3) === 'retry' && parts.length === 4 && method === 'POST') { requireStaff(['admin']); return operations.retryJob(user.id, segment(2), (await readBody(event))?.reason || ''); }
     if (path === 'admin/operations/tick' && method === 'POST') { requireStaff(['admin']); return operations.runOperationalTick({ allowExternal: true }); }
-    if (segment(1) === 'orders' && segment(3) === 'refund' && parts.length === 4 && method === 'POST') { requireStaff(['finance']); return commerce.refundOrder(segment(2), user.id, (await readBody(event))?.reason || ''); }
+    if (segment(1) === 'orders' && segment(3) === 'refund' && parts.length === 4 && method === 'POST') { requireStaff(['finance']); const body = parse(commerce.refundInputSchema, await readBody(event)); return commerce.refundOrder(segment(2), user.id, body.reason, { amountMinor: body.amountMinor, currency: body.currency, idempotencyKey: key }); }
     if (path === 'admin/credential-templates' && method === 'GET') { requireStaff(['issuer', 'reviewer']); return { templates: await queryAll('SELECT id,name,program_id AS programId,status,created_by AS createdBy FROM credential_templates ORDER BY created_at DESC LIMIT 100') }; }
     if (path === 'admin/credential-templates' && method === 'POST') { requireStaff(['issuer']); return credentials.createCredentialTemplate(user.id, await readBody(event)); }
     if (segment(1) === 'credential-templates' && segment(3) === 'preview' && parts.length === 4 && method === 'GET') {

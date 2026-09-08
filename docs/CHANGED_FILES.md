@@ -2,7 +2,7 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 305
+Всего файлов: 309
 
 - `.env.example`
 - `.gitattributes`
@@ -23,6 +23,7 @@
 - `components/lms/LmsLeadWorkspace.vue`
 - `components/lms/LmsLearningReminders.vue`
 - `components/lms/LmsNotifications.vue`
+- `components/lms/LmsOrderAmounts.vue`
 - `components/lms/LmsPreferences.vue`
 - `components/lms/LmsProgramEditor.vue`
 - `components/lms/LmsSalesFunnel.vue`
@@ -95,6 +96,7 @@
 - `docs/LMS_NAV_LAYOUT_LAB.md`
 - `docs/OBSERVABILITY.md`
 - `docs/ORGANIZATION_REPORT_AND_REMINDERS.md`
+- `docs/PARTIAL_REFUNDS.md`
 - `docs/PDF-CONTENT-AUDIT.md`
 - `docs/PERFORMANCE_LOCAL_LAB_2026-09-07.md`
 - `docs/PREVIEW-NOINDEX-QA.md`
@@ -206,6 +208,7 @@
 - `server/db/migrations/010-observability.sql`
 - `server/db/migrations/011-lead-attribution.sql`
 - `server/db/migrations/012-sales-links.sql`
+- `server/db/migrations/013-partial-refunds.sql`
 - `server/db/required-migrations.ts`
 - `server/handlers/business.ts`
 - `server/handlers/core.ts`
@@ -283,6 +286,7 @@
 - `tests/lms-admin-browser.mjs`
 - `tests/lms-auth-browser.mjs`
 - `tests/lms-browser.mjs`
+- `tests/lms-money-input.test.ts`
 - `tests/migration-upgrade-fixture.ts`
 - `tests/migration-upgrade.test.ts`
 - `tests/notifications.test.ts`

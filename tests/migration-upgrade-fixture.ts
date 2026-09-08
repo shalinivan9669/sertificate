@@ -24,7 +24,7 @@ async function verifyUpgrade(baseline: number, directory: string) {
   const currentDirectory = resolve('server/db/migrations');
   const names = (await readdir(currentDirectory)).filter(name=>/^\d+[-_].*\.sql$/.test(name)).sort();
   const historical = names.filter(name=>Number(name.slice(0,3))<=baseline);
-  assert.equal(historical.length,baseline); assert.equal(names.length,12,'This explicitly bounded regression targets schema 012');
+  assert.equal(historical.length,baseline); assert.equal(names.length,13,'This explicitly bounded regression targets schema 013');
   for (const name of historical) await copyFile(join(currentDirectory,name),join(historicalDirectory,name));
   const db = createClient({url:'file:'+join(directory,'upgrade.sqlite').replaceAll('\\','/'),concurrency:1,intMode:'number'});
   const exec = (sql: string,args: any[] = [])=>db.execute({sql,args});
@@ -48,6 +48,14 @@ async function verifyUpgrade(baseline: number, directory: string) {
     await exec('INSERT INTO notifications(id,user_id,purpose,template,payload_json,status,dedupe_key,created_at) VALUES(?,?,?,?,?,?,?,?)',['upgrade-notice','upgrade-learner','service','TEST_TEMPLATE','{"private":"PRIVATE_NOTICE_CANARY"}','read','upgrade-notice-key',stamp]);
     await exec('INSERT INTO corporate_invoices(id,number,organization_id,version_id,status,amount_minor,currency,snapshot_json,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)',['upgrade-invoice','TEST-INVOICE','upgrade-org','upgrade-version','preparing',101,'KZT','{"private":"PRIVATE_INVOICE_CANARY"}','upgrade-reviewer',stamp]);
     await exec('INSERT INTO corporate_invoice_lines(id,invoice_id,user_id,amount_minor,snapshot_json,allocated_amount_minor) VALUES(?,?,?,?,?,?)',['upgrade-line','upgrade-invoice','upgrade-learner',101,'{"test":true}',0]);
+    // The old schema allowed zero and negative refund amounts. Preserve those exact
+    // historical facts for review instead of normalizing them into invented receipts.
+    for (const [index, amount] of [125000, 0, -1].entries()) {
+      const order = `upgrade-refund-order-${index}`, payment = `upgrade-refund-payment-${index}`;
+      await exec('INSERT INTO orders(id,user_id,version_id,status,amount_minor,currency,snapshot_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)', [order,'upgrade-learner','upgrade-version','refunded',125000,'KZT','{"synthetic":"old financial fact"}',stamp,stamp]);
+      await exec('INSERT INTO payments(id,order_id,provider,status,amount_minor,currency,merchant,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)', [payment,order,'sandbox','refunded',125000,'KZT','TEST ONLY',stamp,stamp]);
+      await exec('INSERT INTO refunds(id,order_id,status,amount_minor,reason,actor_id,created_at) VALUES(?,?,?,?,?,?,?)', [`upgrade-refund-${index}`,order,'confirmed',amount,'TEST legacy financial fact','upgrade-reviewer',stamp]);
+    }
     for (const [index,status] of ['accepted','note_pending','delivered'].entries()) {
       await exec('INSERT INTO lead_submissions(id,payload_json,request_hash,idempotency_key,status,crm_lead_id,crm_note_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)',
         [`upgrade-lead-${index}`,JSON.stringify({name:'PRIVATE MIGRATION LEAD',email:'migration-lead@example.test',organizationName:index?'TEST historical organization':''}),`TEST-HASH-${index}`,`TEST-KEY-${index}`,status,index?100+index:null,status==='delivered'?201:null,stamp,stamp]);
@@ -66,14 +74,16 @@ async function verifyUpgrade(baseline: number, directory: string) {
     const after = await snapshot(db,oldTables);
     const exported = JSON.parse(await readFile(snapshotPath,'utf8'));
     for (const name of oldTables.filter(name=>name!=='schema_migrations')) {
-      const expected = baseline < 10 && ['audit_events','outbox'].includes(name) ? exported[name].map((row: Record<string, unknown>) => ({ ...row, request_id: null, correlation_id: null, origin_request_id: null, source_job_id: null })) : exported[name];
+      let expected = baseline < 10 && ['audit_events','outbox'].includes(name) ? exported[name].map((row: Record<string, unknown>) => ({ ...row, request_id: null, correlation_id: null, origin_request_id: null, source_job_id: null })) : exported[name];
+      if (name === 'refunds') expected = expected.map((row: Record<string, unknown>) => ({ ...row, payment_id: null, currency: 'KZT', refunded_total_minor: null }));
       assert.deepEqual(after[name],expected,`${name}: every old value unchanged; new context columns intentionally NULL`);
     }
     assert.deepEqual(after.schema_migrations!.slice(0,baseline),exported.schema_migrations);
     assert.deepEqual(after.schema_migrations!.slice(baseline).map((row:any)=>row.name),names.slice(baseline));
-    assert.equal(after.schema_migrations!.length,12);
+    assert.equal(after.schema_migrations!.length,13);
     const newTables = (await tableNames(db)).filter(name=>!oldTables.includes(name));
-    const expectedAdditions = ['lead_attributions','lead_qualifications','public_journey_steps','public_journeys','sales_links','sales_proposals'];
+    const expectedAdditions = baseline < 12 ? ['lead_qualifications','sales_links','sales_proposals'] : [];
+    if (baseline < 11) expectedAdditions.push('lead_attributions','public_journey_steps','public_journeys');
     if (baseline < 10) expectedAdditions.push('credential_batch_items','credential_batches','learning_reminder_deliveries','learning_reminder_preferences','learning_reminders','operational_counters','operational_incidents','program_intake_controls','support_notes');
     assert.deepEqual(newTables,expectedAdditions.sort());
     for (const name of newTables) assert.equal(Number((await exec(`SELECT COUNT(*) n FROM ${identifier(name)}`)).rows[0]!.n),0,`${name}: migration invents no attribution, qualification, proposal, link or operational fact`);
@@ -82,8 +92,12 @@ async function verifyUpgrade(baseline: number, directory: string) {
     assert.deepEqual((await exec('PRAGMA integrity_check')).rows.map(row=>row.integrity_check),['ok']);
     for (const schema of protectedSchema) {
       const actual=(await exec('SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name=?',[schema.name])).rows[0];
+      if (schema.name === 'refunds_one_confirmed') { assert.equal(actual,undefined,'only the one-refund restriction is replaced by the cumulative ledger'); continue; }
       assert.deepEqual(actual,schema,`historical ${schema.type} ${schema.name} unchanged`);
     }
+    assert.equal(Number((await exec("SELECT COUNT(*) n FROM sqlite_master WHERE type='index' AND name='refunds_confirmed_order'")).rows[0]!.n),1);
+    await assert.rejects(exec("UPDATE refunds SET amount_minor=1 WHERE id='upgrade-refund-0'"),/immutable/i);
+    await assert.rejects(exec("DELETE FROM refunds WHERE id='upgrade-refund-1'"),/immutable/i);
     await assert.rejects(exec('UPDATE program_versions SET data_json=? WHERE id=?',['{}','upgrade-version']),/immutable/i);
     await assert.rejects(exec('DELETE FROM program_versions WHERE id=?',['upgrade-version']),/immutable/i);
     await assert.rejects(exec('UPDATE attempts SET result_json=? WHERE id=?',['{"pass":false}','upgrade-attempt']),/immutable/i);
@@ -100,9 +114,9 @@ const [baselineText, directoryText] = process.argv.slice(2);
 assert.equal(process.env.NODE_ENV, 'test');
 assert.equal(process.env.OT_ALLOW_MIGRATION_FIXTURE, '1', 'Explicit isolated migration fixture only');
 assert.ok(!process.env.VERCEL && !process.env.TURSO_DATABASE_URL && !process.env.TURSO_AUTH_TOKEN);
-assert.ok(baselineText === '5' || baselineText === '10');
+assert.ok(baselineText === '5' || baselineText === '10' || baselineText === '12');
 assert.ok(directoryText);
 const directory = resolve(directoryText);
 assert.ok(directory.startsWith(`${resolve(tmpdir())}${sep}`) && basename(directory).startsWith('ot-migration-upgrade-'));
 await verifyUpgrade(Number(baselineText), directory);
-process.stdout.write(JSON.stringify({ baseline: Number(baselineText), target: 12, assertions: 'passed' }) + '\n');
+process.stdout.write(JSON.stringify({ baseline: Number(baselineText), target: 13, assertions: 'passed' }) + '\n');

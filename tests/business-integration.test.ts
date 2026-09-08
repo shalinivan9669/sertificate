@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { createHmac, randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 import { PDFDocument, PDFName, PDFString, StandardFonts } from 'pdf-lib';
 import nodemailer from 'nodemailer';
+import { createClient } from '@libsql/client';
+import { decryptBackup, encryptBackup, exportDatabase, restoreDatabase } from '../scripts/db-backup';
 import { closeDb, enqueue, execute, getDb, queryAll, queryOne, withTransaction } from '../server/db';
 import { createVersion, publishVersion, reviewVersion, type ProgramData } from '../server/services/catalog';
 import { createEnrollment, completeLesson } from '../server/services/learning';
@@ -153,6 +155,170 @@ test('sandbox is blocked in production even when an application environment flag
   finally { process.env.NODE_ENV = beforeNode; process.env.OT_APP_ENV = beforeApp; delete process.env.VERCEL_ENV; }
 });
 
+test('partial refunds accumulate exactly, replay stable receipts, ignore late events and retain all academic evidence', async () => {
+  const { order, event } = await paidOrder(), raw = JSON.stringify(event);
+  await processPaymentWebhook(raw, signature(raw));
+  const paid = await getOrder(order.id, learner.id);
+  await completeLesson(learner, paid.enrollmentId, 'test-lesson', 0);
+  let attempt = await startAttempt(learner, paid.enrollmentId, randomUUID());
+  attempt = await saveAnswer(learner, attempt.id, 'test-question', ['right'], attempt.revision);
+  await submitAttempt(learner, attempt.id);
+  await approvedTestTemplate();
+  const issued = await issueCredential(admin.id, paid.enrollmentId, 'ISOLATED partial refund academic evidence');
+  await renderCredential(issued.credential.id);
+  const academic = async () => Promise.all([
+    queryAll('SELECT * FROM enrollments WHERE id=?', [paid.enrollmentId]),
+    queryAll('SELECT * FROM lesson_progress WHERE enrollment_id=?', [paid.enrollmentId]),
+    queryAll('SELECT * FROM attempts WHERE enrollment_id=?', [paid.enrollmentId]),
+    queryAll('SELECT * FROM credentials WHERE enrollment_id=?', [paid.enrollmentId]),
+  ]);
+  const before = await academic(), reason = 'ISOLATED confirmed partial refund';
+  const options = { amountMinor: 40000, currency: 'KZT' as const, idempotencyKey: randomUUID() };
+  const [first, concurrentReplay] = await Promise.all([refundOrder(order.id, admin.id, reason, options), refundOrder(order.id, admin.id, reason, options)]);
+  assert.deepEqual(concurrentReplay, first);
+  assert.deepEqual([first.amountMinor, first.paidMinor, first.refundedMinor, first.refundableMinor, first.orderStatus], [40000, 125000, 40000, 85000, 'partially_refunded']);
+  const middle = await refundOrder(order.id, admin.id, reason, { amountMinor: 35000, currency: 'KZT', idempotencyKey: randomUUID() });
+  assert.deepEqual([middle.refundedMinor, middle.refundableMinor, middle.orderStatus], [75000, 50000, 'partially_refunded']);
+  assert.deepEqual(await refundOrder(order.id, admin.id, reason, options), first, 'receipt totals describe the original operation even after another refund');
+  await rejectsCode(refundOrder(order.id, admin.id, reason, { ...options, amountMinor: 40001 }), 'IDEMPOTENCY_CONFLICT');
+  await rejectsCode(refundOrder(order.id, reviewer.id, reason, options), 'IDEMPOTENCY_CONFLICT');
+  await rejectsCode(refundOrder(order.id, admin.id, reason + ' changed', options), 'IDEMPOTENCY_CONFLICT');
+  await rejectsCode(refundOrder(order.id, admin.id, reason, { amountMinor: 50001, currency: 'KZT', idempotencyKey: randomUUID() }), 'REFUND_AMOUNT_EXCEEDS_REMAINING');
+  for (const status of ['succeeded', 'pending', 'failed', 'cancelled']) {
+    const late = JSON.stringify({ ...event, eventId: randomUUID(), status });
+    assert.equal((await processPaymentWebhook(late, signature(late))).ignored, true);
+  }
+  const partial = await getOrder(order.id, learner.id), staff = (await operationsOverview(admin)).orders.find(row => row.id === order.id)!;
+  assert.deepEqual([partial.status, partial.paidMinor, partial.refundedMinor, partial.refundableMinor, partial.refundAllowed], ['partially_refunded', 125000, 75000, 50000, true]);
+  assert.deepEqual([staff.refundedMinor, staff.refundableMinor, staff.refundMode, staff.refundAllowed], [75000, 50000, 'sandbox', true]);
+  await rejectsCode(checkout(order.id, learner.id), 'ORDER_NOT_PAYABLE');
+  await rejectsCode(getOrder(order.id, outsider.id), 'ORDER_NOT_FOUND');
+  const last = await refundOrder(order.id, admin.id, 'ISOLATED full remaining refund');
+  assert.deepEqual([last.amountMinor, last.refundedMinor, last.refundableMinor, last.orderStatus], [50000, 125000, 0, 'refunded']);
+  assert.deepEqual(await refundOrder(order.id, admin.id, 'ISOLATED full remaining refund'), last);
+  assert.deepEqual(await refundOrder(order.id, admin.id, reason, options), first);
+  await rejectsCode(refundOrder(order.id, admin.id, reason, { amountMinor: 1, currency: 'KZT', idempotencyKey: randomUUID() }), 'ORDER_NOT_REFUNDABLE');
+  assert.equal((await getOrder(order.id, learner.id)).refundAllowed, false);
+  assert.equal((await queryOne('SELECT status FROM payments WHERE id=?', [event.paymentId]))!.status, 'refunded');
+  assert.deepEqual(await academic(), before, 'enrollment, progress, terminal result, credential snapshot and PDF bytes remain identical');
+  assert.equal((await queryOne("SELECT COUNT(*) n,SUM(amount_minor) total FROM refunds WHERE order_id=? AND status='confirmed'", [order.id]))!.total, 125000);
+  assert.equal((await queryOne("SELECT COUNT(*) n FROM refunds WHERE order_id=? AND status='confirmed'", [order.id]))!.n, 3);
+  assert.equal((await queryOne("SELECT COUNT(*) n FROM audit_events WHERE action='refund_confirmed' AND target=?", [order.id]))!.n, 3);
+  assert.equal((await queryOne("SELECT COUNT(*) n FROM outbox WHERE type='notification.enrollment' AND aggregate_id=?", [paid.enrollmentId]))!.n, 1);
+});
+
+test('distinct concurrent refund keys cannot over-refund and failed transactions leave no ledger, key or audit writes', async () => {
+  const { order, event } = await paidOrder(), raw = JSON.stringify(event), reason = 'ISOLATED concurrent refund';
+  await processPaymentWebhook(raw, signature(raw));
+  const requests = [randomUUID(), randomUUID()].map(idempotencyKey => refundOrder(order.id, admin.id, reason, { amountMinor: 70000, currency: 'KZT', idempotencyKey }));
+  const results = await Promise.allSettled(requests);
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  const rejected = results.find(result => result.status === 'rejected') as PromiseRejectedResult;
+  assert.equal(rejected.reason.data.code, 'REFUND_AMOUNT_EXCEEDS_REMAINING');
+  const before = await queryAll('SELECT * FROM refunds WHERE order_id=?', [order.id]);
+  const options = { amountMinor: 10000, currency: 'KZT' as const, idempotencyKey: randomUUID() };
+  await execute("CREATE TRIGGER isolated_refund_audit_failure BEFORE INSERT ON audit_events WHEN NEW.action='refund_confirmed' BEGIN SELECT RAISE(ABORT,'ISOLATED REFUND ATOMIC FAILURE'); END");
+  try { await assert.rejects(refundOrder(order.id, admin.id, reason, options), /ISOLATED REFUND ATOMIC FAILURE/); }
+  finally { await execute('DROP TRIGGER isolated_refund_audit_failure'); }
+  assert.deepEqual(await queryAll('SELECT * FROM refunds WHERE order_id=?', [order.id]), before);
+  assert.equal((await getOrder(order.id, learner.id)).refundedMinor, 70000);
+  assert.equal(await queryOne('SELECT resource_id FROM idempotency_keys WHERE scope=? AND key=?', [`refund:${order.id}`, options.idempotencyKey]), undefined);
+  assert.equal((await queryOne("SELECT COUNT(*) n FROM audit_events WHERE action='refund_confirmed' AND target=?", [order.id]))!.n, 1);
+  const retry = await refundOrder(order.id, admin.id, reason, options);
+  assert.equal(retry.refundedMinor, 80000);
+  assert.deepEqual(await refundOrder(order.id, admin.id, reason, options), retry);
+});
+
+test('refund input, provider and production guards reject new invalid confirmations without financial writes', async () => {
+  const { order, event } = await paidOrder(), raw = JSON.stringify(event), reason = 'ISOLATED guarded refund';
+  await processPaymentWebhook(raw, signature(raw));
+  for (const amountMinor of [0, -1, 0.5, Number.MAX_SAFE_INTEGER + 1, NaN]) await rejectsCode(refundOrder(order.id, admin.id, reason, { amountMinor, currency: 'KZT', idempotencyKey: randomUUID() }), 'VALIDATION_ERROR');
+  await rejectsCode(refundOrder(order.id, admin.id, reason, { amountMinor: 1, currency: 'KZT' }), 'IDEMPOTENCY_KEY_REQUIRED');
+  await rejectsCode(refundOrder(order.id, admin.id, reason, { amountMinor: 1, idempotencyKey: randomUUID() }), 'VALIDATION_ERROR');
+  await rejectsCode(refundOrder(order.id, admin.id, reason, { amountMinor: 1, currency: 'USD' as any, idempotencyKey: randomUUID() }), 'VALIDATION_ERROR');
+  try {
+    process.env.OT_PAYMENT_PROVIDER = 'disabled';
+    await rejectsCode(refundOrder(order.id, admin.id, reason), 'REFUND_PROVIDER_NOT_CONFIGURED');
+    const disabled = await getOrder(order.id, learner.id); assert.equal(disabled.refundAllowed, false); assert.equal(disabled.refundMode, 'disabled');
+    process.env.OT_PAYMENT_PROVIDER = 'sandbox'; process.env.VERCEL_ENV = 'production';
+    await rejectsCode(refundOrder(order.id, admin.id, reason), 'SANDBOX_FORBIDDEN_IN_PRODUCTION');
+  } finally { process.env.OT_PAYMENT_PROVIDER = 'sandbox'; delete process.env.VERCEL_ENV; }
+  await execute('UPDATE payments SET currency=? WHERE id=?', ['USD', event.paymentId]);
+  await rejectsCode(refundOrder(order.id, admin.id, reason), 'REFUND_PAYMENT_MISMATCH');
+  await execute('UPDATE payments SET currency=?,provider=? WHERE id=?', ['KZT', 'manual_invoice', event.paymentId]);
+  await rejectsCode(refundOrder(order.id, admin.id, reason), 'REFUND_PROVIDER_MISMATCH');
+  assert.equal((await getOrder(order.id, learner.id)).refundAllowed, false);
+  assert.equal((await queryOne('SELECT COUNT(*) n FROM refunds WHERE order_id=?', [order.id]))!.n, 0);
+});
+
+test('schema013 rejects obsolete refund writers and preserves confirmed ledger identity and monotonic states', async () => {
+  const { order, event } = await paidOrder(), raw = JSON.stringify(event), reason = 'ISOLATED immutable refund';
+  await processPaymentWebhook(raw, signature(raw));
+  // Exact pre-013 INSERT shape cannot silently create a full-refund receipt on schema013.
+  const legacyInsert = () => execute('INSERT INTO refunds(id,order_id,status,amount_minor,reason,actor_id,created_at) VALUES(?,?,?,?,?,?,?)', [randomUUID(), order.id, 'confirmed', 125000, reason, admin.id, new Date().toISOString()]);
+  await assert.rejects(legacyInsert(), /confirmed refund amount or payment mismatch/);
+  const first = await refundOrder(order.id, admin.id, reason, { amountMinor: 30000, currency: 'KZT', idempotencyKey: randomUUID() });
+  for (const sql of ['UPDATE refunds SET amount_minor=1 WHERE id=?', 'UPDATE refunds SET status=\'pending\' WHERE id=?', 'DELETE FROM refunds WHERE id=?']) await assert.rejects(execute(sql, [first.id]), /immutable/);
+  for (const table of ['payments', 'orders']) {
+    const target = table === 'payments' ? event.paymentId : order.id;
+    await assert.rejects(execute(`UPDATE ${table} SET status='succeeded' WHERE id=?`, [target]), /monotonic/);
+    await assert.rejects(execute(`UPDATE ${table} SET amount_minor=1 WHERE id=?`, [target]), /immutable/);
+  }
+  await assert.rejects(legacyInsert(), /confirmed refund amount or payment mismatch/);
+  await assert.rejects(execute('INSERT INTO refunds(id,order_id,status,amount_minor,reason,actor_id,created_at,payment_id,currency,refunded_total_minor) VALUES(?,?,?,?,?,?,?,?,?,?)', [randomUUID(), order.id, 'confirmed', 100000, reason, admin.id, new Date().toISOString(), event.paymentId, 'KZT', 130000]), /confirmed refund amount or payment mismatch/);
+  assert.equal((await getOrder(order.id, learner.id)).refundedMinor, 30000);
+});
+
+test('schema013 encrypted restore retains every table and resumes an idempotent partial ledger using current services', async (context) => {
+  const { order, event } = await paidOrder(), raw = JSON.stringify(event), reason = 'ISOLATED recovery refund';
+  await processPaymentWebhook(raw, signature(raw));
+  const options = { amountMinor: 30000, currency: 'KZT' as const, idempotencyKey: randomUUID() };
+  const first = await refundOrder(order.id, admin.id, reason, options);
+  const second = await refundOrder(order.id, admin.id, reason, { amountMinor: 20000, currency: 'KZT', idempotencyKey: randomUUID() });
+  const sourcePath = process.env.OT_DATABASE_PATH!, restoredPath = join(directory, 'partial-refund-restored.sqlite'), archivePath = join(directory, 'partial-refund-backup.otb');
+  const password = `ISOLATED-ephemeral-backup-${randomUUID()}`;
+  const backupStarted = performance.now(), before = await exportDatabase(await getDb());
+  await writeFile(archivePath, encryptBackup(before, password), { flag: 'wx', mode: 0o600 });
+  const backupMs = performance.now() - backupStarted, restoreStarted = performance.now();
+  const recovered = createClient({ url: `file:${restoredPath.replaceAll('\\', '/')}`, concurrency: 1, intMode: 'number' });
+  try {
+    await restoreDatabase(recovered, decryptBackup(await readFile(archivePath), password));
+    const after = await exportDatabase(recovered);
+    assert.deepEqual(after.schema, before.schema, 'restore retains all indexes and immutable/monotonic guards');
+    assert.deepEqual(after.tables, before.tables, 'no table or row is excluded from recovery invariants');
+  } finally { recovered.close(); }
+  const restoreMs = performance.now() - restoreStarted, resumeStarted = performance.now();
+  await closeDb(); process.env.OT_DATABASE_PATH = restoredPath;
+  try {
+    assert.deepEqual(await refundOrder(order.id, admin.id, reason, options), first);
+    assert.equal((await getOrder(order.id, learner.id)).refundedMinor, second.refundedMinor);
+    assert.deepEqual((await exportDatabase(await getDb())).tables, before.tables, 'receipt replay and read do not mutate restored facts');
+    await assert.rejects(execute("UPDATE payments SET status='succeeded' WHERE id=?", [event.paymentId]), /monotonic/);
+    await assert.rejects(execute('DELETE FROM refunds WHERE id=?', [first.id]), /immutable/);
+    const remaining = await refundOrder(order.id, admin.id, 'ISOLATED remaining after recovery');
+    assert.equal(remaining.amountMinor, 75000); assert.equal(remaining.orderStatus, 'refunded');
+    assert.deepEqual(await refundOrder(order.id, admin.id, reason, options), first);
+    const final = await exportDatabase(await getDb());
+    for (const table of before.tables) {
+      const after = final.tables.find(row => row.name === table.name)!;
+      assert.deepEqual(after.columns, table.columns);
+      for (const row of table.rows) {
+        const key = row[table.columns.indexOf('id')];
+        const mutableId = table.name === 'orders' ? order.id : table.name === 'payments' ? event.paymentId : null;
+        if (mutableId === key) {
+          const updated = after.rows.find(value => value[table.columns.indexOf('id')] === key)!;
+          assert.ok(updated);
+          for (const [index, column] of table.columns.entries()) if (!['status', 'updated_at'].includes(column)) assert.deepEqual(updated[index], row[index], `${table.name}.${column} preserved`);
+          assert.equal(updated[table.columns.indexOf('status')], 'refunded');
+        } else assert.ok(after.rows.some(value => JSON.stringify(value) === JSON.stringify(row)), `${table.name}: every historical row retained`);
+      }
+      assert.equal(after.rows.length, table.rows.length + (['refunds', 'audit_events'].includes(table.name) ? 1 : 0), `${table.name}: only one new confirmed receipt and one mandatory audit`);
+    }
+    context.diagnostic(JSON.stringify({ scope: 'isolated schema013 source-service recovery; not Vercel artifact rollback or production RTO', tables: before.tables.length, backupMs: Math.round(backupMs), restoreMs: Math.round(restoreMs), currentServiceResumeAndVerificationMs: Math.round(performance.now() - resumeStarted) }));
+  } finally { await closeDb(); process.env.OT_DATABASE_PATH = sourcePath; }
+  assert.deepEqual((await exportDatabase(await getDb())).tables, before.tables, 'source was not rolled back, overwritten or mutated during the isolated recovery');
+});
+
 test('organization invitations bind verified email, cannot escalate manager role, and are single-use', async () => {
   const { organization } = await createOrganization(admin.id, { name: 'ISOLATED TEST ORG' });
   const invitation = await invite(admin.id, organization.id, { email: manager.email, role: 'manager' });
@@ -285,11 +451,22 @@ test('CRM recovers a lost create response using the stable correlation marker', 
   await deliverLead(lead.submissionId!, transport); assert.equal(creates, 1);
 });
 
-test('payment alone and incomplete learning cannot reserve a credential', async () => {
+test('partial refund preserves the contractual path but payment alone cannot replace completed learning and server assessment', async () => {
   const { order, event } = await paidOrder(); const raw = JSON.stringify(event); await processPaymentWebhook(raw, signature(raw));
   const enrollmentId = (await getOrder(order.id, learner.id)).enrollmentId;
+  await refundOrder(order.id, admin.id, 'ISOLATED partial before learning', { amountMinor: 10000, currency: 'KZT', idempotencyKey: randomUUID() });
   await rejectsCode(issueCredential(admin.id, enrollmentId, 'ISOLATED TEST attempted early issue'), 'REQUIRED_LEARNING_INCOMPLETE');
   assert.equal((await queryOne('SELECT COUNT(*) n FROM credentials WHERE enrollment_id=?', [enrollmentId]))!.n, 0);
+  await completeLesson(learner, enrollmentId, 'test-lesson', 0);
+  await rejectsCode(issueCredential(admin.id, enrollmentId, 'ISOLATED TEST before assessment'), 'ASSESSMENT_NOT_PASSED');
+  let attempt = await startAttempt(learner, enrollmentId, randomUUID());
+  attempt = await saveAnswer(learner, attempt.id, 'test-question', ['right'], attempt.revision);
+  await submitAttempt(learner, attempt.id); await approvedTestTemplate();
+  const issued = await issueCredential(admin.id, enrollmentId, 'ISOLATED completed learning after partial refund');
+  await renderCredential(issued.credential.id);
+  const before = await queryOne('SELECT * FROM credentials WHERE id=?', [issued.credential.id]);
+  await refundOrder(order.id, admin.id, 'ISOLATED remaining after completed learning');
+  assert.deepEqual(await queryOne('SELECT * FROM credentials WHERE id=?', [issued.credential.id]), before);
 });
 
 test('PDF template validation rejects active actions hidden in compressed page dictionaries', async () => {

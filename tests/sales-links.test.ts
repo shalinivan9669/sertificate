@@ -122,6 +122,7 @@ test('an actual signed sandbox order grants only its own verified access; pendin
   await rejects(post({...event,amountMinor:1}),'PAYMENT_MISMATCH');assert.equal(stage(await salesReport(admin,from,until()),'b2c','confirmedAccess'),stage(baseline,'b2c','confirmedAccess'));
   await post(event);await post(event);const paid=await salesReport(admin,from,until());assert.equal(stage(paid,'b2c','confirmedAccess'),stage(baseline,'b2c','confirmedAccess')+1);assert.equal(paid.b2c.invalidLinks,baseline.b2c.invalidLinks);
   await execute('UPDATE "user" SET emailVerified=0 WHERE id=?',[learner.id]);assert.ok(stage(await salesReport(admin,from,until()),'b2c','confirmedAccess')<stage(paid,'b2c','confirmedAccess'));await execute('UPDATE "user" SET emailVerified=1 WHERE id=?',[learner.id]);
+  await refundOrder(order.id,admin.id,reason,{amountMinor:20000,currency:'KZT',idempotencyKey:randomUUID()});assert.equal(stage(await salesReport(admin,from,until()),'b2c','confirmedAccess'),stage(paid,'b2c','confirmedAccess'),'partial refund retains the existing access path');
   await refundOrder(order.id,admin.id,reason);assert.equal(stage(await salesReport(admin,from,until()),'b2c','confirmedAccess'),stage(baseline,'b2c','confirmedAccess'));
 });
 

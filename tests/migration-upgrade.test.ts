@@ -7,8 +7,8 @@ import { basename, join, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 
 const run = promisify(execFile);
-for (const baseline of [5, 10]) {
-  test(`populated schema ${baseline} upgrade to 012 preserves every old value without inventing attribution or sales facts`, async () => {
+for (const baseline of [5, 10, 12]) {
+  test(`populated schema ${baseline} upgrade to 013 preserves every old value including legacy refund edge values`, async () => {
     const directory = await mkdtemp(join(tmpdir(), 'ot-migration-upgrade-'));
     const environment: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: 'test', OT_ALLOW_MIGRATION_FIXTURE: '1' };
     for (const key of Object.keys(environment)) if (/^(?:VERCEL|TURSO_|AMO_|SMTP_|MAIL_FROM$)/.test(key)) delete environment[key];
@@ -19,7 +19,7 @@ for (const baseline of [5, 10]) {
         env: environment, windowsHide: true, timeout: 45000, maxBuffer: 1024 * 1024,
       });
       assert.equal(result.stderr, '');
-      assert.deepEqual(JSON.parse(result.stdout), { baseline, target: 12, assertions: 'passed' });
+      assert.deepEqual(JSON.parse(result.stdout), { baseline, target: 13, assertions: 'passed' });
     } finally {
       const target = resolve(directory);
       assert.ok(target.startsWith(`${resolve(tmpdir())}${sep}`) && basename(target).startsWith('ot-migration-upgrade-'));
