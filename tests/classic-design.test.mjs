@@ -1,4 +1,4 @@
 import { test } from 'node:test';
 import { assertClassicSource } from './classic-design-contract.mjs';
 
-test('HomePageClassic and its real index route retain the explicitly protected 413ad4a source', assertClassicSource);
+test('HomePageClassic retains the reviewed classic with owner-approved catalogue changes and the original index route', assertClassicSource);

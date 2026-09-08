@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { additionalSourceDirections } from '~/shared/source-products';
+
 const { api, tr, locale } = useLmsApi();
 const path = useLocalePath();
 const { data, pending, error, refresh } = await useAsyncData(
@@ -10,6 +12,7 @@ onMounted(() => {
 });
 const search = ref("");
 const direction = ref("");
+const newDirectionIds = new Set<string>(additionalSourceDirections.map(item => item.id));
 const programs = computed(() =>
   (data.value?.programs || []).filter(
     (p) =>
@@ -22,7 +25,7 @@ const programs = computed(() =>
       )
         .toLowerCase()
         .includes(search.value.toLowerCase()),
-  ),
+  ).sort((a, b) => Number(newDirectionIds.has(b.directionId)) - Number(newDirectionIds.has(a.directionId))),
 );
 useHead(() => ({
   title: tr(
@@ -87,12 +90,15 @@ useHead(() => ({
           :key="p.id"
           class="lms-card flex flex-col gap-4"
         >
-          <p class="text-sm font-medium text-brand-accent">
-            {{
-              p.availability === "published"
-                ? tr("Открыта запись", "Тіркелу ашық")
-                : tr("Подбор с консультантом", "Кеңесшімен таңдау")
-            }}
+          <p class="flex flex-wrap items-center justify-between gap-2 text-sm font-medium text-brand-accent">
+            <span>{{
+                p.availability === "published"
+                  ? tr("Открыта запись", "Тіркелу ашық")
+                  : tr("Подбор с консультантом", "Кеңесшімен таңдау")
+            }}</span>
+            <span v-if="newDirectionIds.has(p.directionId)" class="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold">
+              {{ tr("Новое", "Жаңа") }}
+            </span>
           </p>
           <h2 class="font-headline text-xl font-bold">
             {{ p.title[locale === "kk" ? "kk" : "ru"] }}
@@ -122,6 +128,9 @@ useHead(() => ({
           </p>
           <p v-if="p.pricing?.basis" class="text-sm text-slate-600">
             {{ p.pricing.basisLabel[locale === "kk" ? "kk" : "ru"] }}
+            <span v-if="p.pricing.taxLabel?.[locale === 'kk' ? 'kk' : 'ru']">
+              · {{ p.pricing.taxLabel[locale === "kk" ? "kk" : "ru"] }}
+            </span>
           </p>
           <div
             v-if="p.versions.length"

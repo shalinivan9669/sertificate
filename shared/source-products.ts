@@ -1,5 +1,6 @@
 /** Source-backed service inventory. Never an approved ProgramVersion or checkout price.
- * Numeric quoted rates stay under ignored .data and are deliberately absent from this public repository file.
+ * Owner-approved public display prices are maintained separately in public-course-pricing.ts.
+ * The original quotation and its private business details remain under ignored .data.
  * Source PDF was read in full; its full text, bank details and stamp are not published.
  */
 export const sourceProductDocument = {
@@ -454,6 +455,20 @@ export const sourceProductGuidance: Record<SourceProduct['id'], ProductGuidance>
 export const additionalSourceDirections = sourceProducts
   .filter(product => product.legacyDirectionId === null)
   .map(product => ({ id: product.slug, alias: null, title: product.title, sourceProductId: product.id }));
+
+export const sourceProductCardSummaries: Record<string, LocalizedText> = {
+  'antiterroristicheskaya-podgotovka': { ru: 'Антитеррористическая подготовка всего персонала организации.', kk: 'Ұйымның барлық қызметкеріне арналған терроризмге қарсы даярлық.' },
+  'soglasitelnaya-komissiya': { ru: 'Работа согласительной комиссии и применение трудового законодательства РК.', kk: 'Келісу комиссиясының жұмысы және ҚР еңбек заңнамасын қолдану.' },
+  'protivodeystvie-korruptsii': { ru: 'Корпоративное обучение по противодействию коррупции и комплаенсу.', kk: 'Сыбайлас жемқорлыққа қарсы іс-қимыл және комплаенс бойынша корпоративтік оқыту.' },
+  'seminar-dekretirovannoy-gruppy-sez': { ru: 'Семинар для декретированной группы населения; состав участников согласуется.', kk: 'Халықтың декреттелген тобына арналған семинар; қатысушылар құрамы келісіледі.' },
+  'rassledovanie-proisshestviy': { ru: 'Расследование происшествий с учётом задач конкретного предприятия.', kk: 'Кәсіпорын міндеттерін ескере отырып, оқиғаларды тергеп-тексеру бойынша даярлық.' },
+  'povedencheskiy-audit-bezopasnosti': { ru: 'Поведенческий аудит в контексте задач безопасности организации.', kk: 'Ұйымның қауіпсіздік міндеттері аясындағы мінез-құлық аудиті.' },
+  'upravlenie-stressom': { ru: 'Управление стрессом и создание здоровой рабочей атмосферы в команде.', kk: 'Стресті басқару және командада салауатты жұмыс ортасын құру.' },
+  'kultura-bezopasnosti': { ru: 'Культура безопасности с учётом производственного контекста предприятия.', kk: 'Кәсіпорынның өндірістік жағдайын ескеретін қауіпсіздік мәдениеті.' },
+  'iso-9001': { ru: 'Подготовка по системе менеджмента качества ISO 9001.', kk: 'ISO 9001 сапа менеджменті жүйесі бойынша даярлық.' },
+  'iso-14001': { ru: 'Подготовка по системе экологического менеджмента ISO 14001.', kk: 'ISO 14001 экологиялық менеджмент жүйесі бойынша даярлық.' },
+  'menedzhment-ohrany-zdorovya': { ru: 'Подготовка по системе менеджмента охраны здоровья и безопасности труда.', kk: 'Денсаулықты қорғау және еңбек қауіпсіздігі менеджменті жүйесі бойынша даярлық.' },
+};
 
 export function getSourceProductForDirection(value: unknown) {
   if (typeof value !== 'string') return undefined;

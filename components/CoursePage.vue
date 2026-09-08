@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
 import { getCityName, getCityPrepositional } from '~/composables/useCity';
 import { resolveCourseDirection } from '~/shared/course-registry';
+import { getPublicCoursePricing } from '~/shared/public-course-pricing';
 import { leadContextQuery } from '~/shared/lead-context';
 import { directionDetails } from '~/content/direction-details';
 
@@ -39,6 +40,7 @@ onMounted(() => {
 });
 
 const courseName = computed(() => props.course.name[locale.value] || props.course.name.ru);
+const pricing = computed(() => getPublicCoursePricing(props.course.slug));
 const cityName = computed(
   () =>
     getCityName(resolvedCity.value, locale.value) ||
@@ -519,6 +521,13 @@ useHead(() => ({
       <p class="text-lg text-slate-700">
         {{ pageDescription }}
       </p>
+      <div class="rounded-xl border border-emerald-100 bg-brand-soft px-4 py-3 space-y-1">
+        <p class="text-sm text-slate-600">{{ locale === 'kk' ? 'Оқу құны' : 'Стоимость обучения' }}</p>
+        <p class="text-2xl font-bold text-brand">{{ pricing.label[locale === 'kk' ? 'kk' : 'ru'] }}</p>
+        <p v-if="pricing.basis" class="text-sm text-slate-600">
+          {{ pricing.basisLabel[locale === 'kk' ? 'kk' : 'ru'] }} · {{ pricing.taxLabel[locale === 'kk' ? 'kk' : 'ru'] }}
+        </p>
+      </div>
       <div class="flex flex-wrap gap-3 text-sm text-slate-700">
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
           <strong class="font-semibold text-slate-900">{{ t('course.durationLabel') }}:</strong>
@@ -597,6 +606,13 @@ useHead(() => ({
       <p class="text-lg text-slate-700">
         {{ metaDescription }}
       </p>
+      <div class="rounded-xl border border-emerald-100 bg-brand-soft px-4 py-3 space-y-1">
+        <p class="text-sm text-slate-600">{{ locale === 'kk' ? 'Оқу құны' : 'Стоимость обучения' }}</p>
+        <p class="text-2xl font-bold text-brand">{{ pricing.label[locale === 'kk' ? 'kk' : 'ru'] }}</p>
+        <p v-if="pricing.basis" class="text-sm text-slate-600">
+          {{ pricing.basisLabel[locale === 'kk' ? 'kk' : 'ru'] }} · {{ pricing.taxLabel[locale === 'kk' ? 'kk' : 'ru'] }}
+        </p>
+      </div>
       <div class="flex flex-wrap gap-3 text-sm text-slate-700">
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
           <strong class="font-semibold text-slate-900">{{ t('course.durationLabel') }}:</strong>

@@ -14,10 +14,11 @@ test('all sixteen source rows retain provenance and extend rather than replace t
   for (const direction of legacyCourseDirections) assert.ok(courseDirections.some(current => current.id === direction.id && current.alias === direction.alias));
 });
 
-test('public source inventory contains no quoted numeric rates, bank details or ready-to-purchase learning content', () => {
+test('source provenance keeps the raw quotation and bank details separate from approved display prices and learning content', () => {
   assert.equal(sourceProductDocument.publicDownloadUrl, null);
   assert.equal(sourceProducts.filter(product => product.pricingBasis === 'organization').length, 4);
   for (const product of sourceProducts) {
+    // The provenance record is separate from owner-approved catalogue pricing.
     assert.equal(product.publicPrice, null); assert.equal(product.availability, 'consultation');
     assert.equal(product.academicContentStatus, 'not_provided');
     assert.equal(product.priceClassification, 'unspecified_source_rate');

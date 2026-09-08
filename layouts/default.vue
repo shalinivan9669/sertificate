@@ -68,11 +68,10 @@ const copy = computed(() => locale.value === 'kk' ? {
           :class="{ 'site-nav-links--kk': locale === 'kk' }"
         >
           <NuxtLink :to="localePath('/')" class="hover:text-brand">{{ t('nav.home') }}</NuxtLink>
-          <NuxtLink :to="`${localePath('/') }#courses`" class="hover:text-brand">{{ t('nav.courses') }}</NuxtLink>
+          <NuxtLink :to="localePath('/courses')" class="hover:text-brand">{{ copy.catalog }}</NuxtLink>
           <NuxtLink :to="`${localePath('/') }#formats`" class="hover:text-brand">{{ t('nav.formats') }}</NuxtLink>
           <NuxtLink :to="localePath('/blog')" class="hover:text-brand">{{ t('nav.blog') }}</NuxtLink>
           <NuxtLink :to="localePath('/contacts')" class="hover:text-brand">{{ t('nav.contacts') }}</NuxtLink>
-          <NuxtLink :to="localePath('/courses')" class="hover:text-brand">{{ copy.online }}</NuxtLink>
           <NuxtLink :to="localePath('/cabinet')" class="hover:text-brand">{{ copy.cabinet }}</NuxtLink>
         </div>
       </nav>

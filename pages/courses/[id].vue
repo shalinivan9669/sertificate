@@ -141,7 +141,7 @@ async function enroll() {
                 )
               }}
             </p>
-            <NuxtLink :to="path(program.publicPath)"
+            <NuxtLink v-if="program.publicPath !== '/courses/' + program.slug" :to="path(program.publicPath)"
               >{{
                 tr("Подробнее о направлении", "Бағыт туралы толығырақ")
               }}
@@ -161,6 +161,9 @@ async function enroll() {
               </p>
               <p v-if="program.pricing?.basis" class="text-sm text-slate-600">
                 {{ program.pricing.basisLabel[locale === "kk" ? "kk" : "ru"] }}
+                <span v-if="program.pricing.taxLabel?.[locale === 'kk' ? 'kk' : 'ru']">
+                  · {{ program.pricing.taxLabel[locale === "kk" ? "kk" : "ru"] }}
+                </span>
               </p>
             </div>
             <template v-if="version"

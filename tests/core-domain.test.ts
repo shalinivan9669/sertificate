@@ -47,14 +47,42 @@ before(async () => {
 });
 after(async () => { await closeDb(); await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); });
 
-test('T031 PDF inventory extends 9 preserved legacy directions to 20 without invented learning or prices', async () => {
+test('T031 PDF inventory extends 9 preserved legacy directions to 20 with owner-approved display rates and no invented learning', async () => {
   assert.equal(legacyCourseDirections.length, 9); assert.deepEqual(courseDirections.slice(0, 9), [...legacyCourseDirections]);
   assert.equal(sourceProducts.length, 16); assert.equal(courseDirections.length, 20); assert.equal(new Set(courseDirections.map(direction => direction.id)).size, 20);
   const { programs } = await catalogPrograms(); assert.equal(programs.length, 20); assert.ok(programs.every((entry) => entry.versions.length === 0 && entry.availability === 'consultation'));
   assert.equal(programs.filter(program => program.sourceProduct).length, 16);
   assert.equal(programs.filter(program => program.sourceProduct && program.pricing.basis === 'organization').length, 4);
   assert.ok(programs.filter(program => program.sourceProduct).every(program => program.sourceProduct!.guidance.kind === 'marketing_orientation'));
-  for (const program of programs) { assert.equal(program.pricing.mode, 'request'); assert.equal(program.pricing.amountMinor, null); assert.equal(program.pricing.label.ru, 'Стоимость по запросу'); }
+  const expectedSourceRates: Record<string, number> = {
+    'kbpk-01': 30_630_000, 'kbpk-02': 2_500_000, 'kbpk-03': 30_630_000, 'kbpk-04': 30_630_000,
+    'kbpk-05': 30_630_000, 'kbpk-06': 2_500_000, 'kbpk-07': 2_500_000, 'kbpk-08': 2_500_000,
+    'kbpk-09': 2_500_000, 'kbpk-10': 9_500_000, 'kbpk-11': 9_500_000, 'kbpk-12': 9_500_000,
+    'kbpk-13': 9_500_000, 'kbpk-14': 7_000_000, 'kbpk-15': 6_000_000, 'kbpk-16': 10_000_000,
+  };
+  assert.equal(programs.filter(program => program.pricing.mode === 'published').length, 16);
+  assert.equal(programs.filter(program => program.pricing.mode === 'request').length, 4);
+  for (const program of programs) {
+    assert.equal(program.pricing.currency, 'KZT');
+    if (program.sourceProduct) {
+      assert.ok(Object.hasOwn(expectedSourceRates, program.sourceProduct.id));
+      assert.equal(program.pricing.mode, 'published');
+      assert.equal(program.pricing.amountMinor, expectedSourceRates[program.sourceProduct.id], program.sourceProduct.id);
+      assert.deepEqual(program.pricing.taxLabel, { ru: 'Без НДС', kk: 'ҚҚС-сыз' });
+      const organizationRate = ['kbpk-01', 'kbpk-03', 'kbpk-04', 'kbpk-05'].includes(program.sourceProduct.id);
+      assert.equal(program.pricing.basis, organizationRate ? 'organization' : 'learner');
+      assert.deepEqual(program.pricing.basisLabel, organizationRate
+        ? { ru: 'За организацию', kk: 'Ұйым үшін' }
+        : { ru: 'За одного слушателя', kk: 'Бір тыңдаушы үшін' });
+    } else {
+      assert.equal(program.pricing.mode, 'request'); assert.equal(program.pricing.amountMinor, null);
+      assert.equal(program.pricing.basis, null);
+      assert.deepEqual(program.pricing.label, { ru: 'Стоимость по запросу', kk: 'Бағасы сұрау бойынша' });
+      assert.deepEqual(program.pricing.taxLabel, { ru: '', kk: '' });
+    }
+  }
+  assert.equal(programs.find(program => program.id === 'antiterroristicheskaya-podgotovka')!.pricing.label.ru.replace(/\s/g, ' '), '306 300 ₸');
+  assert.equal(programs.find(program => program.id === 'pervaya-pomoshch')!.pricing.label.kk.replace(/\s/g, ' '), '25 000 ₸');
   const publicData = JSON.stringify(programs); for (const field of ['amountKzt', 'rateTextRaw', 'sourceDescriptionRaw', 'standardAsWritten', 'correctOptionIds']) assert.ok(!publicData.includes(field), field);
   for (const source of sourceProducts) assert.equal(source.publicPrice, null);
   assert.equal(programs.find(program => program.id === 'antiterroristicheskaya-podgotovka')!.pricing.basis, 'organization');
@@ -88,7 +116,9 @@ test('authoring guide uses source provenance and missing-field checklist without
   for (const field of ['modules', 'questions', 'durationHours', 'assessment', 'sourceRefs']) assert.ok(guide.missingFields.includes(field));
   assert.ok(guide.fields.every(field => field.provided === ['title', 'billingBasis'].includes(field.path)));
   assert.equal(guide.fields.find(field => field.path === 'billingBasis')!.value, 'learner');
-  assert.equal(guide.pricing.amountMinor, null); assert.ok(!JSON.stringify(guide).includes('ISO 45001'));
+  assert.equal(guide.pricing.mode, 'published'); assert.equal(guide.pricing.amountMinor, 10_000_000);
+  assert.equal(guide.pricing.basis, 'learner'); assert.deepEqual(guide.pricing.taxLabel, { ru: 'Без НДС', kk: 'ҚҚС-сыз' });
+  assert.ok(!JSON.stringify(guide).includes('ISO 45001'));
   assert.equal((await queryOne('SELECT COUNT(*) n FROM program_versions'))!.n, 0);
   assert.equal((await catalogProgram('menedzhment-ohrany-zdorovya')).program.versions.length, 0);
 });

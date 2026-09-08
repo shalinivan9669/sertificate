@@ -1,8 +1,8 @@
 # Изменённые файлы OT Center
 
-Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
+Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, базы, секреты, сборки и временные артефакты в изменения приложения не включены. Разрешённые владельцем цены опубликованы отдельным справочником; оригинал коммерческого предложения и его реквизиты остаются закрытыми.
 
-Всего файлов: 324
+Всего файлов: 326
 
 - `.env.example`
 - `.gitattributes`
@@ -12,6 +12,7 @@
 - `components/CoursePage.vue`
 - `components/FormatLanding.vue`
 - `components/HomePage.vue`
+- `components/HomePageClassic.vue`
 - `components/lms/LmsAnalyticsConsent.vue`
 - `components/lms/LmsAuthForm.vue`
 - `components/lms/LmsAuthoringGuide.vue`
@@ -253,6 +254,7 @@
 - `shared/lead-attribution.ts`
 - `shared/lead-context.ts`
 - `shared/program-draft-import.ts`
+- `shared/public-course-pricing.ts`
 - `shared/sales-report.ts`
 - `shared/source-products.ts`
 - `tests/acceptance-extra-browser.mjs`

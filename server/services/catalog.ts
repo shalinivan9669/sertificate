@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { audit, databaseConfigured, execute, queryAll, queryOne, withTransaction, type Db } from '../db';
 import { courseDirections, legacyCourseDirections, resolveCourseDirection } from '../../shared/course-registry';
 import { getSourceProductForDirection, sourceProductDocument } from '../../shared/source-products';
+import { getPublicCoursePricing } from '../../shared/public-course-pricing';
 import { entityId, fail, integer, record, strictKeys, textValue } from '../utils/validation';
 import { assertRole, type AppUser } from '../utils/auth';
 
@@ -109,11 +110,8 @@ export function publicVersion(row: VersionRow) {
 
 function inventoryMetadata(directionId: string) {
   const source = getSourceProductForDirection(directionId);
-  const basis = source?.pricingBasis || null;
   return {
-    pricing: { mode: 'request' as const, amountMinor: null, currency: 'KZT' as const, basis,
-      label: { ru: 'Стоимость по запросу', kk: 'Бағасы сұрау бойынша' },
-      basisLabel: basis === 'organization' ? { ru: 'Расчёт для организации', kk: 'Ұйым үшін есептеу' } : basis === 'learner' ? { ru: 'Расчёт на одного обучаемого', kk: 'Бір тыңдаушы үшін есептеу' } : { ru: 'Уточним условия обучения', kk: 'Оқу шарттарын нақтылаймыз' } },
+    pricing: getPublicCoursePricing(directionId),
     sourceProduct: source ? { id: source.id, title: source.title, sourceDocumentId: source.sourceDocumentId, sourcePage: source.sourcePage, sourceRow: source.sourceRow, academicContentStatus: source.academicContentStatus, guidance: source.guidance } : null,
   };
 }

@@ -1,3 +1,5 @@
+import type { PublicCoursePricing } from '~/shared/public-course-pricing';
+
 export interface LmsProgram {
   id: string;
   directionId: string;
@@ -19,14 +21,7 @@ export interface LmsProgram {
       kind: "marketing_orientation";
     };
   } | null;
-  pricing?: {
-    mode: "request";
-    amountMinor: null;
-    currency: "KZT";
-    basis: "organization" | "learner" | null;
-    label: { ru: string; kk: string };
-    basisLabel: { ru: string; kk: string };
-  };
+  pricing?: PublicCoursePricing;
   versions: Array<{
     id: string;
     title: string;

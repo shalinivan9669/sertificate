@@ -1,17 +1,18 @@
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium, expect } from '@playwright/test';
-import { assertClassicSource, classicBase, classicBlobs } from './classic-design-contract.mjs';
+import { assertClassicSource, classicBase, classicBlobs, classicCourseRevision } from './classic-design-contract.mjs';
 
 const base = process.env.TEST_BASE_URL;
 assert.match(base || '', /^http:\/\/(?:localhost|127\.0\.0\.1):\d+$/, 'An explicitly local completed Node build is required');
 await assertClassicSource();
 const output = 'artifacts/classic-browser'; await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_PATH || chromium.executablePath(), headless: true });
-const report = { status: 'running', scope: 'Preserved Git source and current rendered structural/style/responsive contracts; screenshots are review artifacts, not pixel-diff evidence', classicBase, classicBlobs, browser: browser.version(), pages: [], failures: [] };
+const report = { status: 'running', scope: 'Reviewed classic source with owner-approved catalogue content and preserved structural/style/responsive contracts; screenshots are review artifacts, not pixel-diff evidence', classicBase, classicCourseRevision, classicBlobs, browser: browser.version(), pages: [], failures: [] };
 const viewports = [{ width: 1440, height: 1000 }, { width: 768, height: 1024 }, { width: 390, height: 844 }, { width: 360, height: 800 }];
 const copy = { '/': 'Обучение по охране труда и промышленной безопасности в Казахстане', '/kk': 'Еңбекті қорғау және өнеркәсіптік қауіпсіздік оқыту Қазақстанда' };
 const directions = ['ohrana-truda', 'promyshlennaya-bezopasnost', 'ptm', 'elektrobezopasnost', 'raboty-na-vysote', 'gpm-stropalschiki', 'gazoopasnye-raboty', 'ekologicheskaya-bezopasnost', 'pervaya-pomoshch'];
+const additionalDirections = ['antiterroristicheskaya-podgotovka', 'soglasitelnaya-komissiya', 'protivodeystvie-korruptsii', 'seminar-dekretirovannoy-gruppy-sez', 'rassledovanie-proisshestviy', 'povedencheskiy-audit-bezopasnosti', 'upravlenie-stressom', 'kultura-bezopasnosti', 'iso-9001', 'iso-14001', 'menedzhment-ohrany-zdorovya'];
 const selectors = { hero: 'main section:first-of-type', h1: 'main h1', cta: 'main section:first-of-type a[href="#contact"]', courses: 'main #courses > .grid', formats: 'main #formats > .grid' };
 // Stable computed values reviewed from the 413ad4a local baseline. Font glyph
 // metrics, absolute page heights, header/footer positions and antialiasing are
@@ -40,7 +41,7 @@ try {
         await page.waitForFunction(() => Boolean(document.querySelector('#__nuxt')?.__vue_app__));
         await page.evaluate(() => document.fonts.ready);
         await expect(page.locator('main h1')).toHaveText(heading);
-        await expect(page.locator('main #courses > .grid > a')).toHaveCount(9);
+        await expect(page.locator('main #courses > .grid > a')).toHaveCount(20);
         await expect(page.locator('main #formats > .grid > a')).toHaveCount(6);
         await expect(page.locator(selectors.cta)).toBeVisible();
         await expect(page.locator('main section:first-of-type a[href="#courses"]')).toBeVisible();
@@ -55,7 +56,7 @@ try {
         }, { selectors, styleContract: expectedStyles(viewport.width) });
         assert.ok(measured.scrollWidth <= viewport.width + 1, `${path} horizontal overflow at ${viewport.width}`);
         assert.ok(measured.logoLoaded, 'Existing OT Center brand asset loads');
-        assert.deepEqual(measured.links, directions.map(id => `${path === '/kk' ? '/kk' : ''}/${id}`));
+        assert.deepEqual(measured.links, [...additionalDirections.map(id => `${path === '/kk' ? '/kk' : ''}/courses/${id}`), ...directions.map(id => `${path === '/kk' ? '/kk' : ''}/${id}`)]);
         for (const [name, styles] of Object.entries(expectedStyles(viewport.width))) {
           assert.deepEqual(measured.elements[name].styles, styles, `${path} ${name} classic style contract at ${viewport.width}`);
           const rect = measured.elements[name].rect;

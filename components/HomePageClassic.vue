@@ -1,10 +1,12 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n, useLocalePath } from '#imports';
 import { getSortedBlogPosts } from '~/config/blog';
 import { cities } from '~/config/cities';
 import { licenseDownloadFiles } from '~/config/licenses-files';
 import { getCityName, getCityPrepositional } from '~/composables/useCity';
+import { additionalSourceDirections, sourceProductCardSummaries } from '~/shared/source-products';
+import { getPublicCoursePricing } from '~/shared/public-course-pricing';
 
 const props = defineProps({
   city: {
@@ -24,6 +26,37 @@ const cityPrepositional = computed(() =>
 
 const asList = (value) => (Array.isArray(value) ? value : []);
 const directions = computed(() => asList(tm('home.directions')));
+const courseGroup = ref('all');
+const courseLanguage = computed(() => locale.value === 'kk' ? 'kk' : 'ru');
+const courseCopy = computed(() => locale.value === 'kk' ? {
+  title: 'Курстар мен бағалар', subtitle: 'Қызметкерлер мен ұйымдарға арналған 20 бағыт. Қажетті курсты таңдап, оқыту шарттарымен танысыңыз.',
+  all: 'Барлық бағыттар', added: 'Жаңа бағыттар', existing: 'Негізгі бағыттар', badge: 'Жаңа',
+  catalog: 'Толық каталог', details: 'Толығырақ', conditions: 'Мазмұны мен шарттары', filters: 'Курс бағыттарын таңдау',
+} : {
+  title: 'Курсы и цены', subtitle: '20 направлений для сотрудников и организаций. Выберите курс и посмотрите условия обучения.',
+  all: 'Все направления', added: 'Новые направления', existing: 'Основные направления', badge: 'Новое',
+  catalog: 'Полный каталог', details: 'Подробнее', conditions: 'Содержание и условия', filters: 'Выбор направлений обучения',
+});
+const homeCourses = computed(() => [
+  ...additionalSourceDirections.map(direction => ({
+    slug: direction.id, title: direction.title[courseLanguage.value],
+    description: sourceProductCardSummaries[direction.id]?.[courseLanguage.value] || '', isNew: true,
+    pricing: getPublicCoursePricing(direction.id),
+  })),
+  ...directions.value.map(direction => ({ ...direction, isNew: false, pricing: getPublicCoursePricing(direction.slug) })),
+]);
+const visibleCourses = computed(() => homeCourses.value.filter(course =>
+  courseGroup.value === 'all' || (courseGroup.value === 'new' ? course.isNew : !course.isNew),
+));
+const courseFilters = computed(() => [
+  { id: 'all', label: courseCopy.value.all, count: homeCourses.value.length },
+  { id: 'new', label: courseCopy.value.added, count: additionalSourceDirections.length },
+  { id: 'existing', label: courseCopy.value.existing, count: directions.value.length },
+]);
+const catalogRoute = (slug = '') => localePath({
+  path: '/courses' + (slug ? '/' + slug : ''),
+  query: resolvedCity.value?.slug ? { city: resolvedCity.value.slug } : {},
+});
 const formatCards = computed(() => asList(tm('home.formatCards')));
 const whyItems = computed(() => asList(tm('home.whyItems')));
 const licensesItems = computed(() => asList(tm('home.licensesItems')));
@@ -102,20 +135,40 @@ const blogArticles = computed(() => getSortedBlogPosts().map(localizePost).slice
     </section>
 
     <section id="courses" class="space-y-6">
-      <header class="space-y-2">
-        <p class="text-sm font-semibold text-brand-accent">{{ t('home.directionsBadge') }}</p>
-        <h2 class="text-2xl font-bold text-slate-900">{{ t('home.directionsTitle') }}</h2>
-        <p class="text-slate-700">{{ t('home.directionsSubtitle') }}</p>
+      <header class="flex flex-wrap items-end justify-between gap-4">
+        <div class="space-y-2">
+          <p class="text-sm font-semibold text-brand-accent">{{ t('home.directionsBadge') }}</p>
+          <h2 class="text-2xl font-bold text-slate-900">{{ courseCopy.title }}</h2>
+          <p class="text-slate-700">{{ courseCopy.subtitle }}</p>
+        </div>
+        <NuxtLink :to="catalogRoute()" class="font-semibold text-brand-accent underline underline-offset-4">{{ courseCopy.catalog }} →</NuxtLink>
       </header>
+      <div class="flex flex-wrap gap-2" role="group" :aria-label="courseCopy.filters">
+        <button
+          v-for="filter in courseFilters" :key="filter.id" type="button"
+          :aria-pressed="courseGroup === filter.id"
+          class="rounded-lg border px-4 py-2 text-sm font-semibold transition"
+          :class="courseGroup === filter.id ? 'border-brand-accent bg-brand-accent text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-brand-accent'"
+          @click="courseGroup = filter.id"
+        >{{ filter.label }} <span class="ml-1">{{ filter.count }}</span></button>
+      </div>
       <div class="grid gap-4 md:grid-cols-3">
         <NuxtLink
-          v-for="direction in directions"
+          v-for="direction in visibleCourses"
           :key="direction.slug"
-          :to="withCityPath(direction.slug)"
-          class="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition"
+          :to="direction.isNew ? catalogRoute(direction.slug) : withCityPath(direction.slug)"
+          class="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition"
         >
+          <span v-if="direction.isNew" class="mb-3 self-start rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">{{ courseCopy.badge }}</span>
           <h3 class="text-lg font-semibold text-slate-900 group-hover:text-brand">{{ direction.title }}</h3>
-          <p class="mt-2 text-sm text-slate-700">{{ direction.description }}</p>
+          <p class="mb-4 mt-2 flex-1 text-sm text-slate-700">{{ direction.description }}</p>
+          <div class="border-t border-slate-100 pt-4">
+            <p class="text-lg font-bold text-brand">{{ direction.pricing.label[courseLanguage] }}</p>
+            <p v-if="direction.pricing.basis" class="mt-1 text-sm text-slate-600">
+              {{ direction.pricing.basisLabel[courseLanguage] }}<span v-if="direction.pricing.taxLabel[courseLanguage]"> · {{ direction.pricing.taxLabel[courseLanguage] }}</span>
+            </p>
+            <p class="mt-3 text-sm font-semibold text-brand-accent">{{ direction.isNew ? courseCopy.conditions : courseCopy.details }} →</p>
+          </div>
         </NuxtLink>
       </div>
     </section>
