@@ -2,10 +2,11 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 291
+Всего файлов: 305
 
 - `.env.example`
 - `.gitattributes`
+- `.github/workflows/database-backup.yml`
 - `.github/workflows/quality.yml`
 - `.gitignore`
 - `IMPLEMENTATION_STATUS.md`
@@ -74,6 +75,7 @@
 - `docs/ANALYTICS_CLIENT.md`
 - `docs/ANALYTICS_SERVER.md`
 - `docs/ARCHITECTURE-DECISIONS.md`
+- `docs/AUTOMATED_BACKUP.md`
 - `docs/BACKLOG_STATUS.csv`
 - `docs/BUSINESS-QA.md`
 - `docs/CHANGED_FILES.md`
@@ -98,6 +100,8 @@
 - `docs/PREVIEW-NOINDEX-QA.md`
 - `docs/PROGRAM-INTAKE.md`
 - `docs/PUBLIC_BUNDLE_AUDIT_2026-09-07.md`
+- `docs/RELEASE_ROLLBACK.md`
+- `docs/REMOTE_DATABASE_CHECKS.md`
 - `docs/ROLLBACK_DRILL.md`
 - `docs/RUNBOOK.md`
 - `docs/RUNTIME_PRIVACY_AUDIT.md`
@@ -157,6 +161,10 @@
 - `pages/wizard.vue`
 - `plugins/lead-attribution.client.ts`
 - `public/sitemap.xml`
+- `scripts/backup-check.ts`
+- `scripts/backup-runner.ts`
+- `scripts/backup-verify-worker.ts`
+- `scripts/backup-workflow-status.mjs`
 - `scripts/build-asset-check.mjs`
 - `scripts/build-vercel.mjs`
 - `scripts/capture-baseline.mjs`
@@ -168,6 +176,8 @@
 - `scripts/lms-nav-layout-lab.mjs`
 - `scripts/performance-lab.mjs`
 - `scripts/prepare-lead-browser-ci-reports.mjs`
+- `scripts/release-rollback-drill.ts`
+- `scripts/remote-transaction-drill.ts`
 - `scripts/rollback-drill.ts`
 - `scripts/rollback-preflight.ts`
 - `scripts/runtime-privacy-audit.mjs`
@@ -239,6 +249,8 @@
 - `tests/analytics-browser-fixtures.ts`
 - `tests/analytics-browser.mjs`
 - `tests/analytics-client.test.ts`
+- `tests/backup-runner.test.ts`
+- `tests/backup-workflow-status.test.mjs`
 - `tests/browser-read-observer.test.mjs`
 - `tests/business-integration.test.ts`
 - `tests/classic-browser.mjs`
@@ -276,15 +288,17 @@
 - `tests/notifications.test.ts`
 - `tests/observability.test.ts`
 - `tests/operational-incidents.test.ts`
-- `tests/outbox-paused-channels.test.ts`
 - `tests/organization-report-browser.mjs`
 - `tests/organization-report-fixtures.ts`
 - `tests/organization-report.test.ts`
+- `tests/outbox-paused-channels.test.ts`
 - `tests/prepare-performance-session.mjs`
 - `tests/program-intake.test.ts`
 - `tests/public-content.test.ts`
 - `tests/public-journey-client.test.ts`
 - `tests/public-route-policy.test.mjs`
+- `tests/release-rollback-fixture.ts`
+- `tests/remote-transaction-drill.test.ts`
 - `tests/run-core-browser.mjs`
 - `tests/run-document-pilot.ps1`
 - `tests/sales-links.test.ts`

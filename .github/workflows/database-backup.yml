@@ -1,0 +1,103 @@
+name: Encrypted database backup
+
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+# This workflow stays disabled until the owner agrees to the destination/retention
+# and the separate environment is configured. No pull-request event receives secrets.
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ot-center-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: backup
+    if: github.ref == 'refs/heads/main' && vars.OT_BACKUP_ENABLED == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: ot-center-backup
+    steps:
+      - name: Select the owned temporary path
+        run: echo "BACKUP_DIRECTORY=$RUNNER_TEMP/ot-center-backup-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+
+      - name: Check out the triggered main revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up the tested Node major
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+
+      - name: Observe previous attempts and repository storage budget
+        id: history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node scripts/backup-workflow-status.mjs
+          --repository "$GITHUB_REPOSITORY"
+          --workflow database-backup.yml
+          --exclude-run "$GITHUB_RUN_ID"
+          --fresh-hours 36
+
+      - name: Enforce the bounded artifact budget
+        env:
+          BUDGET_ALLOWED: ${{ steps.history.outputs.budget_allowed }}
+        run: |
+          if [ "$BUDGET_ALLOWED" != 'true' ]; then
+            echo '::error::Backup storage budget is unavailable or exhausted. Existing artifacts were not deleted.'
+            exit 1
+          fi
+
+      # Locked dependency lifecycle scripts run before any database/password secret is supplied.
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Export, encrypt and verify an isolated restore
+        id: snapshot
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.OT_BACKUP_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.OT_BACKUP_DATABASE_READ_TOKEN }}
+          OT_BACKUP_PASSWORD: ${{ secrets.OT_BACKUP_PASSWORD }}
+          OT_BACKUP_MAX_BYTES: '8388608'
+        run: node --import tsx scripts/backup-runner.ts --output-dir "$BACKUP_DIRECTORY"
+
+      - name: Independently authenticate the archive and its manifest
+        env:
+          OT_BACKUP_PASSWORD: ${{ secrets.OT_BACKUP_PASSWORD }}
+        run: node --import tsx scripts/backup-check.ts --directory "$BACKUP_DIRECTORY" --max-age-hours 1
+
+      - name: Retain only the encrypted archive and safe manifest
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ot-center-db-backup-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.BACKUP_DIRECTORY }}/database.otb
+            ${{ env.BACKUP_DIRECTORY }}/manifest.json
+          if-no-files-found: error
+          include-hidden-files: false
+          compression-level: 0
+          retention-days: 7
+          overwrite: false
+
+      - name: Record the successful retained upload
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+        run: |
+          echo 'Encrypted backup and its independent archive check passed; the isolated restore completed before upload.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Retained artifact ID: $ARTIFACT_ID. Requested retention: 7 days." >> "$GITHUB_STEP_SUMMARY"
+          echo 'This is a measured recovery check for this snapshot; it does not establish a production RPO/RTO or guarantee the next scheduled run.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record a failed attempt without publishing private temporary files
+        if: failure()
+        run: |
+          echo '::error::Backup attempt failed. Do not treat this attempt as a successful retained backup.'
+          echo 'Backup attempt failed. See the safe stage/error code above and the previous-upload observation. No plaintext database, environment file or password is uploaded by this workflow.' >> "$GITHUB_STEP_SUMMARY"
