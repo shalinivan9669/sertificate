@@ -9,6 +9,7 @@ import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createClient } from '@libsql/client';
 import { chromium, expect } from '@playwright/test';
+import { readBrowserRows } from './helpers/browser-read-observer.mjs';
 
 if (process.env.NODE_ENV !== 'test' || process.env.OT_ALLOW_TEST_SEED !== '1' || ['VERCEL', 'VERCEL_ENV', 'TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN'].some(key => process.env[key])) throw new Error('Explicit isolated local test environment required');
 const root = resolve('.'); const artifact = resolve(process.env.OT_LEAD_WORKSPACE_ARTIFACT_OUTPUT || '.output');
@@ -29,7 +30,7 @@ const server = spawn(process.execPath, [resolve(directory, '.output/server/index
 const db = createClient({ url: 'file:' + env.OT_DATABASE_PATH.replaceAll('\\', '/'), concurrency: 1 });
 const checks = []; const errors = []; let browser; let currentPage; let failure;
 const passed = name => { checks.push({ name, status: 'passed' }); console.log('PASS', name); };
-const row = async (sql, args = []) => (await db.execute({ sql, args })).rows[0];
+const row = async (sql, args = []) => (await readBrowserRows(db, sql, args))[0];
 function totp(uri) { const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; const bits = [...new URL(uri).searchParams.get('secret').toUpperCase().replace(/=+$/, '')].map(c => alphabet.indexOf(c).toString(2).padStart(5, '0')).join(''); const key = Buffer.from(bits.match(/.{8}/g).map(byte => parseInt(byte, 2))); const counter = Buffer.alloc(8); counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000))); const hash = createHmac('sha1', key).update(counter).digest(); return String((hash.readUInt32BE(hash[hash.length - 1] & 15) & 0x7fffffff) % 1000000).padStart(6, '0'); }
 async function go(page, path) { currentPage = page; const response = await page.goto(base + path, { waitUntil: 'networkidle' }); await page.waitForFunction(() => document.querySelector('#__nuxt')?.__vue_app__?.config.globalProperties.$nuxt?.isHydrating === false); return response; }
 async function response(page, pathname, method, action, status = 200) { const pending = page.waitForResponse(value => new URL(value.url()).pathname === pathname && value.request().method() === method); await action(); const value = await pending; assert.equal(value.status(), status, await value.text()); return value.json(); }

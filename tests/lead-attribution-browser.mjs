@@ -9,6 +9,7 @@ import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, sep } from 'node:path';
 import { createClient } from '@libsql/client';
 import { chromium, expect } from '@playwright/test';
+import { readBrowserRows } from './helpers/browser-read-observer.mjs';
 
 if (process.env.NODE_ENV !== 'test' || process.env.OT_ALLOW_TEST_SEED !== '1' || ['VERCEL', 'VERCEL_ENV', 'TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN'].some(key => process.env[key])) throw new Error('Explicit isolated local browser environment required');
 const root = resolve('.'), base = 'http://127.0.0.1:3111', runId = randomUUID();
@@ -32,7 +33,7 @@ assert.equal((await once(seed, 'exit'))[0], 0);
 const fixture = JSON.parse(await readFile(env.OT_ANALYTICS_FIXTURE_PATH, 'utf8')); assert.equal(fixture.notice, 'SYNTHETIC LOCAL TEST DATA ONLY');
 console.log('Owned completed artifact copied:', directory);
 const db = createClient({ url: 'file:' + env.OT_DATABASE_PATH.replaceAll('\\', '/'), concurrency: 1 });
-const rows = async (sql, args = []) => (await db.execute({ sql, args })).rows;
+const rows = (sql, args = []) => readBrowserRows(db, sql, args);
 const count = async table => Number((await rows(`SELECT COUNT(*) n FROM ${table}`))[0].n);
 const windowsChrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const executablePath = process.env.BROWSER_PATH || (process.platform === 'win32' && existsSync(windowsChrome) ? windowsChrome : chromium.executablePath());
