@@ -2,15 +2,17 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 288
+Всего файлов: 291
 
 - `.env.example`
 - `.gitattributes`
 - `.github/workflows/quality.yml`
 - `.gitignore`
+- `IMPLEMENTATION_STATUS.md`
 - `components/CoursePage.vue`
 - `components/FormatLanding.vue`
 - `components/HomePage.vue`
+- `components/SeoUniqueBlocks.vue`
 - `components/lms/LmsAnalyticsConsent.vue`
 - `components/lms/LmsAuthForm.vue`
 - `components/lms/LmsAuthoringGuide.vue`
@@ -49,7 +51,6 @@
 - `components/redesign-flow/success/SuccessBreakdownTable.vue`
 - `components/redesign-flow/success/SuccessMainCard.vue`
 - `components/redesign-flow/success/SuccessScoreSidebar.vue`
-- `components/SeoUniqueBlocks.vue`
 - `composables/useLeadAttribution.ts`
 - `composables/useLmsAnalytics.ts`
 - `composables/useLmsApi.ts`
@@ -88,8 +89,8 @@
 - `docs/LEAD_ATTRIBUTION.md`
 - `docs/LEAD_CONTEXT.md`
 - `docs/LEAD_WORKSPACE.md`
-- `docs/LMS_NAV_LAYOUT_LAB.md`
 - `docs/LMS-BROWSER-QA.md`
+- `docs/LMS_NAV_LAYOUT_LAB.md`
 - `docs/OBSERVABILITY.md`
 - `docs/ORGANIZATION_REPORT_AND_REMINDERS.md`
 - `docs/PDF-CONTENT-AUDIT.md`
@@ -105,7 +106,6 @@
 - `docs/STATUS_MATRIX_METHOD.md`
 - `docs/VISUAL-ACCESSIBILITY-QA.md`
 - `eslint.config.mjs`
-- `IMPLEMENTATION_STATUS.md`
 - `layouts/default.vue`
 - `layouts/fullwidth.vue`
 - `middleware/city.global.js`
@@ -239,6 +239,7 @@
 - `tests/analytics-browser-fixtures.ts`
 - `tests/analytics-browser.mjs`
 - `tests/analytics-client.test.ts`
+- `tests/browser-read-observer.test.mjs`
 - `tests/business-integration.test.ts`
 - `tests/classic-browser.mjs`
 - `tests/classic-design-contract.mjs`
@@ -255,6 +256,7 @@
 - `tests/document-pilot-pdf.py`
 - `tests/e2e-fixtures.ts`
 - `tests/e2e-reset-learning.ts`
+- `tests/helpers/browser-read-observer.mjs`
 - `tests/http-security.test.ts`
 - `tests/invoices.test.ts`
 - `tests/keyboard-learning-browser.mjs`
@@ -274,6 +276,7 @@
 - `tests/notifications.test.ts`
 - `tests/observability.test.ts`
 - `tests/operational-incidents.test.ts`
+- `tests/outbox-paused-channels.test.ts`
 - `tests/organization-report-browser.mjs`
 - `tests/organization-report-fixtures.ts`
 - `tests/organization-report.test.ts`

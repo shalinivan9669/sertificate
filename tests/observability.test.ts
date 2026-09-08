@@ -117,9 +117,17 @@ test('B52 actual Better Auth transactional email outbox inherits HTTP context wi
   const row = (await queryOne('SELECT id,aggregate_id,request_id,correlation_id,origin_request_id,source_job_id FROM outbox WHERE type=? ORDER BY created_at DESC LIMIT 1', ['auth.email']))!;
   assert.match(row.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   assert.deepEqual({ request_id: row.request_id, correlation_id: row.correlation_id, origin_request_id: row.origin_request_id, source_job_id: row.source_job_id }, { request_id: requestId, correlation_id: requestId, origin_request_id: requestId, source_job_id: null });
-  await processOutbox({ aggregateId: row.aggregate_id, limit: 1, allowExternal: false });
-  const delivered = logs.findLast(log => log.sourceJobId === row.id)!;
-  assert.equal(delivered.correlationId, requestId); assert.equal(delivered.originRequestId, requestId); assert.equal(delivered.errorCode, 'EXTERNAL_DELIVERY_DISABLED');
+  const queued = await queryOne('SELECT * FROM outbox WHERE id=?', [row.id]);
+  assert.equal((await processOutbox({ aggregateId: row.aggregate_id, limit: 1, allowExternal: false })).processed, 0);
+  assert.deepEqual(await queryOne('SELECT * FROM outbox WHERE id=?', [row.id]), queued);
+  assert.equal(logs.some(log => log.sourceJobId === row.id), false, 'Paused delivery does not create a fabricated attempt span');
+  // Explicitly enabled but unconfigured email remains an observable configuration error.
+  process.env.OT_EMAIL_DELIVERY_ENABLED = '1';
+  try {
+    await processOutbox({ aggregateId: row.aggregate_id, limit: 1, allowExternal: true });
+    const failure = logs.findLast(log => log.sourceJobId === row.id)!;
+    assert.equal(failure.correlationId, requestId); assert.equal(failure.originRequestId, requestId); assert.equal(failure.errorCode, 'EMAIL_DELIVERY_NOT_CONFIGURED');
+  } finally { process.env.OT_EMAIL_DELIVERY_ENABLED = '0'; }
 });
 
 test('B52 handled Better Auth Web Response 401 is observed once without changing its authentication response', async () => {

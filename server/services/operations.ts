@@ -85,12 +85,21 @@ async function deliverOperationalAlert(job: any): Promise<'delivered' | 'cancell
 /** Leased, short batches fit serverless invocations; no process-local queue or perpetual worker. */
 export async function processOutbox(options: { limit?: number; budgetMs?: number; aggregateId?: string; allowExternal?: boolean } = {}) {
   const started = Date.now(); const maximum = Math.min(options.limit || 5, 20); const budget = Math.min(options.budgetMs || 20000, 40000);
+  // Disabled channels stay queued without spending attempts or the daily batch.
+  // Keep configured-but-broken channels eligible so genuine delivery errors remain visible.
+  const pausedTypes = [
+    ...(!options.allowExternal || process.env.OT_CRM_DELIVERY_ENABLED !== '1' ? ['crm.lead'] : []),
+    ...(!options.allowExternal || process.env.OT_EMAIL_DELIVERY_ENABLED !== '1' ? ['auth.email'] : []),
+    ...(!options.allowExternal || process.env.OT_OPERATIONAL_ALERTS_ENABLED !== '1' ? ['operations.alert'] : []),
+  ];
   const results: { id: string; status: string; code?: string }[] = [];
   for (let index = 0; index < maximum && Date.now() - started < budget; index++) {
     const job: any = await withTransaction(async tx => {
       const extra = options.aggregateId ? ' AND aggregate_id=?' : '';
       const args: any[] = [nowIso(), nowIso()]; if (options.aggregateId) args.push(options.aggregateId);
-      const row = await queryOne(`SELECT * FROM outbox WHERE status IN ('pending','processing') AND available_at<=? AND (lease_until IS NULL OR lease_until<?)${extra} ORDER BY created_at LIMIT 1`, args, tx);
+      const enabled = pausedTypes.length ? ` AND type NOT IN (${pausedTypes.map(() => '?').join(',')})` : '';
+      args.push(...pausedTypes);
+      const row = await queryOne(`SELECT * FROM outbox WHERE status IN ('pending','processing') AND available_at<=? AND (lease_until IS NULL OR lease_until<?)${extra}${enabled} ORDER BY created_at LIMIT 1`, args, tx);
       if (!row) return undefined;
       const lease = id();
       const observation = jobObservation(row);

@@ -225,7 +225,9 @@ test('lead acceptance is durable during CRM outage and organizationName is not t
   const row = await queryOne('SELECT payload_json,status FROM lead_submissions WHERE id=?', [first.submissionId!]); assert.equal(row!.status, 'accepted'); assert.equal(JSON.parse(row!.payload_json).organizationName, 'TEST COMPANY'); assert.equal(JSON.parse(row!.payload_json).sourcePath, '/kk/contacts');
   assert.equal((await queryOne('SELECT COUNT(*) n FROM consent_records WHERE lead_id=?', [first.submissionId!]))!.n, 2);
   await rejectsCode(acceptLead({ ...payload, name: 'Different' }, key), 'IDEMPOTENCY_CONFLICT');
-  const outcome = await processOutbox({ aggregateId: first.submissionId, allowExternal: false }); assert.ok(outcome.results[0]); assert.equal(outcome.results[0].code, 'EXTERNAL_DELIVERY_DISABLED');
+  const queued = await queryOne('SELECT * FROM outbox WHERE aggregate_id=?', [first.submissionId!]);
+  const outcome = await processOutbox({ aggregateId: first.submissionId, allowExternal: false }); assert.equal(outcome.processed, 0);
+  assert.deepEqual(await queryOne('SELECT * FROM outbox WHERE aggregate_id=?', [first.submissionId!]), queued);
   assert.equal((await queryOne('SELECT status FROM lead_submissions WHERE id=?', [first.submissionId!]))!.status, 'accepted');
 });
 
@@ -258,10 +260,11 @@ test('external delivery flags block CRM fetch and SMTP even when the worker is e
   const fetchSpy = context.mock.method(globalThis, 'fetch', async () => { throw new Error('External fetch must not run'); });
   const smtpSpy = context.mock.method(nodemailer, 'createTransport', () => { throw new Error('SMTP transport must not be created'); });
   try {
+    const queued = await queryAll('SELECT * FROM outbox WHERE aggregate_id IN (?,?) ORDER BY id', [lead.submissionId!, mailAggregate]);
     const crm = await processOutbox({ aggregateId: lead.submissionId, allowExternal: true });
     const email = await processOutbox({ aggregateId: mailAggregate, allowExternal: true });
-    assert.ok(crm.results[0]); assert.equal(crm.results[0].code, 'EXTERNAL_DELIVERY_DISABLED');
-    assert.ok(email.results[0]); assert.equal(email.results[0].code, 'EMAIL_DELIVERY_NOT_CONFIGURED');
+    assert.equal(crm.processed, 0); assert.equal(email.processed, 0);
+    assert.deepEqual(await queryAll('SELECT * FROM outbox WHERE aggregate_id IN (?,?) ORDER BY id', [lead.submissionId!, mailAggregate]), queued);
     assert.equal(fetchSpy.mock.callCount(), 0); assert.equal(smtpSpy.mock.callCount(), 0);
     assert.equal((await queryOne('SELECT status FROM lead_submissions WHERE id=?', [lead.submissionId]))!.status, 'accepted');
   } finally {
