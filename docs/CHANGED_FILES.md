@@ -2,7 +2,7 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 311
+Всего файлов: 320
 
 - `.env.example`
 - `.gitattributes`
@@ -101,6 +101,7 @@
 - `docs/PERFORMANCE_LOCAL_LAB_2026-09-07.md`
 - `docs/PREVIEW-NOINDEX-QA.md`
 - `docs/PROGRAM-INTAKE.md`
+- `docs/PROGRAM_DRAFT_IMPORT.md`
 - `docs/PUBLIC_BUNDLE_AUDIT_2026-09-07.md`
 - `docs/RELEASE_ROLLBACK.md`
 - `docs/REMOTE_DATABASE_CHECKS.md`
@@ -109,6 +110,7 @@
 - `docs/RUNTIME_PRIVACY_AUDIT.md`
 - `docs/SALES_FUNNELS.md`
 - `docs/SEO-POLICY.md`
+- `docs/STAGING_CACHE_PILOT.md`
 - `docs/STATUS_MATRIX_METHOD.md`
 - `docs/VISUAL-ACCESSIBILITY-QA.md`
 - `eslint.config.mjs`
@@ -186,6 +188,9 @@
 - `scripts/seo-build-check.mjs`
 - `scripts/seo-http-check.mjs`
 - `scripts/seo-uniqueness-check.ts`
+- `scripts/staging-cache-check.mjs`
+- `scripts/staging-cache-fixture.ts`
+- `scripts/staging-cache-local-worker.ts`
 - `scripts/visual-a11y-check.mjs`
 - `server/api/amo-lead.post.ts`
 - `server/api/auth/[...all].ts`
@@ -245,6 +250,7 @@
 - `shared/course-registry.ts`
 - `shared/lead-attribution.ts`
 - `shared/lead-context.ts`
+- `shared/program-draft-import.ts`
 - `shared/sales-report.ts`
 - `shared/source-products.ts`
 - `tests/acceptance-extra-browser.mjs`
@@ -297,6 +303,7 @@
 - `tests/organization-report.test.ts`
 - `tests/outbox-paused-channels.test.ts`
 - `tests/prepare-performance-session.mjs`
+- `tests/program-draft-import.test.ts`
 - `tests/program-intake.test.ts`
 - `tests/public-content.test.ts`
 - `tests/public-journey-client.test.ts`
@@ -310,6 +317,8 @@
 - `tests/sales-links.test.ts`
 - `tests/seo-indexability.test.mjs`
 - `tests/source-products.test.ts`
+- `tests/staging-cache-check.test.ts`
+- `tests/staging-cache-fixture.test.ts`
 - `tests/support-notes.test.ts`
 - `tsconfig.json`
 - `utils/lms-analytics-client.ts`
