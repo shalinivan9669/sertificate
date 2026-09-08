@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 
@@ -55,13 +55,34 @@ export async function checkLessonPreview(page, { language = 'ru', content, outpu
   };
   page.on('request', observe);
   const checkpoints = [];
+  const keyboardChecks = [];
   const escaped = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const previewButton = (label, title) => page.getByRole('button', { name: new RegExp('^' + escaped(label) + '\\s*:\\s*' + escaped(title.trim().replace(/\s+/g, ' ')) + '$') });
   async function keyboardReach(locator) {
     for (let count = 0; count < 600; count++) {
       if (await locator.evaluate(element => element === document.activeElement)) {
-        await expect.poll(() => locator.evaluate(element => { const box = element.getBoundingClientRect(); return box.top >= 0 && box.bottom <= innerHeight; })).toBe(true);
+        const samples = [];
+        try {
+          await expect.poll(async () => {
+            const state = await locator.evaluate(element => {
+              const box = element.getBoundingClientRect();
+              return { top: box.top, bottom: box.bottom, height: box.height, viewportHeight: innerHeight, scrollY,
+                focused: element === document.activeElement, focusVisible: element.matches(':focus-visible'),
+                name: element.getAttribute('aria-label') || element.textContent.trim().slice(0, 200) };
+            });
+            samples.push(state);
+            return state.top >= 0 && state.bottom <= state.viewportHeight;
+          }).toBe(true);
+        } catch (error) {
+          if (outputDirectory) {
+            await mkdir(outputDirectory, { recursive: true });
+            await writeFile(resolve(outputDirectory, `lesson-preview-focus-failure-${language}.json`), JSON.stringify({ language, tabCount: count, samples }, null, 2));
+            await page.screenshot({ path: resolve(outputDirectory, `lesson-preview-focus-failure-${language}.png`) });
+          }
+          throw new Error('Focused preview control is outside the viewport: ' + JSON.stringify(samples.at(-1)), { cause: error });
+        }
         assert.ok(await locator.evaluate(element => element.matches(':focus-visible')));
+        keyboardChecks.push({ tabCount: count, samples });
         return count;
       }
       await page.keyboard.press('Tab');
@@ -123,7 +144,7 @@ export async function checkLessonPreview(page, { language = 'ru', content, outpu
     assert.deepEqual(await afterResponse.json(), before, 'Preview does not save, review or publish any version');
     assert.deepEqual(requests, [], 'Preview sends no domain writes and makes no external media requests');
     checkpoints.push('Practice preview has no completion control; hours/review remain unset and persistent versions unchanged');
-    return { language, status: 'passed', checkpoints, lessons: lessons.length, firstLessonBodySha256: createHash('sha256').update(firstLesson.body).digest('hex'), domainWrites: 0, externalMediaRequests: 0, screenReader: 'not_run' };
+    return { language, status: 'passed', checkpoints, keyboardChecks, lessons: lessons.length, firstLessonBodySha256: createHash('sha256').update(firstLesson.body).digest('hex'), domainWrites: 0, externalMediaRequests: 0, screenReader: 'not_run' };
   } finally {
     page.off('request', observe);
   }
