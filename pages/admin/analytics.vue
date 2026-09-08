@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { clientAnalyticsEvents, serverAnalyticsEvents, type LeadCohortReport } from '~/shared/analytics';
+import type { SalesReport } from '~/shared/sales-report';
 
 type EventName = typeof clientAnalyticsEvents[number] | typeof serverAnalyticsEvents[number];
 interface AnalyticsReport {
@@ -14,6 +15,7 @@ interface AnalyticsReport {
   server: Array<{ name: EventName; events: number }>;
   totals: { client: number; server: number };
   leadCohort: LeadCohortReport;
+  sales: SalesReport;
 }
 const { api, tr, locale } = useLmsApi();
 const path = useLocalePath();
@@ -77,6 +79,7 @@ useHead(() => ({ title: tr('Статистика действий — OT Center'
           </section>
         </div>
         <LmsLeadCohort v-if="data.leadCohort" :report="data.leadCohort" />
+        <LmsSalesFunnel v-if="data.sales" :report="data.sales" />
       </template>
     </LmsState>
     <NuxtLink v-if="lmsErrorStatus(error) === 403" class="lms-button secondary" :to="path('/cabinet/security')">{{ tr('Проверить подтверждение безопасности входа', 'Кіру қауіпсіздігін растауды тексеру') }}</NuxtLink>

@@ -256,6 +256,7 @@ useHead(() => ({
       ><NuxtLink v-if="can('issuer')" class="lms-button secondary" :to="path('/admin/document-batches')">{{ tr("Пакетное оформление документов", "Құжаттарды топтамамен рәсімдеу") }}</NuxtLink
       ><NuxtLink v-if="can('admin')" class="lms-button secondary" :to="path('/admin/support')">{{ tr("Обращения и заметки поддержки", "Қолдау өтініштері мен жазбалары") }}</NuxtLink
       ><NuxtLink v-if="can('admin')" class="lms-button secondary" :to="path('/admin/analytics')">{{ tr("Статистика действий", "Әрекеттер статистикасы") }}</NuxtLink
+      ><NuxtLink v-if="can('admin')" class="lms-button secondary" :to="path('/admin/leads')">{{ tr("Заявки и этапы работы", "Өтінімдер және жұмыс кезеңдері") }}</NuxtLink
       ><NuxtLink class="lms-button secondary" :to="path('/cabinet/security')">{{
         tr("Подтвердить безопасность входа", "Кіру қауіпсіздігін растау")
       }}</NuxtLink>

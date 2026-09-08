@@ -100,12 +100,20 @@ try {
   await startRuntime(copy, env); assert.equal((await success('/_nuxt/builds/latest.json')).body.id, build.id);
   pass('isolated-copied-artifact-and-current-schema-ready', { buildId: build.id });
   const disabledConfig = (await success('/api/v1/analytics/config')).body; assert.equal(disabledConfig.enabled, false);
-  const disabledEvent = await success('/api/v1/analytics', { method: 'POST', headers: { Cookie: 'ot_analytics_consent=analytics-v1' }, data: { id: randomUUID(), name: 'program_view', dimensions: { programId: 'ohrana-truda', locale: 'ru' } } });
+  const disabledEvent = await success('/api/v1/analytics', { method: 'POST', headers: { Cookie: 'ot_analytics_consent=analytics-v2' }, data: { id: randomUUID(), name: 'program_view', dimensions: { programId: 'ohrana-truda', locale: 'ru' } } });
   assert.equal(disabledEvent.body.accepted, false); assert.equal(disabledEvent.body.reason, 'disabled');
   assert.equal(Number((await row('SELECT COUNT(*) n FROM analytics_events')).n), 0);
   pass('default-disabled-analytics-does-not-store-even-with-consent');
+  const authJourneyId = randomUUID();
+  const authJourneyEvent = { id: randomUUID(), journeyId: authJourneyId, sequence: 1, step: 'auth_start', context: { routeId: 'auth_login', locale: 'ru', source: 'internal' } };
+  for (const [path, data] of [['/api/v1/analytics/journey', authJourneyEvent], ['/api/v1/analytics/journey/authenticated', { journeyId: authJourneyId }]]) {
+    const disabled = await success(path, { method: 'POST', headers: { Cookie: 'ot_analytics_consent=analytics-v2' }, data });
+    assert.deepEqual(disabled.body, { accepted: false, reason: 'disabled' });
+  }
+  assert.equal(Number((await row('SELECT COUNT(*) n FROM public_journeys')).n), 0);
+  pass('disabled-journey-and-auth-proof-do-not-require-session-or-store-data');
   await negative('disabled-analytics-still-rejects-private-dimensions', '/api/v1/analytics', 400, {
-    method: 'POST', headers: { Cookie: 'ot_analytics_consent=analytics-v1' },
+    method: 'POST', headers: { Cookie: 'ot_analytics_consent=analytics-v2' },
     data: { id: randomUUID(), name: 'program_view', dimensions: { programId: 'ohrana-truda', email: canaries.email, answer: canaries.answer } },
   });
   assert.equal(Number((await row('SELECT COUNT(*) n FROM analytics_events')).n), 0);
@@ -170,11 +178,40 @@ try {
   // Restart only our own copied runtime with explicit local test analytics settings.
   await stopChild(); await startRuntime(copy, { ...env, OT_ANALYTICS_ENABLED: '1' });
   const enabledConfig = (await success('/api/v1/analytics/config')).body;
-  assert.equal(enabledConfig.enabled, true); assert.equal(enabledConfig.consentVersion, 'analytics-v1'); assert.equal(enabledConfig.retentionDays, 14);
+  assert.equal(enabledConfig.enabled, true); assert.equal(enabledConfig.consentVersion, 'analytics-v2'); assert.equal(enabledConfig.retentionDays, 14);
   const noConsentEvent = await success('/api/v1/analytics', { method: 'POST', data: { id: randomUUID(), name: 'program_view', dimensions: { programId: 'ohrana-truda', locale: 'ru' } } });
   assert.equal(noConsentEvent.body.accepted, false); assert.equal(noConsentEvent.body.reason, 'consent_required');
   assert.equal(Number((await row('SELECT COUNT(*) n FROM analytics_events')).n), 0);
   pass('enabled-analytics-requires-separate-client-consent');
+  for (const consent of ['', 'ot_analytics_consent=analytics-v1']) {
+    const response = await success('/api/v1/analytics/journey/authenticated', { method: 'POST', headers: { Cookie: consent }, data: { journeyId: authJourneyId } });
+    assert.deepEqual(response.body, { accepted: false, reason: 'consent_required' });
+  }
+  pass('journey-auth-proof-requires-current-consent-before-session-access');
+  const journeyHeaders = { Cookie: 'ot_analytics_consent=analytics-v2' };
+  await negative('journey-context-rejects-private-query-and-contact-fields', '/api/v1/analytics/journey', 400, {
+    method: 'POST', headers: journeyHeaders, data: { ...authJourneyEvent, context: { ...authJourneyEvent.context, email: canaries.email, returnTo: canaries.verificationToken } },
+  });
+  await negative('journey-rejects-client-forged-auth-confirmation', '/api/v1/analytics/journey', 400, {
+    method: 'POST', headers: journeyHeaders, data: { ...authJourneyEvent, step: 'auth_confirmed', auth_confirmed_at: canaries.answer },
+  });
+  await negative('journey-auth-proof-rejects-private-extra-fields', '/api/v1/analytics/journey/authenticated', 400, {
+    method: 'POST', headers: journeyHeaders, data: { journeyId: authJourneyId, email: canaries.email, sessionToken: canaries.sessionToken },
+  });
+  const authStart = await success('/api/v1/analytics/journey', { method: 'POST', headers: journeyHeaders, data: authJourneyEvent });
+  assert.equal(authStart.body.accepted, true);
+  await negative('journey-auth-proof-requires-actual-session', '/api/v1/analytics/journey/authenticated', 401, {
+    method: 'POST', headers: journeyHeaders, data: { journeyId: authJourneyId },
+  });
+  assert.equal((await row('SELECT auth_confirmed_at FROM public_journeys WHERE id=?', [authJourneyId])).auth_confirmed_at, null);
+  const proofOptions = { method: 'POST', headers: { Cookie: cookie + '; ot_analytics_consent=analytics-v2' }, data: { journeyId: authJourneyId } };
+  assert.equal((await success('/api/v1/analytics/journey/authenticated', proofOptions)).body.accepted, true);
+  const confirmed = await row('SELECT * FROM public_journeys WHERE id=?', [authJourneyId]);
+  assert.ok(Number.isFinite(Date.parse(confirmed.auth_confirmed_at)));
+  assert.deepEqual(scan(JSON.stringify(confirmed)), []);
+  assert.equal((await success('/api/v1/analytics/journey/authenticated', proofOptions)).body.accepted, true);
+  assert.equal((await row('SELECT auth_confirmed_at FROM public_journeys WHERE id=?', [authJourneyId])).auth_confirmed_at, confirmed.auth_confirmed_at);
+  pass('actual-session-confirms-one-stable-timestamp-without-account-or-session-fields');
   const acceptedLeadKey = randomUUID();
   const privateLead = { name: canaries.name, email: canaries.email, phone: canaries.phone, comment: canaries.answer, city: canaries.name, programId: 'ohrana-truda', sourcePath: '/contacts', consentVersion: 'synthetic-privacy-audit' };
   const operationalLead = await success('/api/amo-lead', { method: 'POST', headers: { 'Idempotency-Key': acceptedLeadKey }, data: privateLead }, 202);
@@ -206,7 +243,7 @@ try {
   await page.getByRole('button', { name: 'Разрешить статистику', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Отозвать согласие на статистику', exact: true })).toBeVisible();
   const consentCookie = (await context.cookies()).find(value => value.name === 'ot_analytics_consent');
-  assert.equal(consentCookie?.value, 'analytics-v1'); assert.equal(clientEvents.length, 0, 'Consent itself is not a product analytics event');
+  assert.equal(consentCookie?.value, 'analytics-v2'); assert.equal(clientEvents.length, 0, 'Consent itself is not a product analytics event');
   const programEventResponse = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/analytics');
   await openPage('/courses/ohrana-truda');
   const programEvent = await programEventResponse; assert.equal(programEvent.status(), 200); assert.equal((await programEvent.json()).accepted, true);
@@ -260,6 +297,7 @@ try {
   const logKeys = new Set(['schemaVersion', 'event', 'requestId', 'correlationId', 'originRequestId', 'sourceJobId', 'route', 'method', 'status', 'errorCode', 'elapsedMs']);
   const events = new Set(['api_failure', 'outbox_delivered', 'outbox_cancelled', 'outbox_failed', 'telemetry_write_failed']);
   const routes = new Set(['/api/:unmatched', '/api/v1/attempts/:id/answers', '/api/v1/attempts/:id', '/api/v1/enrollments/:id', '/api/v1/verify/:token', '/api/v1/orders/:id', '/api/v1/credentials/:id', '/api/v1/organizations/:id', '/api/v1/admin/:operation', '/api/v1/me/:resource', '/api/auth/:operation', '/api/leads', '/api/v1/payments/webhook', '/api/v1/operations/tick', '/api/v1/analytics', '/api/v1/catalog/programs/:id', '/api/health', '/api/ready']);
+  routes.add('/api/v1/analytics/journey'); routes.add('/api/v1/analytics/journey/authenticated');
   for (const record of records) {
     assert.equal(record.schemaVersion, 1); assert.ok(events.has(record.event)); assert.ok(Object.keys(record).every(key => logKeys.has(key)), 'Runtime log fields must use the closed schema');
     if (record.route !== undefined) assert.ok(routes.has(record.route), 'Runtime route must be a fixed template');

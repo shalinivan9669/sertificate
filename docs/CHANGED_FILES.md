@@ -2,7 +2,7 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 262
+Всего файлов: 288
 
 - `.env.example`
 - `.gitattributes`
@@ -17,10 +17,12 @@
 - `components/lms/LmsExamPage.vue`
 - `components/lms/LmsInvoices.vue`
 - `components/lms/LmsLeadCohort.vue`
+- `components/lms/LmsLeadWorkspace.vue`
 - `components/lms/LmsLearningReminders.vue`
 - `components/lms/LmsNotifications.vue`
 - `components/lms/LmsPreferences.vue`
 - `components/lms/LmsProgramEditor.vue`
+- `components/lms/LmsSalesFunnel.vue`
 - `components/lms/LmsShell.vue`
 - `components/lms/LmsState.vue`
 - `components/redesign-flow/certificate/CertificateCheckoutSidebar.vue`
@@ -48,6 +50,7 @@
 - `components/redesign-flow/success/SuccessMainCard.vue`
 - `components/redesign-flow/success/SuccessScoreSidebar.vue`
 - `components/SeoUniqueBlocks.vue`
+- `composables/useLeadAttribution.ts`
 - `composables/useLmsAnalytics.ts`
 - `composables/useLmsApi.ts`
 - `composables/useLmsSelection.ts`
@@ -82,7 +85,9 @@
 - `docs/DEPENDENCY-REVIEW.md`
 - `docs/DOCUMENT-OPERATIONS-PILOT.md`
 - `docs/KEYBOARD_LEARNING_PILOT.md`
+- `docs/LEAD_ATTRIBUTION.md`
 - `docs/LEAD_CONTEXT.md`
+- `docs/LEAD_WORKSPACE.md`
 - `docs/LMS_NAV_LAYOUT_LAB.md`
 - `docs/LMS-BROWSER-QA.md`
 - `docs/OBSERVABILITY.md`
@@ -95,6 +100,7 @@
 - `docs/ROLLBACK_DRILL.md`
 - `docs/RUNBOOK.md`
 - `docs/RUNTIME_PRIVACY_AUDIT.md`
+- `docs/SALES_FUNNELS.md`
 - `docs/SEO-POLICY.md`
 - `docs/STATUS_MATRIX_METHOD.md`
 - `docs/VISUAL-ACCESSIBILITY-QA.md`
@@ -115,6 +121,7 @@
 - `pages/admin/documents.vue`
 - `pages/admin/incidents.vue`
 - `pages/admin/index.vue`
+- `pages/admin/leads.vue`
 - `pages/admin/programs/index.vue`
 - `pages/admin/support.vue`
 - `pages/admin/users.vue`
@@ -148,6 +155,7 @@
 - `pages/second.vue`
 - `pages/verify/[token].vue`
 - `pages/wizard.vue`
+- `plugins/lead-attribution.client.ts`
 - `public/sitemap.xml`
 - `scripts/build-asset-check.mjs`
 - `scripts/build-vercel.mjs`
@@ -159,6 +167,7 @@
 - `scripts/generate-sitemap.mjs`
 - `scripts/lms-nav-layout-lab.mjs`
 - `scripts/performance-lab.mjs`
+- `scripts/prepare-lead-browser-ci-reports.mjs`
 - `scripts/rollback-drill.ts`
 - `scripts/rollback-preflight.ts`
 - `scripts/runtime-privacy-audit.mjs`
@@ -171,6 +180,8 @@
 - `server/api/health.get.ts`
 - `server/api/ready.get.ts`
 - `server/api/v1/[...path].ts`
+- `server/api/v1/analytics/journey.post.ts`
+- `server/api/v1/analytics/journey/authenticated.post.ts`
 - `server/db/auth-schema.ts`
 - `server/db/index.ts`
 - `server/db/migrations/001-core.sql`
@@ -183,6 +194,8 @@
 - `server/db/migrations/008-program-intake.sql`
 - `server/db/migrations/009-staff-workflows.sql`
 - `server/db/migrations/010-observability.sql`
+- `server/db/migrations/011-lead-attribution.sql`
+- `server/db/migrations/012-sales-links.sql`
 - `server/db/required-migrations.ts`
 - `server/handlers/business.ts`
 - `server/handlers/core.ts`
@@ -198,6 +211,7 @@
 - `server/services/credentials.ts`
 - `server/services/incidents.ts`
 - `server/services/invoices.ts`
+- `server/services/lead-attribution.ts`
 - `server/services/lead-cohort.ts`
 - `server/services/leads.ts`
 - `server/services/learning.ts`
@@ -206,6 +220,8 @@
 - `server/services/program-intake.ts`
 - `server/services/reminders.ts`
 - `server/services/request-observations.ts`
+- `server/services/sales-links.ts`
+- `server/services/sales-report.ts`
 - `server/services/staff-workflows.ts`
 - `server/utils/auth.ts`
 - `server/utils/business.ts`
@@ -214,7 +230,9 @@
 - `server/utils/validation.ts`
 - `shared/analytics.ts`
 - `shared/course-registry.ts`
+- `shared/lead-attribution.ts`
 - `shared/lead-context.ts`
+- `shared/sales-report.ts`
 - `shared/source-products.ts`
 - `tests/acceptance-extra-browser.mjs`
 - `tests/acceptance-extra-fixtures.ts`
@@ -240,13 +258,18 @@
 - `tests/http-security.test.ts`
 - `tests/invoices.test.ts`
 - `tests/keyboard-learning-browser.mjs`
+- `tests/lead-attribution-browser.mjs`
+- `tests/lead-attribution.test.ts`
 - `tests/lead-cohort.test.ts`
 - `tests/lead-context-browser.mjs`
 - `tests/lead-context.test.ts`
+- `tests/lead-workspace-browser.mjs`
+- `tests/lead-workspace-fixtures.ts`
 - `tests/learning-reminders.test.ts`
 - `tests/lms-admin-browser.mjs`
 - `tests/lms-auth-browser.mjs`
 - `tests/lms-browser.mjs`
+- `tests/migration-upgrade-fixture.ts`
 - `tests/migration-upgrade.test.ts`
 - `tests/notifications.test.ts`
 - `tests/observability.test.ts`
@@ -257,12 +280,15 @@
 - `tests/prepare-performance-session.mjs`
 - `tests/program-intake.test.ts`
 - `tests/public-content.test.ts`
+- `tests/public-journey-client.test.ts`
 - `tests/public-route-policy.test.mjs`
 - `tests/run-core-browser.mjs`
 - `tests/run-document-pilot.ps1`
+- `tests/sales-links.test.ts`
 - `tests/seo-indexability.test.mjs`
 - `tests/source-products.test.ts`
 - `tests/support-notes.test.ts`
 - `tsconfig.json`
 - `utils/lms-analytics-client.ts`
+- `utils/public-journey-client.ts`
 - `vercel.json`

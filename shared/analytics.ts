@@ -2,7 +2,7 @@ import { courseDirections } from './course-registry';
 
 export const clientAnalyticsEvents = ['program_view', 'selection_start', 'selection_complete', 'contact_click', 'lead_form_start', 'checkout_view', 'lesson_open', 'support_open'] as const;
 export const serverAnalyticsEvents = ['lead_accepted', 'lead_crm_delivered', 'enrollment_activated', 'lesson_completed', 'assessment_started', 'assessment_submitted', 'assessment_graded', 'payment_confirmed', 'refund_confirmed', 'credential_issued', 'credential_revoked'] as const;
-export const analyticsConsentVersion = 'analytics-v1' as const;
+export const analyticsConsentVersion = 'analytics-v2' as const;
 export const analyticsCookieName = 'ot_analytics_consent' as const;
 export const analyticsCities = ['almaty', 'astana', 'shymkent', 'karaganda', 'atyrau', 'aktau', 'pavlodar', 'ust-kamenogorsk', 'kostanay', 'taraz', 'kyzylorda', 'aktobe', 'petropavlovsk', 'semey', 'uralsk'] as const;
 export const analyticsPrograms = courseDirections.map(direction => direction.id);

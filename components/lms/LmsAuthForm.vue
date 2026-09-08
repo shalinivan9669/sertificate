@@ -2,7 +2,8 @@
 const props = defineProps<{
   mode: "login" | "signup" | "forgot" | "reset" | "verify" | "mfa";
 }>();
-const { tr, request, errorText } = useLmsApi();
+const { tr, locale, request, errorText } = useLmsApi();
+const attribution = useLeadAttribution();
 const path = useLocalePath();
 const route = useRoute();
 const busy = ref(false);
@@ -48,6 +49,7 @@ async function submit() {
   busy.value = true;
   failure.value = "";
   message.value = "";
+  if (props.mode === 'login' || props.mode === 'signup') void attribution.action('auth_start', { routeId: props.mode === 'login' ? 'auth_login' : 'auth_signup', locale: locale.value === 'kk' ? 'kk' : 'ru', source: 'internal' }).catch(() => {});
   try {
     if (props.mode === "login") {
       const result = await request<any>("/api/auth/sign-in/email", {
@@ -63,7 +65,10 @@ async function submit() {
           path: path("/auth/mfa"),
           query: { returnTo: destination.value },
         });
-      else await navigateTo(destination.value);
+      else {
+        void attribution.authenticated().catch(() => {});
+        await navigateTo(destination.value);
+      }
     } else if (props.mode === "signup") {
       await request("/api/auth/sign-up/email", {
         method: "POST",
@@ -147,6 +152,7 @@ async function submit() {
         method: "POST",
         body: { code: code.value, trustDevice: false },
       });
+      void attribution.authenticated().catch(() => {});
       await navigateTo(destination.value);
     }
   } catch (error) {

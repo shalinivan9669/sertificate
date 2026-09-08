@@ -10,4 +10,6 @@ export const requiredMigrations = [
   '008-program-intake.sql',
   '009-staff-workflows.sql',
   '010-observability.sql',
+  '011-lead-attribution.sql',
+  '012-sales-links.sql',
 ] as const;

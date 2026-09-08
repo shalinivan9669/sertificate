@@ -80,6 +80,9 @@ test('B52 log allowlist rejects dynamic routes, query/body/stack, uppercase secr
     assert.equal(record.errorCode, 'SERVER_REQUEST_FAILED'); assert.equal(record.requestId, null); assert.equal(record.method, 'OTHER'); assert.ok(text.length < 500);
   }
   assert.equal(safeRoute(`/api/v1/attempts/${randomUUID()}/answers/private-question`), '/api/v1/attempts/:id/answers');
+  assert.equal(safeRoute(`/api/v1/analytics/journey?source=${canaries[1]}`), '/api/v1/analytics/journey');
+  assert.equal(safeRoute(`/api/v1/analytics/journey/authenticated?token=${canaries[1]}`), '/api/v1/analytics/journey/authenticated');
+  assert.equal(safeRoute(`/api/v1/analytics/journey/${canaries[0]}`), '/api/:unmatched');
   assert.equal(safeDeliveryCode({ statusMessage: canaries[0], message: canaries[1], stack: canaries[2] }), 'DELIVERY_FAILED');
   assert.equal(safeOperationalCode(canaries[0]), 'UNCLASSIFIED');
   const event = fakeEvent('/api/v1/analytics', 'POST');
@@ -121,6 +124,7 @@ test('B52 actual Better Auth transactional email outbox inherits HTTP context wi
 
 test('B52 handled Better Auth Web Response 401 is observed once without changing its authentication response', async () => {
   const before = Number((await queryOne('SELECT SUM(count) AS total FROM operational_counters WHERE metric=?', ['api_error']))?.total || 0);
+  const authBefore = Number((await queryOne('SELECT SUM(count) AS total FROM operational_counters WHERE metric=?', ['auth_failure']))?.total || 0);
   const response = await fetch(`${origin}/api/auth/sign-in/email?token=${canaries[3]}`, {
     method: 'POST', headers: { origin, 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'auth-observation@example.test', password: 'Wrong-isolated-test-password-2026!' }),
@@ -133,6 +137,24 @@ test('B52 handled Better Auth Web Response 401 is observed once without changing
   assert.equal(matches.length, 1); assert.equal(matches[0]!.status, 401);
   assert.equal(matches[0]!.route, '/api/auth/:operation'); assert.equal(matches[0]!.errorCode, 'AUTHENTICATION_REQUIRED');
   assert.equal(Number((await queryOne('SELECT SUM(count) AS total FROM operational_counters WHERE metric=?', ['api_error']))!.total), before + 1);
+  assert.equal(Number((await queryOne('SELECT SUM(count) AS total FROM operational_counters WHERE metric=?', ['auth_failure']))!.total), authBefore + 1);
+});
+
+test('order write errors have a bounded aggregate counter; reads, successful responses and duplicate hooks do not inflate it', async () => {
+  const count = async () => Number((await queryOne('SELECT SUM(count) AS total FROM operational_counters WHERE metric=?', ['checkout_failure']))?.total || 0);
+  const initial = await count();
+  for (const path of ['/api/v1/orders', `/api/v1/orders/${randomUUID()}/checkout`]) {
+    const response = await fetch(origin + path, { method: 'POST', headers: { origin, 'Content-Type': 'application/json' }, body: '{}' });
+    assert.equal(response.status, 401, 'Actual anonymous writes fail through the existing authorization path');
+  }
+  assert.equal(await count(), initial + 2);
+  const read = await fetch(`${origin}/api/v1/orders/${randomUUID()}`); assert.equal(read.status, 401);
+  assert.equal(await count(), initial + 2, 'Reading an order is not an attempted checkout');
+  const metrics: string[][] = [], write = async (names: readonly string[]) => { metrics.push([...names]); };
+  const event = fakeEvent(`/api/v1/orders/${randomUUID()}/checkout`, 'POST');
+  await observeApiResponse(event, 503, write); await observeApiResponse(event, 503, write);
+  await observeApiResponse(fakeEvent('/api/v1/orders', 'POST'), 200, write);
+  assert.deepEqual(metrics, [['api_error','checkout_failure']], 'One write per failed response with no personal dimension');
 });
 
 test('B52 worker failure/retry uses source correlation and job span rather than the operator request; success is not redelivered', async () => {

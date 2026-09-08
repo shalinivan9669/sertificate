@@ -6,6 +6,7 @@ import { assertRole, type AppUser } from '../utils/auth';
 import { analyticsCities, analyticsConsentVersion, analyticsPrograms, clientAnalyticsEvents, safeClientAnalyticsDimensions, serverAnalyticsEvents, type ClientAnalyticsDimensions } from '../../shared/analytics';
 import { resolveCourseDirection } from '../../shared/course-registry';
 import { leadDeliveryCohort } from './lead-cohort';
+import { salesReport } from './sales-report';
 
 const clientSchema = z.object({ id: z.string().uuid(), name: z.enum(clientAnalyticsEvents), dimensions: z.object({
   programId: z.enum(analyticsPrograms as [string, ...string[]]).optional(), locale: z.enum(['ru', 'kk']).optional(),
@@ -111,20 +112,21 @@ export async function analyticsReport(actor: AppUser, query: Record<string, unkn
   const counts = new Map(rows.map(row => [row.name, Number(row.events)]));
   const client = clientAnalyticsEvents.map(name => ({ name, events: counts.get(name) || 0 }));
   const server = serverAnalyticsEvents.map(name => ({ name, events: counts.get(name) || 0 }));
-  const leadCohort = await leadDeliveryCohort(from, until, new Date().toISOString());
+  const leadCohort = await leadDeliveryCohort(from, until, new Date(now).toISOString());
+  const sales = await salesReport(actor, from, until, now);
   return { configuration, window: { from, until, days, timezone: 'UTC', bounds: '[from,until)' }, unit: 'deduplicated_events', clientPopulation: 'opted_in_browser_actions', serverPopulation: 'confirmed_service_transitions', uniqueVisitorsMeasured: false, conversionRate: null,
-    client, server, totals: { client: client.reduce((n, row) => n + row.events, 0), server: server.reduce((n, row) => n + row.events, 0) }, leadCohort };
+    client, server, totals: { client: client.reduce((n, row) => n + row.events, 0), server: server.reduce((n, row) => n + row.events, 0) }, leadCohort, sales };
 }
 
 /** Only optional analytics records; never audit, attempts, payments, files or consent history. */
 export async function expireAnalytics(now = Date.now()) {
   const { enabled, retentionDays } = analyticsConfiguration();
-  if (!enabled || !retentionDays) return { deleted: 0, enabled: false };
+  if (!retentionDays) return { deleted: 0, enabled };
   const cutoff = new Date(now - retentionDays * 86400000).toISOString();
   const started = Date.now(); let deleted = 0;
   for (let batch = 0; batch < 10 && Date.now() - started < 3000; batch++) {
     const result = await execute('DELETE FROM analytics_events WHERE id IN (SELECT id FROM analytics_events WHERE created_at<? ORDER BY created_at LIMIT 500)', [cutoff]);
     deleted += Number(result.rowsAffected); if (Number(result.rowsAffected) < 500) break;
   }
-  return { deleted, enabled: true, cutoff, batchLimit: 5000, elapsedMs: Date.now() - started };
+  return { deleted, enabled, cutoff, batchLimit: 5000, elapsedMs: Date.now() - started };
 }

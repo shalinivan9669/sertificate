@@ -21,6 +21,8 @@ export async function observeApiResponse(event: H3Event, status: number, writer:
   logObservation({ event: 'api_failure', context: observation.context, route, method, status, elapsedMs: performance.now() - observation.started });
   const metrics = ['api_error'];
   if (route === '/api/v1/attempts/:id/answers' && ['PUT', 'POST', 'PATCH'].includes(method)) metrics.push('autosave_failure');
+  if (route === '/api/v1/orders/:id' && method === 'POST') metrics.push('checkout_failure');
+  if (route === '/api/auth/:operation') metrics.push('auth_failure');
   try { await writer(metrics); }
   catch { logObservation({ event: 'telemetry_write_failed', context: observation.context, route, method }); }
 }

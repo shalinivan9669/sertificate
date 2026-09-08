@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref, useHead, useI18n, useLocalePath, useRoute } from '#imports';
+import { onBeforeUnmount, onMounted, reactive, ref, useHead, useI18n, useLocalePath, useNuxtApp, useRoute, useRouter } from '#imports';
 import { courseDirections } from '~/shared/course-registry';
 import { leadCities, leadCityLabel, leadCityValue, leadFormats, readLeadContext } from '~/shared/lead-context';
 
@@ -8,13 +8,25 @@ const path = useLocalePath();
 const route = useRoute();
 const tr = (ru, kk) => locale.value === 'kk' ? kk : ru;
 const { track } = useLmsAnalytics();
+const { snapshot: attributionSnapshot } = useLeadAttribution();
 const isSubmitting = ref(false);
 const status = ref('');
 const failure = ref('');
 const context = reactive({ programId: '', city: '', format: '' });
-const initialContext = readLeadContext(route.query);
-const resetContext = () => Object.assign(context, initialContext, { city: leadCityLabel(initialContext.city, locale.value) });
-onMounted(resetContext);
+const nuxtApp = useNuxtApp();
+const router = useRouter();
+let stopContextPrefill = () => {};
+onMounted(() => {
+  const applyContext = () => {
+    const initial = readLeadContext(router.currentRoute.value.query);
+    const values = { ...initial, city: leadCityLabel(initial.city, locale.value) };
+    for (const key of ['programId', 'city', 'format']) if (!context[key]) context[key] = values[key];
+  };
+  // Prerendered routes restore their query after suspense resolves.
+  if (nuxtApp.isHydrating) stopContextPrefill = nuxtApp.hooks.hookOnce('app:suspense:resolve', applyContext);
+  else applyContext();
+});
+onBeforeUnmount(() => stopContextPrefill());
 let submissionKey = '';
 let submittedPayload = '';
 
@@ -64,10 +76,11 @@ const handleSubmit = async (event) => {
   isSubmitting.value = true;
 
   try {
+    const attribution = await attributionSnapshot();
     await $fetch('/api/amo-lead', {
       method: 'POST',
       headers: { 'Idempotency-Key': submissionKey },
-      body: payload,
+      body: { ...payload, ...(attribution ? { attribution } : {}) },
       retry: 0,
     });
 

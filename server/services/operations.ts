@@ -9,6 +9,7 @@ import { incrementOperationalCounter, recordIncident, scanOperationalIncidents }
 import { deliverLearningReminder, scheduleLearningReminders } from './reminders';
 import { expireDueAttempts } from './assessment';
 import { expireAnalytics } from './analytics';
+import { expireLeadAttribution } from './lead-attribution';
 import { jobObservation, logObservation, runWithObservation, safeDeliveryCode } from '../utils/observability';
 
 export function secretEquals(value: string, expected: string | undefined) {
@@ -143,7 +144,9 @@ export async function runOperationalTick(options: { allowExternal?: boolean } = 
   const queue = await processOutbox({ limit: 10, budgetMs: Math.max(100, 30000 - (Date.now() - started)), allowExternal: options.allowExternal });
   const incidents = await scanOperationalIncidents({ limit: 20, budgetMs: Math.max(100, Math.min(5000, 40000 - (Date.now() - started))) });
   const analyticsRetention = await expireAnalytics().catch(() => { logObservation({ event: 'telemetry_write_failed' }); return { completed: false }; });
-  return { ...queue, incidents, reminders, attempts, analyticsRetention, elapsedMs: Date.now() - started };
+  // Stored expiry still applies after collection is disabled; business records remain untouched.
+  const attributionRetention = await expireLeadAttribution().catch(() => { logObservation({ event: 'telemetry_write_failed' }); return { completed: false }; });
+  return { ...queue, incidents, reminders, attempts, analyticsRetention, attributionRetention, elapsedMs: Date.now() - started };
 }
 export async function updateConsent(userId: string, data: unknown) {
   const body = parse(z.object({ marketing: z.boolean(), version: z.string().min(1).max(50) }).strict(), data);

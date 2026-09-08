@@ -31,6 +31,19 @@ before(async () => {
   await source.execute({ sql: 'INSERT INTO learning_reminder_deliveries(id,reminder_id,revision,offset_days,scheduled_at,expires_at,created_at) VALUES(?,?,0,7,?,?,?)', args: ['restore-reminder-slot', 'restore-reminder', '2029-12-25T00:00:00.000Z', '2029-12-26T00:00:00.000Z', now] });
   await source.execute({ sql: 'INSERT INTO credential_batches(id,created_by,action,reason,expires_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)', args: ['restore-batch', 'source-reviewer', 'issue', 'SYNTHETIC preserve pending batch', '2030-01-01T00:00:00.000Z', now, now] });
   await source.execute({ sql: 'INSERT INTO credential_batch_items(batch_id,target_id,preview_json,fingerprint) VALUES(?,?,?,?)', args: ['restore-batch', 'restore-enrollment', '{"notice":"SYNTHETIC private preview"}', 'synthetic-preview-hash'] });
+  // Populated optional attribution and explicit sales relationships must also survive encrypted restore.
+  // These are isolated database fixtures; no proposal was sent and no service workflow is implied.
+  const journeyId = 'd2b9d63b-9b23-4303-b93d-4099b08401fb';
+  const touch = JSON.stringify({ routeId: 'home', locale: 'ru', source: 'direct' });
+  await source.execute({ sql: 'INSERT INTO lead_submissions(id,payload_json,request_hash,idempotency_key,created_at,updated_at) VALUES(?,?,?,?,?,?)', args: ['restore-lead', '{"name":"SYNTHETIC backup lead","email":"restore-lead@example.test","organizationName":"SYNTHETIC backup organization"}', 'synthetic-backup-lead-hash', 'synthetic-backup-lead-key', now, now] });
+  await source.execute({ sql: 'INSERT INTO public_journeys(id,consent_version,created_at,updated_at,expires_at) VALUES(?,?,?,?,?)', args: [journeyId, 'analytics-v2', now, now, '2030-01-01T00:00:00.000Z'] });
+  await source.execute({ sql: 'INSERT INTO public_journey_steps(id,journey_id,sequence,step,context_json,created_at) VALUES(?,?,1,?,?,?)', args: ['9f6f37c4-fdb5-4656-a36e-20c6344aef81', journeyId, 'landing', touch, now] });
+  await source.execute({ sql: 'INSERT INTO lead_attributions(lead_id,journey_id,last_sequence,first_touch_json,last_touch_json,consent_version,created_at,expires_at) VALUES(?,?,1,?,?,?,?,?)', args: ['restore-lead', journeyId, touch, touch, 'analytics-v2', now, '2030-01-01T00:00:00.000Z'] });
+  await source.execute({ sql: 'INSERT INTO lead_qualifications(lead_id,status,updated_by,updated_at) VALUES(?,?,?,?)', args: ['restore-lead', 'qualified', 'source-reviewer', now] });
+  await source.execute({ sql: 'INSERT INTO organizations(id,name,created_at) VALUES(?,?,?)', args: ['restore-organization', 'SYNTHETIC backup organization', now] });
+  await source.execute({ sql: 'INSERT INTO enrollments(id,user_id,version_id,organization_id,status,created_at) VALUES(?,?,?,?,?,?)', args: ['restore-corporate-enrollment', 'source-author', 'restore-version', 'restore-organization', 'active', now] });
+  await source.execute({ sql: 'INSERT INTO sales_proposals(id,lead_id,sent_at,reference,organization_id,created_by,created_at) VALUES(?,?,?,?,?,?,?)', args: ['restore-proposal', 'restore-lead', now, 'SYNTHETIC NO ACTUAL DELIVERY', 'restore-organization', 'source-reviewer', now] });
+  await source.execute({ sql: 'INSERT INTO sales_links(id,lead_id,proposal_id,kind,enrollment_id,created_by,created_at) VALUES(?,?,?,?,?,?,?)', args: ['restore-sales-link', 'restore-lead', 'restore-proposal', 'enrollment', 'restore-corporate-enrollment', 'source-reviewer', now] });
   snapshot = await exportDatabase(source);
 });
 after(async () => {

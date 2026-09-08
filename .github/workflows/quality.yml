@@ -43,10 +43,29 @@ jobs:
         env:
           NODE_ENV: test
           OT_ALLOW_PRIVACY_AUDIT: '1'
+      - name: Consented public journey and lead attribution
+        run: node tests/lead-attribution-browser.mjs
+        env:
+          NODE_ENV: test
+          OT_ALLOW_TEST_SEED: '1'
+      - name: Protected lead workspace and sales report
+        run: node tests/lead-workspace-browser.mjs
+        env:
+          NODE_ENV: test
+          OT_ALLOW_TEST_SEED: '1'
       - run: npm run build:vercel
+      - name: Prepare safe lead browser failure reports
+        if: failure()
+        run: node scripts/prepare-lead-browser-ci-reports.mjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: verification-artifacts
-          path: artifacts/
+          path: |
+            artifacts/
+            !artifacts/lead-attribution-browser/**
+            !artifacts/lead-workspace-browser/**
+            !artifacts/**/*.log
+            !artifacts/**/*.sqlite*
+            !artifacts/**/*-private.*
           if-no-files-found: ignore

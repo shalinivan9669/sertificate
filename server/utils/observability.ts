@@ -79,6 +79,8 @@ const routePatterns = [
   [/^\/api\/v1\/payments\/webhook$/, '/api/v1/payments/webhook'],
   [/^\/api\/v1\/operations\/tick$/, '/api/v1/operations/tick'],
   [/^\/api\/v1\/analytics$/, '/api/v1/analytics'],
+  [/^\/api\/v1\/analytics\/journey$/, '/api/v1/analytics/journey'],
+  [/^\/api\/v1\/analytics\/journey\/authenticated$/, '/api/v1/analytics/journey/authenticated'],
   [/^\/api\/v1\/catalog\/programs(?:\/[^/]+)?$/, '/api/v1/catalog/programs/:id'],
   [/^\/api\/health$/, '/api/health'], [/^\/api\/ready$/, '/api/ready'],
 ] as const;

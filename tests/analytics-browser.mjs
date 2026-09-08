@@ -105,7 +105,7 @@ try {
   const consent = learner.getByRole('region', { name: 'Необязательная статистика сайта', exact: true });
   await expect(consent.getByRole('button', { name: 'Разрешить статистику', exact: true })).toBeEnabled();
   await consent.getByRole('button', { name: 'Разрешить статистику', exact: true }).click();
-  await expect.poll(async () => (await learnerContext.cookies()).find(cookie => cookie.name === 'ot_analytics_consent')?.value).toBe('analytics-v1');
+  await expect.poll(async () => (await learnerContext.cookies()).find(cookie => cookie.name === 'ot_analytics_consent')?.value).toBe('analytics-v2');
   const cookie = (await learnerContext.cookies()).find(cookie => cookie.name === 'ot_analytics_consent'); assert.equal(cookie.expires, -1); assert.equal(cookie.path, '/'); assert.equal(cookie.sameSite, 'Lax'); assert.equal(events.length, 0);
   passed('Explicit RU opt-in creates only the session consent cookie; consent itself is not an event');
 

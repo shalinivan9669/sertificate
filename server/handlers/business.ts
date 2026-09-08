@@ -12,6 +12,7 @@ import * as invoices from '../services/invoices';
 import * as incidents from '../services/incidents';
 import * as staffWorkflows from '../services/staff-workflows';
 import * as analytics from '../services/analytics';
+import * as sales from '../services/sales-links';
 import { analyticsCookieName } from '../../shared/analytics';
 export default defineEventHandler(async event => {
   const path = getRequestURL(event).pathname.replace(/^\/api\/v1\//, ''); const parts = path.split('/'); const method = getMethod(event); const segment = (index: number) => parts[index] || "";
@@ -20,7 +21,7 @@ export default defineEventHandler(async event => {
   if (method === 'GET' && segment(0) === 'verify' && parts.length === 2) { await limit(`verify:${ip}`, 30, 60000); return credentials.verifyCredential(segment(1)); }
   if (method === 'POST' && path === 'leads') {
     await limit(`lead:${ip}`, 5, 60000);
-    const result = await acceptLead(await readBody(event), key);
+    const result = await acceptLead(await readBody(event), key, getCookie(event, analyticsCookieName));
     setResponseStatus(event, 202);
     if ('submissionId' in result && process.env.OT_CRM_DELIVERY_ENABLED === '1') event.waitUntil(operations.processOutbox({ aggregateId: result.submissionId, limit: 1, budgetMs: 30000, allowExternal: true }).catch(() => undefined));
     return result;
@@ -76,6 +77,20 @@ export default defineEventHandler(async event => {
   if (path === 'me/consents' && method === 'GET') return { marketing: Boolean(await queryOne('SELECT id FROM consent_records WHERE user_id=? AND purpose=? AND withdrawn_at IS NULL LIMIT 1', [user.id, 'marketing'])) };
   if (path === 'me/consents' && method === 'POST') return operations.updateConsent(user.id, await readBody(event));
   if (segment(0) === 'admin') {
+    if (path === 'admin/leads' && method === 'GET') return sales.listSalesLeads(user, Object.fromEntries(getRequestURL(event).searchParams));
+    if (path === 'admin/leads/targets' && method === 'GET') return sales.salesTargets(user, Object.fromEntries(getRequestURL(event).searchParams));
+    if (segment(1) === 'leads' && parts.length === 3 && method === 'GET') return sales.getSalesLead(user, segment(2));
+    if (segment(1) === 'leads' && method === 'POST') {
+      if (segment(3) === 'qualification' && parts.length === 4) return sales.qualifyLead(user, segment(2), await readBody(event), key);
+      if (segment(3) === 'links' && parts.length === 4) return sales.linkLead(user, segment(2), await readBody(event), key);
+      if (segment(3) === 'links' && segment(5) === 'revoke' && parts.length === 6) return sales.revokeSalesLink(user, segment(2), segment(4), await readBody(event), key);
+      if (segment(3) === 'proposals' && parts.length === 4) return sales.recordSalesProposal(user, segment(2), await readBody(event), key);
+      if (segment(3) === 'proposals' && parts.length === 6) {
+        if (segment(5) === 'organization') return sales.attachProposalOrganization(user, segment(2), segment(4), await readBody(event), key);
+        if (segment(5) === 'assignments') return sales.attachProposalAssignments(user, segment(2), segment(4), await readBody(event), key);
+        if (segment(5) === 'withdraw') return sales.withdrawSalesProposal(user, segment(2), segment(4), await readBody(event), key);
+      }
+    }
     if (path === 'admin/analytics' && method === 'GET') return analytics.analyticsReport(user, Object.fromEntries(getRequestURL(event).searchParams));
     if (segment(1) === 'support-notes' && parts.length === 3 && method === 'GET') return staffWorkflows.listSupportNotes(user, segment(2), Object.fromEntries(getRequestURL(event).searchParams));
     if (segment(1) === 'support-notes' && parts.length === 3 && method === 'POST') return staffWorkflows.appendSupportNote(user, segment(2), await readBody(event));

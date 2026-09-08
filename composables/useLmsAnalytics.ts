@@ -7,7 +7,10 @@ let configRequest: Promise<AnalyticsConfig | null> | undefined;
 let configAbort: AbortController | undefined;
 
 export function useLmsAnalytics() {
-  const { locale } = useI18n();
+  const app = useNuxtApp();
+  // Vue's useI18n requires a component setup instance. Nuxt plugins use the already
+  // installed global composer; unref keeps both the composer and legacy shape reactive.
+  const locale = getCurrentInstance() ? useI18n().locale : computed(() => unref(app.$i18n.locale));
   const cookie = useCookie<string | null>(analyticsCookieName, { sameSite: 'lax', path: '/', encode: value => encodeURIComponent(value || ''), decode: value => typeof value === 'string' ? decodeURIComponent(value) : null, default: () => null });
   const consented = useState('lms-analytics-consented', () => false);
   const config = useState<AnalyticsConfig | null>('lms-analytics-config', () => null);
@@ -31,6 +34,7 @@ export function useLmsAnalytics() {
   function withdraw() {
     consented.value = false; cookie.value = null;
     queue?.clear(); configAbort?.abort();
+    if (import.meta.client) window.dispatchEvent(new Event('ot-analytics-withdraw'));
   }
   function optIn() {
     if (!import.meta.client || !enabled.value) return false;
@@ -45,7 +49,9 @@ export function useLmsAnalytics() {
     } });
     queue.enqueue({ id: crypto.randomUUID(), name, dimensions: analyticsDimensions({ ...dimensions, locale: locale.value === 'kk' ? 'kk' : 'ru' }) });
   }
-  onMounted(() => { consented.value = cookie.value === analyticsConsentVersion; });
+  const restoreConsent = () => { consented.value = cookie.value === analyticsConsentVersion; };
+  if (getCurrentInstance()) onMounted(restoreConsent);
+  else if (import.meta.client) app.hook('app:mounted', restoreConsent);
   watch(consented, value => { if (!value) queue?.clear(); });
   return { consented, config, configPending, configError, enabled, loadConfig, optIn, withdraw, track };
 }

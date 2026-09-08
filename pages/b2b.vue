@@ -3,6 +3,7 @@ import { leadCities, leadCityLabel, leadCityValue, leadFormats, readLeadContext 
 const { tr, locale, request, errorText } = useLmsApi();
 const path = useLocalePath();
 const route = useRoute();
+const { snapshot: attributionSnapshot } = useLeadAttribution();
 const busy = ref(false);
 const failure = ref("");
 const success = ref(false);
@@ -21,8 +22,20 @@ const form = reactive({
   comment: "",
   website: "",
 });
-const initialContext = readLeadContext(route.query);
-onMounted(() => Object.assign(form, initialContext, { city: leadCityLabel(initialContext.city, locale.value) }));
+const nuxtApp = useNuxtApp();
+const router = useRouter();
+let stopContextPrefill = () => {};
+onMounted(() => {
+  const applyContext = () => {
+    const initial = readLeadContext(router.currentRoute.value.query);
+    const values = { ...initial, city: leadCityLabel(initial.city, locale.value) };
+    for (const key of ['programId', 'city', 'format'] as const) if (!form[key]) form[key] = values[key];
+  };
+  // Prerendered routes restore their query after suspense resolves.
+  if (nuxtApp.isHydrating) stopContextPrefill = nuxtApp.hooks.hookOnce('app:suspense:resolve', applyContext);
+  else applyContext();
+});
+onBeforeUnmount(() => stopContextPrefill());
 async function submit() {
   if (busy.value) return;
   busy.value = true;
@@ -45,10 +58,11 @@ async function submit() {
       leadKey = crypto.randomUUID();
       submittedPayload = fingerprint;
     }
+    const attribution = await attributionSnapshot();
     await request("/api/amo-lead", {
       method: "POST",
       headers: { "Idempotency-Key": leadKey },
-      body: payload,
+      body: { ...payload, ...(attribution ? { attribution } : {}) },
     });
     success.value = true;
     leadKey = "";

@@ -335,7 +335,7 @@ test('analytics cannot accept browser purchase/grade truth or PII; consent withd
   process.env.OT_ANALYTICS_ENABLED = '1'; process.env.OT_ANALYTICS_RETENTION_DAYS = '14';
   try {
   const event = { id: randomUUID(), name: 'program_view', dimensions: { programId: 'ohrana-truda', locale: 'kk' } };
-  await recordAnalytics(event, 'analytics-v1'); await recordAnalytics(event, 'analytics-v1'); assert.equal((await queryOne('SELECT COUNT(*) n FROM analytics_events WHERE id=?', [event.id]))!.n, 1);
+  await recordAnalytics(event, 'analytics-v2'); await recordAnalytics(event, 'analytics-v2'); assert.equal((await queryOne('SELECT COUNT(*) n FROM analytics_events WHERE id=?', [event.id]))!.n, 1);
   await rejectsCode(recordAnalytics({ ...event, name: 'purchase' }), 'VALIDATION_ERROR');
   await rejectsCode(recordAnalytics({ ...event, dimensions: { email: learner.email } }), 'VALIDATION_ERROR');
   await updateConsent(learner.id, { marketing: true, version: 'isolated-test-v1' });
@@ -351,16 +351,17 @@ test('analytics stays disabled without explicit policy and refuses collection wi
   const event = { id: randomUUID(), name: 'program_view', dimensions: { programId: 'ohrana-truda' } };
   try {
     delete process.env.OT_ANALYTICS_ENABLED; delete process.env.OT_ANALYTICS_RETENTION_DAYS;
-    assert.equal(analyticsConfiguration().enabled, false); assert.equal((await recordClientAnalytics(event, 'analytics-v1')).accepted, false);
+    assert.equal(analyticsConfiguration().enabled, false); assert.equal((await recordClientAnalytics(event, 'analytics-v2')).accepted, false);
     process.env.OT_ANALYTICS_ENABLED = '1';
     for (const days of ['', '0', '91', 'NaN', '14.5', '100000']) { process.env.OT_ANALYTICS_RETENTION_DAYS = days; assert.equal(analyticsConfiguration().enabled, false); }
     process.env.OT_ANALYTICS_RETENTION_DAYS = '14'; assert.equal(analyticsConfiguration().enabled, true);
     assert.deepEqual(await recordClientAnalytics(event, undefined), { accepted: false, reason: 'consent_required' });
     assert.deepEqual(await recordClientAnalytics(event, 'marketing-v1'), { accepted: false, reason: 'consent_required' });
+    assert.deepEqual(await recordClientAnalytics(event, 'analytics-v1'), { accepted: false, reason: 'consent_required' }, 'The previous consent cannot authorize the expanded collection');
     assert.equal((await queryOne('SELECT COUNT(*) n FROM analytics_events WHERE id=?', [event.id]))!.n, 0);
-    for (const dimensions of [{ programId: 'private-person-canary' }, { city: 'private-city-canary' }, { email: learner.email }, { token: 'PRIVATE_QUERY_TOKEN' }, { selectedOptionIds: ['right'] }]) await rejectsCode(recordClientAnalytics({ ...event, dimensions }, 'analytics-v1'), 'VALIDATION_ERROR');
-    for (const name of serverAnalyticsEvents) await rejectsCode(recordClientAnalytics({ ...event, name }, 'analytics-v1'), 'VALIDATION_ERROR');
-    await Promise.all(Array.from({ length: 10 }, () => recordClientAnalytics(event, 'analytics-v1')));
+    for (const dimensions of [{ programId: 'private-person-canary' }, { city: 'private-city-canary' }, { email: learner.email }, { token: 'PRIVATE_QUERY_TOKEN' }, { selectedOptionIds: ['right'] }]) await rejectsCode(recordClientAnalytics({ ...event, dimensions }, 'analytics-v2'), 'VALIDATION_ERROR');
+    for (const name of serverAnalyticsEvents) await rejectsCode(recordClientAnalytics({ ...event, name }, 'analytics-v2'), 'VALIDATION_ERROR');
+    await Promise.all(Array.from({ length: 10 }, () => recordClientAnalytics(event, 'analytics-v2')));
     assert.equal((await queryOne('SELECT COUNT(*) n FROM analytics_events WHERE id=?', [event.id]))!.n, 1);
   } finally { if (priorFlag === undefined) delete process.env.OT_ANALYTICS_ENABLED; else process.env.OT_ANALYTICS_ENABLED = priorFlag; if (priorDays === undefined) delete process.env.OT_ANALYTICS_RETENTION_DAYS; else process.env.OT_ANALYTICS_RETENTION_DAYS = priorDays; }
 });
@@ -427,7 +428,12 @@ test('analytics report uses an explicit UTC window and event counts; retention n
     assert.equal((await expireAnalytics(now)).deleted, 1); assert.equal(await queryOne('SELECT id FROM analytics_events WHERE id=?', [oldId]), undefined);
     assert.ok(await queryOne('SELECT id FROM analytics_events WHERE id=?', [boundaryId]));
     assert.deepEqual(await queryOne('SELECT (SELECT COUNT(*) FROM audit_events) AS audit,(SELECT COUNT(*) FROM attempts) AS attempts,(SELECT COUNT(*) FROM credentials) AS credentials'), academic);
-    process.env.OT_ANALYTICS_ENABLED = '0'; assert.equal((await expireAnalytics(now + 60 * 86400000)).deleted, 0);
+    const remainingOptional = Number((await queryOne('SELECT COUNT(*) n FROM analytics_events'))!.n);
+    process.env.OT_ANALYTICS_ENABLED = '0';
+    const disabledCleanup = await expireAnalytics(now + 60 * 86400000);
+    assert.equal(disabledCleanup.enabled, false); assert.equal(disabledCleanup.deleted, remainingOptional);
+    assert.equal(Number((await queryOne('SELECT COUNT(*) n FROM analytics_events'))!.n), 0, 'Disabling collection does not extend the retention of old events');
+    assert.deepEqual(await queryOne('SELECT (SELECT COUNT(*) FROM audit_events) AS audit,(SELECT COUNT(*) FROM attempts) AS attempts,(SELECT COUNT(*) FROM credentials) AS credentials'), academic);
   } finally { if (priorFlag === undefined) delete process.env.OT_ANALYTICS_ENABLED; else process.env.OT_ANALYTICS_ENABLED = priorFlag; if (priorDays === undefined) delete process.env.OT_ANALYTICS_RETENTION_DAYS; else process.env.OT_ANALYTICS_RETENTION_DAYS = priorDays; }
 });
 

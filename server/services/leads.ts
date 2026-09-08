@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { audit, enqueue, execute, queryOne, withTransaction, type Db } from '../db';
 import { businessFail as fail, id, nowIso, parse, sha256 } from '../utils/business';
+import { attachLeadAttribution, leadAttributionNote } from './lead-attribution';
 
 const field = (max: number) => z.string().trim().max(max).optional().default('');
 const leadSchema = z.object({
@@ -12,8 +13,11 @@ const leadSchema = z.object({
   .refine(v => !v.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email), { path: ['email'], message: 'Invalid email' })
   .refine(v => !v.phone || /^\+?[\d ()-]{7,30}$/.test(v.phone), { path: ['phone'], message: 'Invalid phone' });
 
-export async function acceptLead(body: unknown, suppliedKey = '') {
-  const payload = parse(leadSchema, body);
+export async function acceptLead(body: unknown, suppliedKey = '', analyticsConsent?: string) {
+  // Optional context never participates in the existing business hash or validates contact fields.
+  const source = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : undefined;
+  const { attribution, ...business } = source || {};
+  const payload = parse(leadSchema, source ? business : body);
   if (payload.company || payload.website) return { ok: true, status: 'accepted' as const };
   if (payload.sourcePath && (!payload.sourcePath.startsWith('/') || payload.sourcePath.startsWith('//'))) fail(400, 'INVALID_SOURCE');
   payload.sourcePath = payload.sourcePath.split('?')[0] || '';
@@ -21,7 +25,8 @@ export async function acceptLead(body: unknown, suppliedKey = '') {
   // Old forms had no idempotency header. Keep their contract with a short bounded retry window.
   const key = suppliedKey ? `client:${suppliedKey}` : `legacy:${Math.floor(Date.now() / 300000)}:${hash}`;
   if (key.length > 180) fail(400, 'INVALID_IDEMPOTENCY_KEY');
-  return withTransaction(async tx => {
+  let firstAcceptance = false;
+  const result = await withTransaction(async tx => {
     const old = await queryOne<{ id: string; request_hash: string }>('SELECT id,request_hash FROM lead_submissions WHERE idempotency_key=?', [key], tx);
     if (old) {
       if (old.request_hash !== hash) fail(409, 'IDEMPOTENCY_CONFLICT');
@@ -33,8 +38,13 @@ export async function acceptLead(body: unknown, suppliedKey = '') {
     if (payload.marketingConsent) await execute('INSERT INTO consent_records(id,lead_id,purpose,version,granted_at) VALUES(?,?,?,?,?)', [id(), submissionId, 'marketing', payload.consentVersion, nowIso()], tx);
     await enqueue('crm.lead', submissionId, { submissionId }, tx);
     await audit(null, 'lead_accepted', submissionId, '', null, tx);
+    firstAcceptance = true;
     return { ok: true, status: 'accepted' as const, submissionId };
   });
+  // A failed optional write cannot roll back the durable lead, consent, audit or CRM outbox.
+  // A replay never retries attribution: new context cannot replace the first accepted snapshot.
+  if (firstAcceptance) await attachLeadAttribution(result.submissionId, attribution, analyticsConsent);
+  return result;
 }
 
 type CrmTransport = (url: string, options: { method: string; headers: Record<string, string>; body?: string; signal?: AbortSignal }) => Promise<Response>;
@@ -129,7 +139,8 @@ export async function deliverLead(submissionId: string, transport: CrmTransport 
   }, 'CRM_NOTE_LOOKUP_FAILED');
   let noteId = matchingId(noteList, note => note.params?.text?.split(/\r?\n/, 1)[0] === marker);
   if (noteId === null) {
-    const text = [marker, payload.organizationName && `Организация: ${payload.organizationName}`, payload.city && `Город: ${payload.city}`, payload.programId && `Программа: ${payload.programId}`, payload.format && `Формат: ${payload.format}`, `Язык: ${payload.locale}`, payload.participants && `Участников: ${payload.participants}`, payload.comment, payload.message, payload.sourcePath && `Страница: ${payload.sourcePath}`].filter(Boolean).join('\n');
+    const attribution = await leadAttributionNote(submissionId, db);
+    const text = [marker, payload.organizationName && `Организация: ${payload.organizationName}`, payload.city && `Город: ${payload.city}`, payload.programId && `Программа: ${payload.programId}`, payload.format && `Формат: ${payload.format}`, `Язык: ${payload.locale}`, payload.participants && `Участников: ${payload.participants}`, payload.comment, payload.message, payload.sourcePath && `Страница: ${payload.sourcePath}`, attribution].filter(Boolean).join('\n');
     const response = await transport(`${url.origin}/api/v4/leads/${leadId}/notes`, { method: 'POST', headers, body: JSON.stringify([{ note_type: 'common', params: { text } }]), signal: signal() });
     if (!response.ok) fail(502, 'CRM_NOTE_FAILED');
     const created = await readCrm(response, noteCreated);

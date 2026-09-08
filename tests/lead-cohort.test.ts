@@ -25,6 +25,7 @@ before(async () => {
   Object.assign(process.env, { OT_DATABASE_PATH: join(directory, 'test.sqlite'), NODE_ENV: 'test', OT_ANALYTICS_ENABLED: '0', OT_ANALYTICS_RETENTION_DAYS: '14', AMO_BASE_URL: 'https://cohort-fixture.invalid', AMO_ACCESS_TOKEN: 'ISOLATED_NO_NETWORK_TOKEN' });
   for (const key of ['OT_MIGRATIONS_DIR', 'VERCEL', 'TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN']) delete process.env[key];
   await getDb();
+  await execute('INSERT INTO "user"(id,name,email,emailVerified,createdAt,updatedAt,role,twoFactorEnabled) VALUES(?,?,?,1,?,?,?,1)', [admin.id,admin.name,admin.email,Date.now(),Date.now(),'admin']);
 });
 after(async () => {
   await closeDb(); const target = resolve(directory);
