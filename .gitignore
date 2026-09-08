@@ -19,6 +19,8 @@ pnpm-debug.log*
 debug.log
 .data/
 artifacts/
+# Private learning drafts and owner review copies
+/output/learning/
 test-results/
 playwright-report/
 *-build.log

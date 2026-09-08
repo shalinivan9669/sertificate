@@ -1,8 +1,8 @@
 # Изменённые файлы OT Center
 
-Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, базы, секреты, сборки и временные артефакты в изменения приложения не включены. Разрешённые владельцем цены опубликованы отдельным справочником; оригинал коммерческого предложения и его реквизиты остаются закрытыми.
+Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, базы, секреты, сборки и временные артефакты в изменения приложения не включены. Разрешённые владельцем цены опубликованы отдельным справочником; оригинал коммерческого предложения, его реквизиты и частные учебные материалы остаются закрытыми.
 
-Всего файлов: 326
+Всего файлов: 328
 
 - `.env.example`
 - `.gitattributes`
@@ -98,6 +98,7 @@
 - `docs/LMS-BROWSER-QA.md`
 - `docs/OBSERVABILITY.md`
 - `docs/ORGANIZATION_REPORT_AND_REMINDERS.md`
+- `docs/OWNER_SETUP.md`
 - `docs/PARTIAL_REFUNDS.md`
 - `docs/PDF-CONTENT-AUDIT.md`
 - `docs/PERFORMANCE_LOCAL_LAB_2026-09-07.md`
@@ -181,6 +182,7 @@
 - `scripts/db-readiness.ts`
 - `scripts/generate-sitemap.mjs`
 - `scripts/lms-nav-layout-lab.mjs`
+- `scripts/owner-setup.ts`
 - `scripts/performance-lab.mjs`
 - `scripts/prepare-lead-browser-ci-reports.mjs`
 - `scripts/release-rollback-drill.ts`
