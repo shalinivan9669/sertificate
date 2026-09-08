@@ -206,6 +206,41 @@ test('T078 content is plain text, and active SVG/HTML media are rejected', () =>
   data.modules[0]!.lessons[0]!.media = [{ kind: 'image', url: 'https://evil.test/exploit.svg', alt: 'Image', transcript: '' }];
   assert.throws(() => validateProgramData(data), (error: any) => error.data.code === 'INVALID_CONTENT');
 });
+test('B27 published media retains accessible alternatives and refuses review without them', async () => {
+  const previousHosts = process.env.OT_CONTENT_HOSTS;
+  process.env.OT_CONTENT_HOSTS = 'learning-assets.example.test';
+  try {
+    const data = fixture();
+    const media = data.modules[0]!.lessons[0]!.media;
+    media.push(
+      { kind: 'image', url: 'https://learning-assets.example.test/checklist.png', alt: 'A three-step inspection checklist', transcript: '' },
+      { kind: 'video', url: 'https://learning-assets.example.test/inspection.mp4', alt: 'Inspection demonstration', transcript: 'Step one: inspect the area.\nStep two: report the hazard.' },
+      { kind: 'attachment', url: 'https://learning-assets.example.test/checklist.pdf', alt: 'Download the inspection checklist', transcript: '' },
+    );
+    const draft = (await createVersion(editor, 'ohrana-truda', data)).version;
+    const review = (await reviewVersion(editor, draft.id, draft.revision)).version;
+    const version = (await publishVersion(reviewer, review.id, review.revision, 'Synthetic accessible-media fixture only')).version;
+    const { enrollment } = await createEnrollment(learner, { userId: learner.id, versionId: version.id }, randomUUID(), true);
+    const lesson = await getLesson(learner, enrollment.id, 'lesson-one');
+    assert.deepEqual(lesson.lesson.media, media);
+    assert.equal(lesson.progress.completed, false, 'Merely requesting media cannot count as completion');
+    assert.equal(JSON.stringify(lesson).includes('correctOptionIds'), false);
+    for (const missing of ['alt', 'transcript'] as const) {
+      const incomplete = structuredClone(data);
+      incomplete.modules[0]!.lessons[0]!.media[missing === 'alt' ? 0 : 1]![missing] = '';
+      const pending = (await createVersion(editor, 'ohrana-truda', incomplete)).version;
+      await assert.rejects(reviewVersion(editor, pending.id, pending.revision));
+      assert.equal((await queryOne('SELECT status FROM program_versions WHERE id=?', [pending.id]))!.status, 'draft');
+    }
+    const unapprovedHost = structuredClone(data);
+    unapprovedHost.modules[0]!.lessons[0]!.media[0]!.url = 'https://unapproved.example.test/checklist.png';
+    assert.throws(() => validateProgramData(unapprovedHost), (error: any) => error.data.code === 'INVALID_CONTENT');
+  } finally {
+    if (previousHosts === undefined) delete process.env.OT_CONTENT_HOSTS;
+    else process.env.OT_CONTENT_HOSTS = previousHosts;
+  }
+});
+
 test('T075 SQL audit is append-only and transactions roll back domain writes together', async () => {
   const count = (await queryOne('SELECT COUNT(*) n FROM audit_events'))!.n;
   await assert.rejects(withTransaction(async (tx) => { await execute('INSERT INTO audit_events (id,action,target,created_at) VALUES (?,?,?,?)', [randomUUID(), 'test.rollback', 'test', new Date().toISOString()], tx); throw new Error('rollback'); }));

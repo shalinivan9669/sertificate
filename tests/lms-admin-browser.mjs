@@ -5,6 +5,7 @@ import { createClient } from "@libsql/client";
 import { hashPassword } from "better-auth/crypto";
 import { PDFDocument } from "pdf-lib";
 import { chromium, expect } from "@playwright/test";
+import { checkLessonPreview } from "./lesson-preview-browser.mjs";
 
 const base = process.env.TEST_BASE_URL || "http://127.0.0.1:3101";
 if (
@@ -489,6 +490,15 @@ try {
       editor.off("request", trackMutation);
     }
   }
+  const lessonPreviews = [];
+  for (const language of ["ru", "kk"]) {
+    lessonPreviews.push(await checkLessonPreview(editor, {
+      language,
+      outputDirectory: "artifacts/lms-browser/lesson-preview",
+    }));
+    passed(language.toUpperCase() + " unsaved lesson preview preserves text, keyboard access and media descriptions without writes or external loads");
+  }
+  await writeFile("artifacts/lms-browser/lesson-preview/report.json", JSON.stringify({ status: "passed", results: lessonPreviews, checkedAt: new Date().toISOString() }, null, 2));
   admin = await session(users.admin);
   const adminDraftResponse = await post(admin, "/admin/program-versions", {
     programId: "ohrana-truda",

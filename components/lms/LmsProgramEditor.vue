@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useId } from 'vue';
 import { parseProgramDraftFile, PROGRAM_DRAFT_MAX_BYTES } from '~/shared/program-draft-import';
 const props = defineProps<{
   version?: any;
@@ -18,6 +19,8 @@ const sources = ref("");
 const price = ref<number | null>(null);
 const imported = ref<ReturnType<typeof parseProgramDraftFile> | null>(null);
 const importFailure = ref('');
+const previewLessonId = ref('');
+const previewId = useId();
 let importReadGeneration = 0;
 const blank = () => ({
   title: "",
@@ -51,6 +54,7 @@ function load(version: any) {
   importReadGeneration++;
   imported.value = null;
   importFailure.value = '';
+  previewLessonId.value = '';
   current.value = version || null;
   form.value = version ? structuredClone(toRaw(version.data)) : blank();
   form.value.billingBasis ||= "learner";
@@ -460,6 +464,27 @@ async function workflow(action: "review" | "publish") {
                 :key="l.id"
                 class="space-y-4 rounded-lg border bg-slate-50 p-4"
               >
+                <button
+                  v-if="canEdit"
+                  type="button"
+                  class="lms-button secondary"
+                  :aria-expanded="previewLessonId === l.id"
+                  :aria-controls="`${previewId}-lesson-${mi}-${li}`"
+                  @click="previewLessonId = previewLessonId === l.id ? '' : l.id"
+                >
+                  {{ previewLessonId === l.id ? tr('Скрыть предпросмотр урока', 'Сабақты алдын ала қарауды жасыру') : tr('Предпросмотр урока', 'Сабақты алдын ала қарау') }}
+                  <span class="sr-only">: {{ l.title || tr('Новый урок', 'Жаңа сабақ') }}</span>
+                </button>
+                <section
+                  v-if="canEdit && previewLessonId === l.id"
+                  :id="`${previewId}-lesson-${mi}-${li}`"
+                  class="min-w-0 space-y-4 rounded-xl border border-slate-200 bg-white p-4"
+                  :aria-label="tr('Предпросмотр содержания урока', 'Сабақ мазмұнын алдын ала қарау')"
+                >
+                  <p class="lms-note">{{ tr('Показаны текущие поля редактора. Просмотр не сохраняет и не утверждает программу. Внешние файлы здесь заменены описаниями.', 'Редактордың ағымдағы өрістері көрсетілген. Алдын ала қарау бағдарламаны сақтамайды және бекітпейді. Сыртқы файлдар мұнда сипаттамалармен ауыстырылған.') }}</p>
+                  <LmsLessonContent :lesson="l" :heading-level="4" media-mode="text" />
+                  <p v-if="l.kind === 'practice'" class="lms-note">{{ tr('Практическую часть подтверждает уполномоченный сотрудник после выполнения.', 'Практикалық бөлім орындалғаннан кейін уәкілетті қызметкер растайды.') }}</p>
+                </section>
                 <label class="block space-y-2"
                   ><span>{{ tr("Название урока", "Сабақ атауы") }}</span
                   ><input v-model="l.title" required maxlength="300"

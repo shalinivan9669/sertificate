@@ -27,7 +27,21 @@ const lessons = computed(
 const current = computed(() =>
   lessons.value.find((l) => l.id === selected.value),
 );
-async function openLesson(lessonId: string) {
+const lessonArticle = ref<HTMLElement | null>(null);
+const contentsHeading = ref<HTMLElement | null>(null);
+let lessonRequest = 0;
+let requestedFocus = 0;
+function focusContent(element: HTMLElement | null | undefined) {
+  element?.focus({ preventScroll: true });
+  element?.scrollIntoView({ block: "start", behavior: "instant" });
+}
+function returnToContents() {
+  requestedFocus = 0;
+  focusContent(contentsHeading.value);
+}
+async function openLesson(lessonId: string, focusAfterLoad = false) {
+  const request = ++lessonRequest;
+  requestedFocus = focusAfterLoad ? request : 0;
   selected.value = lessonId;
   loadingLesson.value = true;
   lessonError.value = null;
@@ -35,19 +49,34 @@ async function openLesson(lessonId: string) {
   saveError.value = "";
   saveMessage.value = "";
   try {
-    const result = await api(
+    const result = await api<any>(
       "/enrollments/" +
         encodeURIComponent(id) +
         "/lessons/" +
         encodeURIComponent(lessonId),
     );
-    if (selected.value === lessonId) lessonData.value = result;
+    if (request === lessonRequest) {
+      // A read begun before a save committed must not undo its acknowledged progress.
+      const saved = lessons.value.find((lesson) => lesson.id === lessonId);
+      if (saved && (saved.revision || 0) > result.progress.revision)
+        result.progress = { completed: Boolean(saved.completed), revision: saved.revision };
+      lessonData.value = result;
+    }
   } catch (e) {
-    if (selected.value === lessonId) lessonError.value = e;
+    if (request === lessonRequest) lessonError.value = e;
   } finally {
-    if (selected.value === lessonId) loadingLesson.value = false;
+    if (request === lessonRequest) loadingLesson.value = false;
+  }
+  if (request === lessonRequest && requestedFocus === request && !lessonError.value) {
+    await nextTick();
+    // A newer choice, return to contents or unmount cancels the pending focus move.
+    if (request === lessonRequest && requestedFocus === request) {
+      requestedFocus = 0;
+      focusContent(lessonArticle.value?.querySelector<HTMLElement>("h2"));
+    }
   }
 }
+onBeforeUnmount(() => { lessonRequest++; });
 onMounted(() => {
   watch(() => [lessonData.value?.lesson?.id, loadingLesson.value], () => {
     const lessonId = lessonData.value?.lesson?.id;
@@ -70,28 +99,37 @@ watch(
   { immediate: true },
 );
 async function complete() {
-  if (!current.value || saving.value) return;
+  if (!current.value || saving.value || loadingLesson.value ||
+      lessonData.value?.lesson.id !== current.value.id) return;
+  const lessonId = current.value.id;
+  const request = lessonRequest;
+  const revision = lessonData.value.progress.revision;
   saving.value = true;
   saveError.value = "";
+  saveMessage.value = "";
   try {
-    await api(
+    const updated = await api<any>(
       "/enrollments/" +
         encodeURIComponent(id) +
         "/progress/" +
-        encodeURIComponent(current.value.id),
+        encodeURIComponent(lessonId),
       {
         method: "PUT",
-        body: { revision: lessonData.value.progress.revision, completed: true },
+        body: { revision, completed: true },
       },
     );
-    await refresh();
-    await openLesson(selected.value);
-    saveMessage.value = tr(
-      "Завершение урока сохранено.",
-      "Сабақты аяқтау сақталды.",
-    );
+    // Completion already returns the authoritative enrollment, including revisions.
+    data.value = updated;
+    const saved = lessons.value.find((lesson) => lesson.id === lessonId);
+    if (saved && lessonData.value?.lesson.id === lessonId)
+      lessonData.value.progress = { completed: Boolean(saved.completed), revision: saved.revision || 0 };
+    if (request === lessonRequest)
+      saveMessage.value = tr(
+        "Завершение урока сохранено.",
+        "Сабақты аяқтау сақталды.",
+      );
   } catch (e) {
-    saveError.value = errorText(e);
+    if (request === lessonRequest) saveError.value = errorText(e);
   } finally {
     saving.value = false;
   }
@@ -119,8 +157,8 @@ useHead(() => ({
           >
         </div>
         <div class="grid items-start gap-6 lg:grid-cols-[290px_1fr]">
-          <aside class="lms-card space-y-5">
-            <h2 class="font-bold">{{ tr("Содержание", "Мазмұны") }}</h2>
+          <aside class="lms-card space-y-5" aria-labelledby="lesson-contents">
+            <h2 id="lesson-contents" ref="contentsHeading" tabindex="-1" class="scroll-mt-4 font-bold">{{ tr("Содержание", "Мазмұны") }}</h2>
             <section
               v-for="m in enrollment.modules"
               :key="m.id"
@@ -139,7 +177,7 @@ useHead(() => ({
                     : 'hover:bg-slate-50'
                 "
                 :aria-current="selected === l.id ? 'true' : undefined"
-                @click="openLesson(l.id)"
+                @click="openLesson(l.id, true)"
               >
                 <span aria-hidden="true">{{ l.completed ? "✓" : "○" }}</span
                 ><span
@@ -155,7 +193,10 @@ useHead(() => ({
               </button>
             </section>
           </aside>
-          <article class="lms-card min-w-0 space-y-6">
+          <article ref="lessonArticle" class="lms-card min-w-0 space-y-6">
+            <a href="#lesson-contents" class="lms-button secondary" @click.prevent="returnToContents">
+              {{ tr("К содержанию", "Мазмұнға") }}
+            </a>
             <LmsState
               :pending="loadingLesson"
               :error="lessonError"
@@ -167,60 +208,8 @@ useHead(() => ({
                 )
               "
               @retry="openLesson(selected)"
-              ><template v-if="lessonData"
-                ><h2 class="font-headline text-2xl font-bold">
-                  {{ lessonData.lesson.title }}
-                </h2>
-                <p class="whitespace-pre-wrap leading-7 text-slate-700">
-                  {{ lessonData.lesson.body }}
-                </p>
-                <div
-                  v-for="(media, index) in lessonData.lesson.media"
-                  :key="index"
-                  class="space-y-3"
-                >
-                  <img
-                    v-if="media.kind === 'image'"
-                    :src="media.url"
-                    :alt="media.alt"
-                    class="max-w-full rounded-xl"
-                    loading="lazy"
-                  /><video
-                    v-if="media.kind === 'video'"
-                    :src="media.url"
-                    controls
-                    preload="metadata"
-                    class="w-full rounded-xl"
-                    :aria-label="media.alt"
-                  />
-                  <details
-                    v-if="media.transcript"
-                    class="rounded-xl border p-4"
-                  >
-                    <summary class="cursor-pointer font-semibold">
-                      {{
-                        tr(
-                          "Текстовая расшифровка видео",
-                          "Бейненің мәтіндік нұсқасы",
-                        )
-                      }}
-                    </summary>
-                    <p class="mt-3 whitespace-pre-wrap text-sm leading-6">
-                      {{ media.transcript }}
-                    </p>
-                  </details>
-                  <a
-                    v-if="media.kind === 'attachment'"
-                    :href="media.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="lms-button secondary"
-                    >{{
-                      media.alt || tr("Открыть вложение", "Тіркемені ашу")
-                    }}
-                    ↗</a
-                  >
-                </div>
+              ><template v-if="lessonData">
+                <LmsLessonContent :lesson="lessonData.lesson" :heading-tabindex="-1" />
                 <div
                   v-if="lessonData.lesson.kind === 'practice'"
                   class="lms-note"

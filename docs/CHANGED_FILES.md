@@ -2,18 +2,16 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 320
+Всего файлов: 324
 
 - `.env.example`
 - `.gitattributes`
 - `.github/workflows/database-backup.yml`
 - `.github/workflows/quality.yml`
 - `.gitignore`
-- `IMPLEMENTATION_STATUS.md`
 - `components/CoursePage.vue`
 - `components/FormatLanding.vue`
 - `components/HomePage.vue`
-- `components/SeoUniqueBlocks.vue`
 - `components/lms/LmsAnalyticsConsent.vue`
 - `components/lms/LmsAuthForm.vue`
 - `components/lms/LmsAuthoringGuide.vue`
@@ -22,6 +20,7 @@
 - `components/lms/LmsLeadCohort.vue`
 - `components/lms/LmsLeadWorkspace.vue`
 - `components/lms/LmsLearningReminders.vue`
+- `components/lms/LmsLessonContent.vue`
 - `components/lms/LmsNotifications.vue`
 - `components/lms/LmsOrderAmounts.vue`
 - `components/lms/LmsPreferences.vue`
@@ -53,6 +52,7 @@
 - `components/redesign-flow/success/SuccessBreakdownTable.vue`
 - `components/redesign-flow/success/SuccessMainCard.vue`
 - `components/redesign-flow/success/SuccessScoreSidebar.vue`
+- `components/SeoUniqueBlocks.vue`
 - `composables/useLeadAttribution.ts`
 - `composables/useLmsAnalytics.ts`
 - `composables/useLmsApi.ts`
@@ -92,16 +92,17 @@
 - `docs/LEAD_ATTRIBUTION.md`
 - `docs/LEAD_CONTEXT.md`
 - `docs/LEAD_WORKSPACE.md`
-- `docs/LMS-BROWSER-QA.md`
+- `docs/LESSON_PREVIEW_AND_NAVIGATION.md`
 - `docs/LMS_NAV_LAYOUT_LAB.md`
+- `docs/LMS-BROWSER-QA.md`
 - `docs/OBSERVABILITY.md`
 - `docs/ORGANIZATION_REPORT_AND_REMINDERS.md`
 - `docs/PARTIAL_REFUNDS.md`
 - `docs/PDF-CONTENT-AUDIT.md`
 - `docs/PERFORMANCE_LOCAL_LAB_2026-09-07.md`
 - `docs/PREVIEW-NOINDEX-QA.md`
-- `docs/PROGRAM-INTAKE.md`
 - `docs/PROGRAM_DRAFT_IMPORT.md`
+- `docs/PROGRAM-INTAKE.md`
 - `docs/PUBLIC_BUNDLE_AUDIT_2026-09-07.md`
 - `docs/RELEASE_ROLLBACK.md`
 - `docs/REMOTE_DATABASE_CHECKS.md`
@@ -114,6 +115,7 @@
 - `docs/STATUS_MATRIX_METHOD.md`
 - `docs/VISUAL-ACCESSIBILITY-QA.md`
 - `eslint.config.mjs`
+- `IMPLEMENTATION_STATUS.md`
 - `layouts/default.vue`
 - `layouts/fullwidth.vue`
 - `middleware/city.global.js`
@@ -288,7 +290,9 @@
 - `tests/lead-context.test.ts`
 - `tests/lead-workspace-browser.mjs`
 - `tests/lead-workspace-fixtures.ts`
+- `tests/learning-navigation.test.mjs`
 - `tests/learning-reminders.test.ts`
+- `tests/lesson-preview-browser.mjs`
 - `tests/lms-admin-browser.mjs`
 - `tests/lms-auth-browser.mjs`
 - `tests/lms-browser.mjs`
