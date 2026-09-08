@@ -43,6 +43,11 @@ jobs:
         env:
           NODE_ENV: test
           OT_ALLOW_PRIVACY_AUDIT: '1'
+      - name: Partial refunds and current artifact recovery
+        run: node --import tsx tests/refund-browser.mjs
+        env:
+          NODE_ENV: test
+          OT_ALLOW_TEST_SEED: '1'
       - name: Consented public journey and lead attribution
         run: node tests/lead-attribution-browser.mjs
         env:

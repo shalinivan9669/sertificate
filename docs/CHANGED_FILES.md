@@ -2,7 +2,7 @@
 
 Список включает изменённые, новые и удалённые файлы относительно commit 413ad4a34e53203f39df3946962903f51caf16a0. Исходная папка .serena, архив handoff, PDF, приватные ставки, базы, секреты, сборки и временные артефакты в изменения приложения не включены.
 
-Всего файлов: 309
+Всего файлов: 311
 
 - `.env.example`
 - `.gitattributes`
@@ -301,6 +301,8 @@
 - `tests/public-content.test.ts`
 - `tests/public-journey-client.test.ts`
 - `tests/public-route-policy.test.mjs`
+- `tests/refund-browser-fixture.ts`
+- `tests/refund-browser.mjs`
 - `tests/release-rollback-fixture.ts`
 - `tests/remote-transaction-drill.test.ts`
 - `tests/run-core-browser.mjs`
