@@ -3,7 +3,7 @@ import { courses } from './courses.js';
 import { formats } from './formats.js';
 import { blogPosts } from './blog.js';
 import { additionalSourceDirections } from '../shared/source-products.ts';
-import { localizePublicPath, nonIndexableRoots } from './public-route-runtime.js';
+import { localizePublicPath, nonIndexableRoots, stripLocale } from './public-route-runtime.js';
 export { isNonIndexableRoute, localizePublicPath, nonIndexableRoots, resolvePublicCityPage, stripLocale } from './public-route-runtime.js';
 
 // One inventory is shared by Nitro, the sitemap generator and route contract tests.
@@ -51,12 +51,23 @@ export function buildPrivateRouteRules() {
 }
 
 export function buildSitemapEntries(siteUrl = defaultSiteUrl) {
-  return buildPublicRoutes().map((path) => ({
-    loc: new URL(path, siteUrl).toString(),
-    alternatives: [
-      { hreflang: 'ru-KZ', href: new URL(localizePublicPath(path, 'ru'), siteUrl).toString() },
-      { hreflang: 'kk-KZ', href: new URL(localizePublicPath(path, 'kk'), siteUrl).toString() },
-      { hreflang: 'x-default', href: new URL(localizePublicPath(path, 'ru'), siteUrl).toString() },
-    ],
-  }));
+  const postsByPath = new Map(blogPosts.map((post) => [post._path, post]));
+  // Editorial dates are stable across builds. Other pages still omit lastmod
+  // because no verified content-revision date is maintained for them.
+  const latestBlogRevision = blogPosts.map((post) => post.updatedAt || post.date).filter(Boolean).sort().at(-1);
+  return buildPublicRoutes().map((path) => {
+    const basePath = stripLocale(path);
+    const post = postsByPath.get(basePath);
+    const lastmod = post ? post.updatedAt || post.date : basePath === '/blog' ? latestBlogRevision : undefined;
+    return {
+      loc: new URL(path, siteUrl).toString(),
+      ...(lastmod ? { lastmod } : {}),
+      ...(post?.image?.src ? { images: [{ loc: new URL(post.image.src, siteUrl).toString() }] } : {}),
+      alternatives: [
+        { hreflang: 'ru-KZ', href: new URL(localizePublicPath(path, 'ru'), siteUrl).toString() },
+        { hreflang: 'kk-KZ', href: new URL(localizePublicPath(path, 'kk'), siteUrl).toString() },
+        { hreflang: 'x-default', href: new URL(localizePublicPath(path, 'ru'), siteUrl).toString() },
+      ],
+    };
+  });
 }

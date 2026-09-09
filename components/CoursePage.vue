@@ -66,6 +66,12 @@ const resolveSeoValue = (value, fallback) => {
   return fallback;
 };
 
+const durationText = computed(() => resolveSeoValue(
+  props.course.durationLabel,
+  `${props.course.durationHours} ${t('course.durationUnit')}`,
+));
+const durationAnswer = computed(() => resolveSeoValue(props.course.durationAnswer, ''));
+
 const fallbackDescription = computed(() => {
   if (locale.value === 'kk') {
     return `Еңбекті қорғау және ТБ бойынша оқу ${cityPrepositional.value}: куәлік беру, білімді тексеру, аттестаттау.`;
@@ -357,10 +363,17 @@ const defaultFaqItems = computed(() => {
   const items = asList(tm('course.faqItems'));
   return items.map((item, index) => ({
     q: item.q,
-    a: t(`course.faqItems.${index}.a`, { hours: props.course.durationHours }),
+    a: index === 1 && durationAnswer.value
+      ? durationAnswer.value
+      : t(`course.faqItems.${index}.a`, { hours: props.course.durationHours }),
   }));
 });
-const faqItems = computed(() => specialContent.value?.faqItems || defaultFaqItems.value);
+const faqItems = computed(() => {
+  if (!specialContent.value?.faqItems) return defaultFaqItems.value;
+  return durationAnswer.value
+    ? [...specialContent.value.faqItems, { q: t('course.faqItems.1.q'), a: durationAnswer.value }]
+    : specialContent.value.faqItems;
+});
 
 const courseSchema = computed(() => ({
   '@context': 'https://schema.org',
@@ -531,7 +544,7 @@ useHead(() => ({
       <div class="flex flex-wrap gap-3 text-sm text-slate-700">
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
           <strong class="font-semibold text-slate-900">{{ t('course.durationLabel') }}:</strong>
-          {{ course.durationHours }} {{ t('course.durationUnit') }}
+          {{ durationText }}
         </span>
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
           <strong class="font-semibold text-slate-900">{{ t('course.mandatoryLabel') }}:</strong>
@@ -616,7 +629,7 @@ useHead(() => ({
       <div class="flex flex-wrap gap-3 text-sm text-slate-700">
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
           <strong class="font-semibold text-slate-900">{{ t('course.durationLabel') }}:</strong>
-          {{ course.durationHours }} {{ t('course.durationUnit') }}
+          {{ durationText }}
         </span>
         <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
           <strong class="font-semibold text-slate-900">{{ t('course.mandatoryLabel') }}:</strong>

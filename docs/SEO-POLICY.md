@@ -14,7 +14,7 @@
 
 ## Public / private
 
-Whitelist содержит 550 публичных адресов: 528 сохранённых плюс 22 новые RU/KK карточки из source inventory. Nitro prerender получает только whitelist, `crawlLinks:false` исключает обнаружение закрытых страниц через ссылки. Sitemap использует тот же whitelist с `excludeAppSources:true`; серверные маршруты, файлы и каталог автоматически не добавляются.
+Whitelist содержит 558 публичных адресов: 528 сохранённых, 22 новые RU/KK карточки из source inventory и 8 адресов четырёх новых статей на двух языках. Существующий адрес статьи ПТМ сохранён и обновлён. Nitro prerender получает только whitelist, `crawlLinks:false` исключает обнаружение закрытых страниц через ссылки. Sitemap использует тот же whitelist с `excludeAppSources:true`; серверные маршруты, файлы и каталог автоматически не добавляются.
 
 `/auth`, `/cabinet`, `/account`, `/organizations`, `/learn`, `/exam`, `/payment`, `/orders`, `/certificates`, `/verify`, `/admin`, `/api`, `/preview`, `/src`, `/second`, `/program-selection`, `/wizard`, `/categories`, их дочерние и KK-варианты имеют `prerender:false`, `cache:false`, `swr:false`, `sitemap:false`, `robots:false` и заголовки `Cache-Control: private, no-store, max-age=0`, `X-Robots-Tag: noindex, nofollow, noarchive`. Финальный Nitro `beforeResponse` повторно устанавливает границу, включая ошибки закрытых URL. Это не заменяет авторизацию и ownership на API.
 

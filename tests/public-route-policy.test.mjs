@@ -4,6 +4,7 @@ import test from 'node:test';
 import { cities } from '../config/cities.js';
 import { courses } from '../config/courses.js';
 import { formats } from '../config/formats.js';
+import { blogPosts } from '../config/blog.js';
 import { additionalSourceDirections } from '../shared/source-products.ts';
 import {
   buildPrivateRouteRules, buildPublicRoutes, buildSitemapEntries,
@@ -25,7 +26,8 @@ test('all existing directions, cities and format combinations retain both public
     }
   }
   assert.equal(routes.size, buildPublicRoutes().length, 'no duplicate sitemap URLs');
-  assert.equal(routes.size, 550, '528 preserved addresses plus 22 source-backed product pages');
+  assert.equal(routes.size, 550 + (blogPosts.length - 1) * 2, '550 preserved addresses plus both locales for each additional article');
+  assert.ok(routes.has('/blog/pozharnyj-tekhnicheskiy-minimum'), 'the established article address remains published');
   assert.equal(additionalSourceDirections.length, 11);
   for (const direction of additionalSourceDirections) for (const locale of ['ru', 'kk']) {
     assert.ok(routes.has(localizePublicPath(`/courses/${direction.id}`, locale)));
@@ -82,12 +84,17 @@ test('both locale variants of private routes disable prerender and cache and car
   assert.ok(!rules['/_nuxt/**'], 'public JavaScript and styles stay crawlable');
 });
 
-test('sitemap alternates are reciprocal and use the same approved host without invented lastmod', () => {
+test('sitemap alternates are reciprocal and lastmod comes only from actual blog revisions', () => {
   const entries = buildSitemapEntries('https://otcenter.kz');
   const locations = new Set(entries.map(({ loc }) => loc));
   for (const entry of entries) {
     assert.equal(new URL(entry.loc).origin, 'https://otcenter.kz');
-    assert.equal(entry.lastmod, undefined);
+    const basePath = localizePublicPath(new URL(entry.loc).pathname, 'ru');
+    const post = blogPosts.find((item) => item._path === basePath);
+    const latestBlogRevision = blogPosts.map((item) => item.updatedAt || item.date).sort().at(-1);
+    assert.equal(entry.lastmod, post ? post.updatedAt || post.date : basePath === '/blog' ? latestBlogRevision : undefined);
+    if (post?.image?.src) assert.deepEqual(entry.images, [{ loc: new URL(post.image.src, 'https://otcenter.kz').toString() }]);
+    else assert.equal(entry.images, undefined);
     assert.equal(entry.alternatives.length, 3);
     for (const alternate of entry.alternatives) assert.ok(locations.has(alternate.href));
     assert.ok(entry.alternatives.some(({ href }) => href === entry.loc));

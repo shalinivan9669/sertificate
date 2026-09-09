@@ -1,89 +1,22 @@
-export const blogPosts = [
-  {
-    slug: 'pozharnyj-tekhnicheskiy-minimum',
-    _path: '/blog/pozharnyj-tekhnicheskiy-minimum',
-    title: {
-      ru: 'Пожарно-технический минимум: кому нужен и как пройти обучение',
-      kk: 'Өрт-техникалық минимум: кімге керек және қалай оқуға болады',
-    },
-    description: {
-      ru: 'Кратко о требованиях ПТМ, форматах обучения и документах по итогам.',
-      kk: 'ПТМ талаптары, оқу форматтары және қорытынды құжаттар туралы қысқаша.',
-    },
-    date: '2024-05-10',
-    tags: {
-      ru: ['пожарная безопасность', 'ПТМ', 'обучение'],
-      kk: ['өрт қауіпсіздігі', 'ӨТМ', 'оқыту'],
-    },
-    relatedCourses: ['ptm', 'ohrana-truda'],
-    bodyHtml: {
-      ru: `
-      <h2>Кому нужен пожарно-технический минимум</h2>
-      <ul>
-        <li>Руководителям и ответственным за пожарную безопасность.</li>
-        <li>Сотрудникам, которые работают с источниками повышенной опасности.</li>
-        <li>Персоналу объектов с массовым пребыванием людей.</li>
-        <li>Специалистам, участвующим в инструктажах и проверках.</li>
-      </ul>
+import occupationalSafety from '../content/blog/ohrana-truda-kazakhstan-2026.js';
+import industrialSafety from '../content/blog/promyshlennaya-bezopasnost-kazakhstan-2026.js';
+import fireSafety from '../content/blog/pozharnyj-tekhnicheskiy-minimum.js';
+import electricalSafety from '../content/blog/elektrobezopasnost-gruppy-dopuska-kazakhstan-2026.js';
+import workAtHeight from '../content/blog/raboty-na-vysote-kazakhstan-2026.js';
 
-      <h2>Форматы обучения и сроки</h2>
-      <ul>
-        <li>Очное обучение в учебном центре или выездом на вашу площадку.</li>
-        <li>Онлайн-формат без отрыва от работы.</li>
-        <li>Типовая продолжительность 1-3 дня в зависимости от программы.</li>
-        <li>По итогам проводится проверка знаний.</li>
-      </ul>
+export const blogPosts = [occupationalSafety, industrialSafety, fireSafety, electricalSafety, workAtHeight];
 
-      <h2>Какие документы выдаются</h2>
-      <ul>
-        <li>Удостоверение установленного образца.</li>
-        <li>Протокол проверки знаний (если требуется).</li>
-        <li>Записи в журналах инструктажа.</li>
-        <li>Методические материалы для дальнейшей работы.</li>
-      </ul>
-
-      <h2>Как подготовиться к обучению</h2>
-      <p>
-        Подготовьте список сотрудников и определите удобный формат. Мы подскажем программу и сроки,
-        организуем обучение и оформим документы в соответствии с требованиями.
-      </p>
-    `,
-      kk: `
-      <h2>Өрт-техникалық минимум кімге қажет</h2>
-      <ul>
-        <li>Өрт қауіпсіздігіне жауапты басшылар мен жауапты тұлғаларға.</li>
-        <li>Қауіпті факторлармен жұмыс істейтін қызметкерлерге.</li>
-        <li>Адамдар көп жиналатын объектілер персоналына.</li>
-        <li>Нұсқама мен тексеруге қатысатын мамандарға.</li>
-      </ul>
-
-      <h2>Оқу форматтары мен мерзімі</h2>
-      <ul>
-        <li>Оқу орталығында немесе сіздің алаңда көзбе-көз оқу.</li>
-        <li>Жұмыстан қол үзбей онлайн формат.</li>
-        <li>Бағдарламаға қарай әдетте 1-3 күн.</li>
-        <li>Қорытындысында білімді тексеру жүргізіледі.</li>
-      </ul>
-
-      <h2>Қандай құжаттар беріледі</h2>
-      <ul>
-        <li>Белгіленген үлгідегі куәлік.</li>
-        <li>Білімді тексеру хаттамасы (қажет болса).</li>
-        <li>Нұсқама журналындағы жазбалар.</li>
-        <li>Әдістемелік материалдар.</li>
-      </ul>
-
-      <h2>Оқуға қалай дайындалуға болады</h2>
-      <p>
-        Қызметкерлер тізімін және ыңғайлы форматты таңдаңыз. Біз бағдарлама мен мерзімді ұсынамыз,
-        оқуды ұйымдастырып, талаптарға сай құжаттарды рәсімдейміз.
-      </p>
-    `,
-    },
-  },
-];
-
+// Content revision dates reflect editorial updates, not deployment timestamps.
 export const getSortedBlogPosts = () =>
-  [...blogPosts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  [...blogPosts].sort((a, b) => new Date(b.updatedAt || b.date).getTime() - new Date(a.updatedAt || a.date).getTime());
 
 export const findBlogPost = (slug) => blogPosts.find((post) => post.slug === slug);
+
+// Explicit month names keep SSR and browsers consistent even with partial ICU data.
+export const formatBlogDate = (date, locale = 'ru') => {
+  const [year, month, day] = date.split('-').map(Number);
+  const months = locale === 'kk'
+    ? ['қаңтар', 'ақпан', 'наурыз', 'сәуір', 'мамыр', 'маусым', 'шілде', 'тамыз', 'қыркүйек', 'қазан', 'қараша', 'желтоқсан']
+    : ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  return `${day} ${months[month - 1]} ${year} ${locale === 'kk' ? 'ж.' : 'г.'}`;
+};

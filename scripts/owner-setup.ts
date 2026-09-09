@@ -25,6 +25,8 @@ function options(args: string[]) {
   const email = (values['--email'] || '').trim().toLowerCase();
   const reason = (values['--reason'] || '').trim();
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new SetupError('An exact registered owner email is required');
+  // Control characters are intentionally rejected from the single-line attestation.
+  // eslint-disable-next-line no-control-regex
   if (reason.length < 20 || reason.length > 1500 || /[\u0000-\u001f]/.test(reason)) throw new SetupError('A meaningful single-line owner attestation reason is required (20–1500 characters)');
   if (flags.has('--apply') && !flags.has('--activate-owner')) throw new SetupError('Applying requires both --apply and --activate-owner');
   return { email, reason, apply: flags.has('--apply'), draftPath: values['--draft'] };
