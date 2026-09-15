@@ -1,6 +1,5 @@
 <script setup lang="ts">
 const { api, tr, date, money, statusLabel, errorText } = useLmsApi();
-const path = useLocalePath();
 const { data: me } = await useAsyncData("lms-me", () => api<any>("/me"));
 const { data, pending, error, refresh } = await useAsyncData(
   "lms-admin-operations",
@@ -301,39 +300,7 @@ useHead(() => ({
 </script>
 <template>
   <LmsShell :title="tr('Управление обучением', 'Оқуды басқару')" back="/cabinet"
-    ><nav class="flex flex-wrap gap-3">
-      <NuxtLink
-        v-if="can('admin')"
-        class="lms-button secondary"
-        :to="path('/admin/users')"
-        >{{
-          tr("Пользователи и права", "Пайдаланушылар мен құқықтар")
-        }}</NuxtLink
-      ><NuxtLink
-        v-if="can('editor', 'reviewer')"
-        class="lms-button secondary"
-        :to="path('/admin/programs')"
-        >{{
-          tr("Программы и редактор", "Бағдарламалар және редактор")
-        }}</NuxtLink
-      ><NuxtLink
-        v-if="can('issuer', 'reviewer')"
-        class="lms-button secondary"
-        :to="path('/admin/documents')"
-        >{{ tr("Шаблоны документов", "Құжат үлгілері") }}</NuxtLink
-      ><NuxtLink
-        v-if="can('finance', 'issuer')"
-        class="lms-button secondary"
-        :to="path('/admin/incidents')"
-        >{{ tr("Операционные инциденты", "Операциялық оқиғалар") }}</NuxtLink
-      ><NuxtLink v-if="can('issuer')" class="lms-button secondary" :to="path('/admin/document-batches')">{{ tr("Пакетное оформление документов", "Құжаттарды топтамамен рәсімдеу") }}</NuxtLink
-      ><NuxtLink v-if="can('admin')" class="lms-button secondary" :to="path('/admin/support')">{{ tr("Обращения и заметки поддержки", "Қолдау өтініштері мен жазбалары") }}</NuxtLink
-      ><NuxtLink v-if="can('admin')" class="lms-button secondary" :to="path('/admin/analytics')">{{ tr("Статистика действий", "Әрекеттер статистикасы") }}</NuxtLink
-      ><NuxtLink v-if="can('admin')" class="lms-button secondary" :to="path('/admin/leads')">{{ tr("Заявки и этапы работы", "Өтінімдер және жұмыс кезеңдері") }}</NuxtLink
-      ><NuxtLink class="lms-button secondary" :to="path('/cabinet/security')">{{
-        tr("Подтвердить безопасность входа", "Кіру қауіпсіздігін растау")
-      }}</NuxtLink>
-    </nav>
+    >
     <p v-if="me?.user && !me.user.mfaVerified" class="lms-note">
       {{
         tr(

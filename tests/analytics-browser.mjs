@@ -119,7 +119,7 @@ try {
   await uiEvent(learner, 'selection_complete', () => learner.getByRole('button', { name: 'Следующий шаг', exact: true }).click());
   await expect(learner.getByRole('link', { name: 'Посмотреть программу', exact: true })).toBeVisible();
   await learner.getByRole('link', { name: 'Посмотреть программу', exact: true }).click(); await learner.waitForURL(url => url.pathname === '/courses/ohrana-truda');
-  await uiEvent(learner, 'contact_click', () => learner.getByRole('link', { name: 'Обсудить обучение', exact: true }).click());
+  await uiEvent(learner, 'contact_click', () => learner.getByRole('link', { name: 'Запросить стоимость', exact: true }).click());
   await learner.waitForURL(url => url.pathname === '/contacts');
   await uiEvent(learner, 'lead_form_start', () => learner.locator('input[name=name]').fill(canary));
   await learner.locator('input[name=email]').fill('private-' + runId + '@example.test'); await learner.locator('textarea[name=comment]').fill(canary + ' response and private note');

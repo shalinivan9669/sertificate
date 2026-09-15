@@ -44,9 +44,9 @@ useHead(() => ({
     :title="tr('Перед проверкой знаний', 'Білімді тексеру алдында')"
     :back="'/learn/' + id"
     ><LmsState :pending="pending" :error="error" @retry="refresh"
-      ><div v-if="enrollment" class="lms-card max-w-3xl space-y-6">
+      ><div v-if="enrollment" class="lms-card ed-exam-brief max-w-3xl space-y-6">
         <h2 class="text-xl font-semibold">{{ enrollment.title }}</h2>
-        <dl v-if="enrollment.assessment" class="grid gap-4 sm:grid-cols-2">
+        <dl v-if="enrollment.assessment" class="ed-exam-facts grid gap-4 sm:grid-cols-2">
           <div>
             <dt class="text-sm text-slate-500">
               {{ tr("Время на попытку", "Әрекетке берілетін уақыт") }}

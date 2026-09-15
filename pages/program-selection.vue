@@ -11,6 +11,8 @@ watch(
   { deep: true },
 );
 const step = ref(1);
+const stepPanel = useTemplateRef<HTMLFormElement>('stepPanel');
+watch(step, async () => { await nextTick(); stepPanel.value?.focus({ preventScroll: true }); });
 const { track } = useLmsAnalytics();
 const attribution = useLeadAttribution();
 let selectionStarted = false;
@@ -66,40 +68,43 @@ useHead(() => ({
 </script>
 <template>
   <LmsShell
+    :class="{ 'ed-selection-started': step > 1 }"
     :title="
       tr(
-        'Подберём программу под вашу задачу',
-        'Міндетіңізге сәйкес бағдарлама таңдаймыз',
+        'Подбор программы',
+        'Бағдарлама таңдау',
       )
     "
     :subtitle="
       tr(
-        'Выбор сохраняется при переходе между страницами. Итог помогает найти программу; условия обучения уточняются в её карточке.',
-        'Таңдауыңыз беттер арасында сақталады. Нәтиже бағдарламаны табуға көмектеседі; оқу шарттары оның карточкасында нақтыланады.',
+        'Четыре шага от вашей задачи к подходящему направлению обучения.',
+        'Төрт қадамда міндетіңізге сәйкес оқу бағытын таңдаңыз.',
       )
     "
   >
-    <ol class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <ol class="ed-selection-steps" :aria-label="tr('Шаги подбора', 'Таңдау қадамдары')">
       <li v-for="(s, i) in steps" :key="s">
         <button
-          class="w-full rounded-xl border px-3 py-3 text-left text-sm"
-          :class="
-            i + 1 === step
-              ? 'border-brand-accent bg-brand-soft font-semibold'
-              : 'border-slate-200 bg-white'
-          "
+          :class="{ 'is-complete': i + 1 < step }"
           :aria-current="i + 1 === step ? 'step' : undefined"
           @click="changeStep(i + 1)"
         >
-          {{ i + 1 }}. {{ s }}
+          <span class="ed-selection-number" aria-hidden="true">{{ i + 1 }}</span><span>{{ s }}</span>
         </button>
       </li>
     </ol>
     <form
-      class="lms-card space-y-6"
+      ref="stepPanel"
+      tabindex="-1"
+      class="lms-card ed-selection-panel space-y-6"
+      :aria-label="`${tr('Шаг', 'Қадам')} ${step} / 4: ${steps[step - 1]}`"
       @change="startSelection"
       @submit.prevent="changeStep(Math.min(4, step + 1))"
     >
+      <div class="ed-selection-current" aria-live="polite">
+        <p>{{ tr('Шаг', 'Қадам') }} {{ step }} / 4</p>
+        <h2>{{ [tr('Что нужно изучить?', 'Нені үйрену керек?'), tr('Расскажите о своей работе', 'Жұмысыңыз туралы айтыңыз'), tr('Как вам удобнее учиться?', 'Қалай оқыған ыңғайлы?'), tr('Ваш следующий шаг', 'Сіздің келесі қадамыңыз')][step - 1] }}</h2>
+      </div>
       <fieldset v-if="step === 1" class="space-y-4">
         <legend class="text-xl font-bold">{{ steps[0] }}</legend>
         <div class="grid gap-3 md:grid-cols-2">

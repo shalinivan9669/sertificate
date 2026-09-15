@@ -25,17 +25,23 @@ const form = reactive({
 const nuxtApp = useNuxtApp();
 const router = useRouter();
 let stopContextPrefill = () => {};
+let stopCitySync = () => {};
+let appliedCity = '';
 onMounted(() => {
   const applyContext = () => {
     const initial = readLeadContext(router.currentRoute.value.query);
     const values = { ...initial, city: leadCityLabel(initial.city, locale.value) };
-    for (const key of ['programId', 'city', 'format'] as const) if (!form[key]) form[key] = values[key];
+    for (const key of ['programId', 'format'] as const) if (!form[key]) form[key] = values[key];
+    // Follow a changed page city only while this field still has its automatic value.
+    if (!form.city || leadCityValue(form.city) === appliedCity) form.city = values.city;
+    appliedCity = initial.city;
   };
   // Prerendered routes restore their query after suspense resolves.
   if (nuxtApp.isHydrating) stopContextPrefill = nuxtApp.hooks.hookOnce('app:suspense:resolve', applyContext);
   else applyContext();
+  stopCitySync = watch([() => router.currentRoute.value.query.city, locale], applyContext);
 });
-onBeforeUnmount(() => stopContextPrefill());
+onBeforeUnmount(() => { stopContextPrefill(); stopCitySync(); });
 async function submit() {
   if (busy.value) return;
   busy.value = true;
@@ -90,22 +96,16 @@ useHead(() => ({
 }));
 </script>
 <template>
-  <LmsShell
-    :title="tr('Обучение для вашей команды', 'Командаңызды оқыту')"
-    :subtitle="
-      tr(
-        'Поможем подобрать программы по должностям и рабочим задачам, согласовать график и организовать обучение сотрудников.',
-        'Лауазымдар мен жұмыс міндеттері бойынша бағдарламаларды таңдап, кестені келісуге және қызметкерлерді оқытуды ұйымдастыруға көмектесеміз.',
-      )
-    "
-  >
-    <div class="grid gap-5 md:grid-cols-3">
-      <article class="lms-card space-y-3">
-        <p class="font-semibold text-brand-accent">01</p>
+  <div class="ed-public">
+    <EditorialPageHeader :title="tr('Обучение для вашей команды', 'Командаңызды оқыту')" :lead="tr('Поможем подобрать программы по должностям и рабочим задачам, согласовать график и организовать обучение сотрудников.', 'Лауазымдар мен жұмыс міндеттері бойынша бағдарламаларды таңдап, кестені келісуге және қызметкерлерді оқытуды ұйымдастыруға көмектесеміз.')">
+      <div class="ed-public-actions"><a href="#team-request" class="ed-public-button">{{ tr('Обсудить обучение команды', 'Команданы оқытуды талқылау') }}</a><NuxtLink :to="path('/cabinet/organization')" class="ed-public-link">{{ tr('Кабинет организации', 'Ұйым кабинеті') }}</NuxtLink></div>
+    </EditorialPageHeader>
+    <div class="ed-public-steps">
+      <article >
         <h2 class="text-lg font-bold">
           {{ tr("Согласуем программу", "Бағдарламаны келісеміз") }}
         </h2>
-        <p class="text-sm leading-6 text-slate-600">
+        <p >
           {{
             tr(
               "Определим аудиторию, направления, языки, формат и необходимую практику.",
@@ -114,12 +114,11 @@ useHead(() => ({
           }}
         </p>
       </article>
-      <article class="lms-card space-y-3">
-        <p class="font-semibold text-brand-accent">02</p>
+      <article >
         <h2 class="text-lg font-bold">
           {{ tr("Организуем обучение", "Оқытуды ұйымдастырамыз") }}
         </h2>
-        <p class="text-sm leading-6 text-slate-600">
+        <p >
           {{
             tr(
               "После согласования условий ответственный приглашает сотрудников и назначает программы в кабинете организации.",
@@ -128,14 +127,13 @@ useHead(() => ({
           }}
         </p>
       </article>
-      <article class="lms-card space-y-3">
-        <p class="font-semibold text-brand-accent">03</p>
+      <article >
         <h2 class="text-lg font-bold">
           {{
             tr("Покажем реальные результаты", "Нақты нәтижелерді көрсетеміз")
           }}
         </h2>
-        <p class="text-sm leading-6 text-slate-600">
+        <p >
           {{
             tr(
               "Прогресс, результаты проверки знаний и статусы документов доступны по правам организации.",
@@ -145,8 +143,8 @@ useHead(() => ({
         </p>
       </article>
     </div>
-    <div class="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-      <section class="lms-card space-y-5">
+    <div class="ed-request-layout">
+      <section id="team-request" class="ed-request-panel">
         <h2 class="text-2xl font-bold">
           {{
             tr(
@@ -163,7 +161,7 @@ useHead(() => ({
             )
           }}
         </p>
-        <form class="grid gap-5 sm:grid-cols-2" @submit.prevent="submit">
+        <form class="ed-request-form" :aria-busy="busy" @submit.prevent="submit">
           <label class="space-y-2"
             ><span>{{ tr("Ваше имя", "Атыңыз") }}</span
             ><input
@@ -221,7 +219,7 @@ useHead(() => ({
               <option value="">{{ tr('Обсудить со специалистом', 'Маманмен талқылау') }}</option>
               <option v-for="format in leadFormats" :key="format.id" :value="format.id">{{ format.title[locale === 'kk' ? 'kk' : 'ru'] }}</option>
             </select>
-          </label><label class="sm:col-span-2 space-y-2"
+          </label><label class="ed-request-wide space-y-2"
             ><span>{{
               tr("Задача и удобный формат", "Міндет және ыңғайлы формат")
             }}</span
@@ -237,7 +235,7 @@ useHead(() => ({
             autocomplete="off"
             class="hidden"
             aria-hidden="true"
-          /></div><label class="sm:col-span-2 flex items-start gap-3 text-sm"
+          /></div><label class="ed-request-wide ed-request-consent"
             ><input
               v-model="consent"
               required
@@ -256,10 +254,10 @@ useHead(() => ({
               >.</span
             ></label
           >
-          <p v-if="failure" class="lms-error sm:col-span-2" role="alert">
+          <p v-if="failure" class="lms-error ed-request-wide" role="alert">
             {{ failure }}
           </p>
-          <p v-if="success" class="lms-success sm:col-span-2" role="status">
+          <p v-if="success" class="lms-success ed-request-wide" role="status">
             {{
               tr(
                 "Заявка принята и сохранена. Учебный центр свяжется с вами для уточнения условий.",
@@ -267,7 +265,7 @@ useHead(() => ({
               )
             }}
           </p>
-          <button class="lms-button sm:col-span-2" :disabled="busy || !consent">
+          <button class="ed-public-button ed-request-wide" :disabled="busy || !consent">
             {{
               busy
                 ? tr("Сохраняем заявку…", "Өтініш сақталуда…")
@@ -279,7 +277,7 @@ useHead(() => ({
           </button>
         </form>
       </section>
-      <aside class="lms-card h-fit space-y-5">
+      <aside class="ed-contact-details">
         <h2 class="text-xl font-bold">
           {{
             tr(
@@ -288,7 +286,7 @@ useHead(() => ({
             )
           }}
         </h2>
-        <p class="text-sm leading-6 text-slate-600">
+        <p >
           {{
             tr(
               "Откройте кабинет своей организации. Доступ предоставляется по подтверждённому приглашению.",
@@ -297,11 +295,11 @@ useHead(() => ({
           }}
         </p>
         <NuxtLink
-          class="lms-button w-full"
+          class="ed-public-button ed-public-button--quiet"
           :to="path('/cabinet/organization')"
           >{{ tr("Кабинет организации", "Ұйым кабинеті") }}</NuxtLink
         >
       </aside>
     </div>
-  </LmsShell>
+  </div>
 </template>

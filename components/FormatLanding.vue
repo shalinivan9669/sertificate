@@ -1,8 +1,9 @@
 <script setup>
 import { computed } from 'vue';
 import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
+import { leadContextQuery } from '~/shared/lead-context';
 import { getFormatByType } from '~/config/formats';
-import { getCityPrepositional } from '~/composables/useCity';
+import { getCityBySlug, getCityPrepositional } from '~/composables/useCity';
 
 const props = defineProps({
   type: {
@@ -16,11 +17,18 @@ const props = defineProps({
 });
 
 const resolvedCity = computed(() =>
-  props.city && 'value' in props.city ? props.city.value : props.city,
+  (props.city && 'value' in props.city ? props.city.value : props.city) || getCityBySlug(route.query.city),
 );
 
 const format = computed(() => getFormatByType(props.type));
 const { locale, t } = useI18n();
+const heading = computed(() => ({
+  online: { ru: 'Онлайн-обучение', kk: 'Онлайн оқу' },
+  ochnoe: { ru: 'Обучение в учебном центре', kk: 'Оқу орталығында оқу' },
+  vyezdnoe: { ru: 'Обучение на вашей площадке', kk: 'Ұйымыңыздың аумағында оқу' },
+  srochnoe: { ru: 'Обучение в ближайшие сроки', kk: 'Жақын мерзімде оқу' },
+  tender: { ru: 'Обучение для участия в тендере', kk: 'Тендерге қатысуға арналған оқу' },
+}[props.type]?.[locale.value === 'kk' ? 'kk' : 'ru'] || metaTitle.value.split(' | ')[0]));
 const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
 const localePath = useLocalePath();
@@ -79,8 +87,10 @@ const programSelectionRoute = computed(() => ({
   query: {
     source: 'format',
     slug: format.value?.slug || '',
-    format: { online: 'online', ochnoe: 'classroom', vyezdnoe: 'onsite' }[props.type] || '',
-    city: resolvedCity.value?.slug || '',
+    ...leadContextQuery({
+      format: { online: 'online', ochnoe: 'classroom', vyezdnoe: 'onsite' }[props.type] || route.query.format,
+      city: resolvedCity.value?.slug || route.query.city,
+    }),
   },
 }));
 
@@ -112,32 +122,20 @@ useHead(() => ({
 </script>
 
 <template>
-  <article v-if="format" class="space-y-8">
-    <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm space-y-3">
-      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">{{ t('home.formatsBadge') }}</p>
-      <h1 class="text-3xl font-bold text-slate-900">{{ metaTitle }}</h1>
-      <p class="text-lg text-slate-700">{{ metaDescription }}</p>
-    </header>
-
-    <section
-      v-for="section in format.sections"
-      :key="section.id"
-      class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3"
-    >
-      <h2 class="text-xl font-semibold text-slate-900">{{ resolveLocalized(section.title) }}</h2>
-      <p class="text-slate-700">{{ resolveLocalized(section.subtitle) }}</p>
-      <ul class="grid gap-2 text-slate-700 list-disc pl-5">
-        <li v-for="item in resolveList(section.bullets)" :key="item">{{ item }}</li>
-      </ul>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">{{ t('formatLanding.ctaTitle') }}</h2>
-      <p class="text-slate-700">{{ t('formatLanding.ctaDescription') }}</p>
-      <div class="flex flex-wrap justify-center gap-3">
-        <NuxtLink :to="programSelectionRoute" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871">{{ t('cta.call') }}</a>
-      </div>
+  <article v-if="format" class="ed-public ed-format-page">
+    <EditorialPageHeader :title="resolvedCity ? metaTitle : heading" :lead="metaDescription" :back-to="{ path: localePath('/courses'), query: leadContextQuery(programSelectionRoute.query) }" :back-label="locale === 'kk' ? 'Оқу бағыттары' : 'Направления обучения'">
+      <template #context><span>{{ cityPrepositional }}</span></template>
+      <div class="ed-public-actions"><NuxtLink :to="programSelectionRoute" class="ed-public-button">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink><a href="#format-details" class="ed-public-link">{{ locale === 'kk' ? 'Формат туралы' : 'Об этом формате' }}</a></div>
+    </EditorialPageHeader>
+    <div id="format-details" class="ed-public-strips">
+      <section v-for="section in format.sections" :id="section.id" :key="section.id">
+        <h2>{{ resolveLocalized(section.title) }}</h2>
+        <div><p>{{ resolveLocalized(section.subtitle) }}</p><ul class="ed-public-list"><li v-for="item in resolveList(section.bullets)" :key="item">{{ item }}</li></ul></div>
+      </section>
+    </div>
+    <section class="ed-public-callout">
+      <h2>{{ t('formatLanding.ctaTitle') }}</h2><p>{{ t('formatLanding.ctaDescription') }}</p>
+      <div class="ed-public-actions"><NuxtLink :to="programSelectionRoute" class="ed-public-button">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink><a class="ed-public-link" href="tel:+77766803282">{{ t('cta.call') }}</a></div>
     </section>
   </article>
   <p v-else>{{ t('formatLanding.empty') }}</p>

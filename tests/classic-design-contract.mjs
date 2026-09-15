@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
-// The index retains the audit-base blob. The home blob was explicitly reviewed
-// for the owner's 2026-09-08 request: extend the existing course grid and display
-// PDF prices. Hero, formats and remaining classic sections retain their design.
-// No automatic refresh mode: subsequent changes still require explicit review.
+// The September 13 editorial redesign supersedes the frozen root-page wrapper.
+// Keep the reviewed classic component unchanged and available at /second.
+// September 14: the owner explicitly requested a site-wide telephone replacement.
+// September 14 follow-up: the owner requested course value in place of public prices.
+// The classic layout is preserved; its phone and course value copy reflect those requests.
 export const classicBase = '413ad4a34e53203f39df3946962903f51caf16a0';
 export const classicCourseRevision = '2026-09-08: owner-approved 20 directions, filters and PDF display prices';
 export const classicBlobs = Object.freeze({
-  'components/HomePageClassic.vue': 'fd2396cc1a993af1b2f8de395b80ef5ecda86784',
-  'pages/index.vue': '5d5710fa6eb31021139bb1a15b0fcf3e026072de',
+  'components/HomePageClassic.vue': '1d11df93e44ea42f28738fa5c837aa767d56c098',
 });
 
 export async function assertClassicSource() {
@@ -19,4 +19,9 @@ export async function assertClassicSource() {
     const actual = createHash('sha1').update(`blob ${source.length}\0`).update(source).digest('hex');
     assert.equal(actual, expected, `${path} diverges from the reviewed classic (${classicBase}; ${classicCourseRevision}); do not refresh this guard from HEAD to hide a design change`);
   }
+  const root = await readFile(new URL('../pages/index.vue', import.meta.url), 'utf8');
+  const second = await readFile(new URL('../pages/second.vue', import.meta.url), 'utf8');
+  assert.match(root, /import HomePageEditorial from '~\/components\/HomePageEditorial\.vue'/);
+  assert.match(root, /<HomePageEditorial\s*\/>/);
+  assert.match(second, /<HomePageClassic\s*\/>/);
 }

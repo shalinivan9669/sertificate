@@ -32,7 +32,7 @@ const reportProgramId = ref("");
 const pages = reactive({ enrollments: 1, members: 1, invitations: 1 });
 const reportUrl = computed(() => "/api/v1/organizations/" + encodeURIComponent(selected.value) + "/report.csv" + (reportProgramId.value ? "?programId=" + encodeURIComponent(reportProgramId.value) : ""));
 let assignmentKey = "";
-const { data: catalog } = await useAsyncData("lms-catalog", () =>
+const { data: catalog, pending: catalogPending, error: catalogError } = await useAsyncData("lms-catalog", () =>
   api<{ programs: LmsProgram[] }>("/catalog/programs"),
 );
 const versions = computed(
@@ -44,6 +44,14 @@ const versions = computed(
       })),
     ) || [],
 );
+const requestedVersionId = computed(() => typeof route.query.versionId === 'string' ? route.query.versionId : '');
+const requestedVersion = computed(() => versions.value.find(item => item.id === requestedVersionId.value && item.intakeOpen !== false));
+let appliedVersionId = '';
+watch([requestedVersionId, versions], () => {
+  if (!requestedVersion.value || requestedVersionId.value === appliedVersionId) return;
+  versionId.value = requestedVersion.value.id;
+  appliedVersionId = requestedVersion.value.id;
+}, { immediate: true });
 watch(
   () => data.value?.organizations,
   (orgs) => {
@@ -275,7 +283,12 @@ useHead(() => ({
 </script>
 <template>
   <LmsShell :title="tr('Кабинет организации', 'Ұйым кабинеті')" back="/cabinet"
-    ><LmsState :pending="pending" :error="error" @retry="refresh"
+    ><div v-if="requestedVersionId" class="lms-note space-y-2" role="status">
+      <p v-if="catalogPending">{{ tr('Проверяем выбранную программу для команды…', 'Команда үшін таңдалған бағдарламаны тексерудеміз…') }}</p>
+      <p v-else-if="catalogError">{{ tr('Не удалось проверить выбранную программу. Обновите страницу или выберите её позже в форме назначения.', 'Таңдалған бағдарламаны тексеру мүмкін болмады. Бетті жаңартыңыз немесе кейінірек тағайындау нысанынан таңдаңыз.') }}</p>
+      <template v-else-if="requestedVersion"><p class="font-semibold">{{ tr('Программа из каталога', 'Каталогтан таңдалған бағдарлама') }}: {{ requestedVersion.programTitle }}</p><p>{{ requestedVersion.title }} · {{ requestedVersion.language.toUpperCase() }}</p><p>{{ versionId === requestedVersion.id ? tr('Вариант выбран в форме назначения. Выберите организацию и сотрудников, затем проверьте условия перед подтверждением.', 'Нұсқа тағайындау нысанында таңдалған. Ұйым мен қызметкерлерді таңдап, растау алдында шарттарды тексеріңіз.') : tr('В форме назначения выбран другой вариант. Проверьте его условия перед подтверждением.', 'Тағайындау нысанында басқа нұсқа таңдалған. Растау алдында оның шарттарын тексеріңіз.') }}</p></template>
+      <p v-else>{{ tr('Выбранная версия сейчас недоступна для нового назначения. Выберите доступную программу в форме ниже или уточните условия в учебном центре.', 'Таңдалған нұсқа жаңа тағайындау үшін қазір қолжетімсіз. Төмендегі нысаннан қолжетімді бағдарламаны таңдаңыз немесе оқу орталығынан шарттарды нақтылаңыз.') }}</p>
+    </div><LmsState :pending="pending" :error="error" @retry="refresh"
       ><div class="lms-card space-y-5">
         <label
           v-if="data?.organizations?.length"

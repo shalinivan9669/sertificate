@@ -1,4 +1,5 @@
 <script setup>
+import { getCityBySlug } from '~/composables/useCity';
 import { computed } from 'vue';
 import { createError, useHead, useRoute } from '#imports';
 import { courses } from '~/config/courses';
@@ -36,7 +37,7 @@ useHead(() => {
   <SeoUniqueBlocks
     v-if="seoContent && !course"
     :content="seoContent"
-    :cta-query="{ source: 'seo-city', slug: courseSlug }"
+    :cta-query="{ source: 'seo-city', city: courseSlug }"
   />
-  <CoursePage v-else :course="course" />
+  <CoursePage v-else :course="course" :city="getCityBySlug(route.query.city)" />
 </template>

@@ -1,264 +1,126 @@
 <script setup lang="ts">
 import { leadContextQuery } from '~/shared/lead-context';
+import { preferredProgramVersion } from '~/shared/program-version-selection';
+import { getPublicCourseValue } from '~/shared/public-course-value';
+
+type ProgramDetails = Omit<LmsProgram, 'versions'> & {
+  versions: Array<LmsProgram['versions'][number] & { limitations?: string; support?: string }>;
+};
 const route = useRoute();
+const router = useRouter();
 const path = useLocalePath();
-const { api, tr, locale, money, date, errorText } = useLmsApi();
+const { api, tr, locale, date, errorText } = useLmsApi();
 const { data, pending, error, refresh } = await useAsyncData(
-  "lms-program-" + route.params.id,
-  () =>
-    api<any>(
-      "/catalog/programs/" + encodeURIComponent(String(route.params.id)),
-    ),
+  'lms-program-' + route.params.id,
+  () => api<{ program: ProgramDetails }>('/catalog/programs/' + encodeURIComponent(String(route.params.id))),
 );
-onMounted(() => {
-  void refresh();
-});
+// Refresh after hydration: Nuxt reuses the prerender payload during onMounted.
+onNuxtReady(() => { void refresh(); });
 if (lmsErrorStatus(error.value) === 404)
-  throw createError({ statusCode: 404, statusMessage: "Программа не найдена" });
-const program = computed<LmsProgram | undefined>(
-  () => data.value?.program || data.value,
-);
-const consultationQuery = computed(() => leadContextQuery({ programId: program.value?.id, city: route.query.city, format: route.query.format }));
+  throw createError({ statusCode: 404, statusMessage: 'Программа не найдена' });
+const program = computed(() => data.value?.program);
 const { track } = useLmsAnalytics();
 onMounted(() => {
   watch(() => program.value?.id, value => { if (value) track('program_view', { programId: value }); }, { immediate: true });
 });
-const selected = ref("");
 const busy = ref(false);
-const failure = ref("");
-const version = computed(
-  () =>
-    program.value?.versions?.find((v) => v.id === selected.value) ||
-    program.value?.versions?.find((v) => v.language === locale.value) ||
-    program.value?.versions?.[0],
-);
-const title = computed(
-  () =>
-    program.value?.title?.[locale.value === "kk" ? "kk" : "ru"] ||
-    tr("Программа обучения", "Оқу бағдарламасы"),
-);
-useHead(() => ({ title: title.value + " — OT Center" }));
-async function enroll() {
-  if (!version.value) return;
-  busy.value = true;
-  failure.value = "";
+const selecting = ref(false);
+const failure = ref('');
+const version = computed(() => preferredProgramVersion(program.value?.versions || [], {
+  versionId: route.query.versionId, language: locale.value, format: route.query.format,
+}));
+const contextQuery = computed(() => leadContextQuery({ city: route.query.city, format: route.query.format }));
+const consultationQuery = computed(() => leadContextQuery({ programId: program.value?.directionId || program.value?.id, ...contextQuery.value }));
+const priceRequestRoute = computed(() => ({ path: path('/contacts'), query: { ...consultationQuery.value, request: 'price' }, hash: '#request-form' }));
+const catalogQuery = computed(() => ({
+  ...contextQuery.value,
+  ...(typeof route.query.q === 'string' ? { q: route.query.q } : {}),
+  ...(typeof route.query.direction === 'string' ? { direction: route.query.direction } : {}),
+}));
+const versionQuery = computed(() => ({ ...catalogQuery.value, ...(version.value ? { versionId: version.value.id } : {}) }));
+const formatLabel = (value?: string) => ({ online: tr('Онлайн', 'Онлайн'), classroom: tr('В учебном центре', 'Оқу орталығында'), onsite: tr('На площадке организации', 'Ұйым аумағында') }[value || ''] || value || tr('Уточняется', 'Нақтыланады'));
+const formatMismatch = computed(() => typeof route.query.format === 'string' && version.value && version.value.format !== route.query.format);
+const title = computed(() => program.value?.title[locale.value === 'kk' ? 'kk' : 'ru'] || tr('Программа обучения', 'Оқу бағдарламасы'));
+const guidance = computed(() => program.value?.sourceProduct?.guidance);
+const courseValue = computed(() => getPublicCourseValue(program.value?.directionId || program.value?.id));
+const audience = computed(() => version.value?.audience || guidance.value?.audience[locale.value === 'kk' ? 'kk' : 'ru']);
+useHead(() => ({ title: title.value + ' — OT Center' }));
+
+async function selectVersion(event: Event) {
+  const id = (event.target as HTMLSelectElement).value;
+  if (selecting.value || busy.value || !program.value?.versions.some(item => item.id === id)) return;
+  selecting.value = true;
   try {
-    const result = await api<any>("/enrollments", {
-      method: "POST",
-      headers: { "Idempotency-Key": crypto.randomUUID() },
-      body: { versionId: version.value.id },
+    // The URL owns explicit selection. No reciprocal watchers or competing navigation.
+    await navigateTo({ path: route.path, query: { ...route.query, versionId: id }, hash: route.hash }, { replace: true });
+    failure.value = '';
+  } finally { selecting.value = false; }
+}
+async function enroll() {
+  if (!version.value || busy.value || selecting.value) return;
+  const selectedVersionId = version.value.id;
+  const returnTo = router.resolve({ path: route.path, query: { ...route.query, versionId: selectedVersionId }, hash: route.hash }).fullPath;
+  busy.value = true;
+  failure.value = '';
+  try {
+    const result = await api<any>('/enrollments', {
+      method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: { versionId: selectedVersionId },
     });
-    await navigateTo(path("/learn/" + (result.enrollment?.id || result.id)));
-  } catch (e) {
-    if (lmsErrorStatus(e) === 401)
-      await navigateTo({
-        path: path("/auth/login"),
-        query: { returnTo: route.fullPath },
-      });
-    else failure.value = errorText(e);
-  } finally {
-    busy.value = false;
-  }
+    await navigateTo(path('/learn/' + (result.enrollment?.id || result.id)));
+  } catch (cause) {
+    if (lmsErrorStatus(cause) === 401)
+      await navigateTo({ path: path('/auth/login'), query: { returnTo } });
+    else failure.value = errorText(cause);
+  } finally { busy.value = false; }
 }
 </script>
+
 <template>
-  <LmsShell :title="title"
-    ><LmsState :pending="pending" :error="error" @retry="refresh"
-      ><template v-if="program">
-        <div class="grid gap-6 lg:grid-cols-[1.7fr_1fr]">
-          <section class="lms-card space-y-6">
-            <h2 class="text-xl font-bold">
-              {{ tr("Содержание программы", "Бағдарлама мазмұны") }}
-            </h2>
-            <div
-              v-if="program.sourceProduct?.guidance"
-              class="space-y-3 text-slate-600"
-            >
-              <p>
-                {{
-                  program.sourceProduct.guidance.summary[
-                    locale === "kk" ? "kk" : "ru"
-                  ]
-                }}
-              </p>
-              <p>
-                {{ tr("Для кого:", "Кім үшін:") }}
-                {{
-                  program.sourceProduct.guidance.audience[
-                    locale === "kk" ? "kk" : "ru"
-                  ]
-                }}
-              </p>
-            </div>
-            <template v-if="version"
-              ><label v-if="program.versions.length > 1" class="block space-y-2"
-                ><span>{{
-                  tr("Вариант и язык обучения", "Оқу нұсқасы және тілі")
-                }}</span
-                ><select v-model="selected">
-                  <option value="" disabled>
-                    {{ tr("Выберите вариант", "Нұсқаны таңдаңыз") }}
-                  </option>
-                  <option
-                    v-for="v in program.versions"
-                    :key="v.id"
-                    :value="v.id"
-                  >
-                    {{ v.title }} · {{ v.language.toUpperCase() }}
-                  </option>
-                </select></label
-              >
-              <p v-if="version.audience">
-                {{ tr("Для кого:", "Кім үшін:") }} {{ version.audience }}
-              </p>
-              <p v-if="version.prerequisites">
-                {{ tr("Перед началом:", "Бастамас бұрын:") }}
-                {{ version.prerequisites }}
-              </p>
-              <div
-                v-for="(m, index) in version.modules"
-                :key="m.id"
-                class="space-y-2 border-t pt-4"
-              >
-                <h3 class="font-semibold">{{ index + 1 }}. {{ m.title }}</h3>
-                <ul class="space-y-2 text-sm text-slate-600">
-                  <li v-for="l in m.lessons" :key="l.id">
-                    {{ l.title }}
-                    <span v-if="l.kind === 'practice'" class="text-brand-accent"
-                      >·
-                      {{ tr("Практическая часть", "Практикалық бөлім") }}</span
-                    >
-                  </li>
-                </ul>
-              </div>
-              <p v-if="version.outcomes">{{ version.outcomes }}</p></template
-            >
-            <p v-else class="text-slate-600">
-              {{
-                tr(
-                  "Специалист поможет подобрать вариант по вашей должности, отрасли и рабочим задачам и предоставит программу и условия записи.",
-                  "Маман лауазымыңызға, салаңызға және жұмыс міндеттеріңізге сәйкес нұсқаны таңдап, бағдарлама мен тіркелу шарттарын береді.",
-                )
-              }}
-            </p>
-            <NuxtLink v-if="program.publicPath !== '/courses/' + program.slug" :to="path(program.publicPath)"
-              >{{
-                tr("Подробнее о направлении", "Бағыт туралы толығырақ")
-              }}
-              →</NuxtLink
-            >
-          </section>
-          <aside class="lms-card h-fit space-y-5">
-            <h2 class="text-xl font-bold">
-              {{ tr("Условия обучения", "Оқу шарттары") }}
-            </h2>
-            <div v-if="!version" class="space-y-2">
-              <p class="text-2xl font-bold text-brand">
-                {{
-                  program.pricing?.label[locale === "kk" ? "kk" : "ru"] ||
-                  tr("Стоимость по запросу", "Бағасы сұрау бойынша")
-                }}
-              </p>
-              <p v-if="program.pricing?.basis" class="text-sm text-slate-600">
-                {{ program.pricing.basisLabel[locale === "kk" ? "kk" : "ru"] }}
-                <span v-if="program.pricing.taxLabel?.[locale === 'kk' ? 'kk' : 'ru']">
-                  · {{ program.pricing.taxLabel[locale === "kk" ? "kk" : "ru"] }}
-                </span>
-              </p>
-            </div>
-            <template v-if="version"
-              ><p class="text-2xl font-bold text-brand">
-                {{ money(version.priceMinor, version.currency) }}
-              </p>
-              <p class="text-sm text-slate-600">
-                {{
-                  version.billingBasis === "organization"
-                    ? tr(
-                        "Общая стоимость для команды организации",
-                        "Ұйым командасы үшін жалпы құн",
-                      )
-                    : tr(
-                        "Расчёт на одного слушателя",
-                        "Бір тыңдаушы үшін есептеу",
-                      )
-                }}
-              </p>
-              <dl class="space-y-3 text-sm">
-                <div class="flex justify-between gap-3">
-                  <dt>{{ tr("Язык", "Тілі") }}</dt>
-                  <dd>{{ version.language.toUpperCase() }}</dd>
-                </div>
-                <div class="flex justify-between gap-3">
-                  <dt>{{ tr("Объём программы", "Бағдарлама көлемі") }}</dt>
-                  <dd>
-                    {{ version.durationHours }} {{ tr("часов", "сағат") }}
-                  </dd>
-                </div>
-                <div v-if="version.format">
-                  <dt>{{ tr("Формат", "Формат") }}</dt>
-                  <dd>{{ version.format }}</dd>
-                </div>
-              </dl>
-              <p v-if="version.documentDescription" class="text-sm">
-                {{ version.documentDescription }}
-              </p>
-              <p v-if="version.retakePolicy" class="text-sm">
-                {{ version.retakePolicy }}
-              </p>
-              <p v-if="version.reviewedAt" class="text-xs text-slate-500">
-                {{ tr("Проверено", "Тексерілді") }}:
-                {{ date(version.reviewedAt) }}
-              </p>
-              <p v-if="version.intakeOpen === false" class="lms-note">{{ tr("Набор на эту версию программы приостановлен. Уточните следующий набор в учебном центре.", "Бағдарламаның осы нұсқасына қабылдау тоқтатылған. Келесі қабылдауды оқу орталығынан нақтылаңыз.") }}</p>
-              <button
-                v-else-if="
-                  version.accessModel === 'free' &&
-                  version.billingBasis !== 'organization'
-                "
-                class="lms-button w-full"
-                :disabled="busy"
-                @click="enroll"
-              >
-                {{ tr("Записаться на обучение", "Оқуға жазылу") }}</button
-              ><NuxtLink
-                v-else-if="version.billingBasis === 'organization'"
-                class="lms-button w-full"
-                :to="path('/cabinet/organization')"
-                >{{
-                  tr("Запись команды организации", "Ұйым командасын тіркеу")
-                }}</NuxtLink
-              ><NuxtLink
-                v-else
-                class="lms-button w-full"
-                :to="{
-                  path: path('/payment/' + program.id),
-                  query: {
-                    versionId: version.id,
-                    city: route.query.city,
-                    format: route.query.format,
-                  },
-                }"
-                >{{
-                  tr("Условия записи и оплаты", "Тіркелу және төлеу шарттары")
-                }}</NuxtLink
-              >
-              <p v-if="failure" class="lms-error" role="alert">
-                {{ failure }}
-              </p></template
-            ><NuxtLink
-              class="lms-button secondary w-full"
-              :to="{ path: path('/contacts'), query: consultationQuery }"
-              @click="track('contact_click', { programId: program.id })"
-              >{{ tr("Обсудить обучение", "Оқуды талқылау") }}</NuxtLink
-            ><NuxtLink class="block text-center text-sm" :to="{ path: path('/b2b'), query: consultationQuery }">{{
-              tr(
-                "Обучение сотрудников организации",
-                "Ұйым қызметкерлерін оқыту",
-              )
-            }}</NuxtLink>
-          </aside>
-        </div>
-      </template></LmsState
-    ></LmsShell
-  >
+  <LmsShell :title="title" :back-query="catalogQuery">
+    <LmsState :pending="pending" :error="error" @retry="refresh">
+      <div v-if="program" class="ed-program-grid">
+        <section class="ed-program-intro" aria-labelledby="program-overview">
+          <p class="ed-commerce-kicker">{{ tr('Программа / содержание и условия', 'Бағдарлама / мазмұны мен шарттары') }}</p>
+          <h2 id="program-overview">{{ courseValue?.purpose[locale === 'kk' ? 'kk' : 'ru'] || tr('Знания для вашей работы.', 'Жұмысыңызға қажет білім.') }}</h2>
+          <p v-if="courseValue || guidance" class="ed-program-lead">{{ courseValue?.description[locale === 'kk' ? 'kk' : 'ru'] || guidance?.summary[locale === 'kk' ? 'kk' : 'ru'] }}</p>
+          <p v-else class="ed-program-lead">{{ tr('Изучите содержание и выберите подходящие условия. Язык, формат и порядок записи зависят от доступной версии программы.', 'Мазмұнын қарап, қолайлы шарттарды таңдаңыз. Тіл, формат және тіркелу тәртібі бағдарламаның қолжетімді нұсқасына байланысты.') }}</p>
+          <div v-if="audience" class="ed-program-audience"><h3>{{ tr('Кому подойдёт', 'Кімге арналған') }}</h3><p>{{ audience }}</p></div>
+          <NuxtLink v-if="program.publicPath !== '/courses/' + program.slug" class="ed-commerce-text-link" :to="{ path: path(program.publicPath), query: contextQuery }">{{ tr('Подробнее о направлении', 'Бағыт туралы толығырақ') }} <span aria-hidden="true">↗</span></NuxtLink>
+        </section>
+        <aside class="ed-program-passport" aria-labelledby="program-terms">
+          <p class="ed-commerce-kicker">{{ tr('Ваш следующий шаг', 'Келесі қадамыңыз') }}</p>
+          <h2 id="program-terms">{{ tr('Условия обучения', 'Оқу шарттары') }}</h2>
+          <p class="ed-program-cost-note"><strong>{{ tr('Стоимость по запросу', 'Бағасы сұрау бойынша') }}</strong>{{ tr('Уточним вашу задачу, формат и число участников. Подготовим предложение по выбранной программе.', 'Міндетіңізді, форматты және қатысушылар санын нақтылап, таңдалған бағдарлама бойынша ұсыныс дайындаймыз.') }}</p>
+          <NuxtLink class="lms-button ed-program-action" :to="priceRequestRoute" @click="track('contact_click', { programId: program.id })">{{ tr('Запросить стоимость', 'Бағасын сұрау') }} <span aria-hidden="true">↗</span></NuxtLink>
+          <template v-if="version">
+            <label v-if="program.versions.length > 1" class="ed-version-field"><span>{{ tr('Вариант и язык обучения', 'Оқу нұсқасы және тілі') }}</span><select :value="version.id" :disabled="busy || selecting" @change="selectVersion"><option v-for="item in program.versions" :key="item.id" :value="item.id">{{ item.title }} · {{ item.language.toUpperCase() }}</option></select></label>
+            <p v-else class="ed-program-version">{{ version.title }}</p>
+            <dl class="ed-program-facts">
+              <div><dt>{{ tr('Язык обучения', 'Оқу тілі') }}</dt><dd>{{ version.language === 'kk' ? 'Қазақша' : version.language === 'ru' ? 'Русский' : version.language.toUpperCase() }}</dd></div>
+              <div><dt>{{ tr('Объём', 'Көлемі') }}</dt><dd>{{ version.durationHours }} {{ tr('часов', 'сағат') }}</dd></div>
+              <div v-if="version.format"><dt>{{ tr('Формат', 'Формат') }}</dt><dd>{{ formatLabel(version.format) }}</dd></div>
+            </dl>
+            <p v-if="formatMismatch" class="ed-program-notice" role="status">{{ tr('В выбранной версии предусмотрен другой формат. Проверьте условия или обсудите своё предпочтение с центром.', 'Таңдалған нұсқада басқа формат көзделген. Шарттарды тексеріңіз немесе қалауыңызды орталықпен талқылаңыз.') }}</p>
+            <p v-if="version.intakeOpen === false" class="ed-program-notice">{{ tr('Набор на эту версию приостановлен. Уточните следующий набор в учебном центре.', 'Бұл нұсқаға қабылдау тоқтатылған. Келесі қабылдауды оқу орталығынан нақтылаңыз.') }}</p>
+            <button v-else-if="version.accessModel === 'free' && version.billingBasis !== 'organization'" class="lms-button ed-program-action" :disabled="busy || selecting" @click="enroll">{{ busy ? tr('Оформляем запись…', 'Тіркелу рәсімделуде…') : tr('Записаться на обучение', 'Оқуға жазылу') }} <span aria-hidden="true">↗</span></button>
+            <NuxtLink v-else-if="version.billingBasis === 'organization'" class="ed-commerce-text-link" :to="{ path: path('/cabinet/organization'), query: versionQuery }">{{ tr('Записать команду', 'Команданы тіркеу') }} <span aria-hidden="true">↗</span></NuxtLink>
+            <NuxtLink v-else class="ed-commerce-text-link" :to="{ path: path('/payment/' + program.id), query: versionQuery }">{{ tr('Условия записи и оплаты', 'Тіркелу және төлеу шарттары') }} <span aria-hidden="true">↗</span></NuxtLink>
+            <p v-if="failure" class="lms-error" role="alert">{{ failure }}</p>
+          </template>
+          <template v-else>
+            <p class="ed-program-notice">{{ tr('Доступную программу, язык, формат и дату начала согласуем с вами перед записью.', 'Қолжетімді бағдарламаны, тілді, форматты және басталу күнін тіркелу алдында сізбен келісеміз.') }}</p>
+          </template>
+          <NuxtLink class="ed-commerce-text-link ed-program-team" :to="{ path: path('/b2b'), query: consultationQuery }">{{ tr('Обучение для организации', 'Ұйым үшін оқыту') }}</NuxtLink>
+        </aside>
+        <section class="ed-program-section" aria-labelledby="program-content">
+          <p class="ed-commerce-kicker">01 / {{ tr('Что предстоит изучить', 'Нені үйренесіз') }}</p>
+          <h2 id="program-content">{{ tr('Содержание программы', 'Бағдарлама мазмұны') }}</h2>
+          <ol v-if="version?.modules.length" class="ed-program-modules"><li v-for="(module, index) in version.modules" :key="module.id"><span class="ed-program-module-number">{{ String(index + 1).padStart(2, '0') }}</span><div><h3>{{ module.title }}</h3><ul><li v-for="lesson in module.lessons" :key="lesson.id">{{ lesson.title }}<span v-if="lesson.kind === 'practice'" class="ed-program-practice">{{ tr('Практика', 'Практика') }}</span></li></ul></div></li></ol>
+          <template v-else><p>{{ tr('Специалист предоставит учебную программу с учётом вашей должности, отрасли и необходимых практических занятий.', 'Маман лауазымыңызға, салаңызға және қажетті практикалық сабақтарға сай оқу бағдарламасын ұсынады.') }}</p><ul v-if="guidance?.topics" class="ed-program-topics"><li v-for="topic in guidance.topics[locale === 'kk' ? 'kk' : 'ru']" :key="topic">{{ topic }}</li></ul><p v-if="guidance?.topics" class="ed-commerce-caption">{{ tr('Темы помогают сориентироваться в направлении. Окончательное содержание уточняется при выборе программы.', 'Тақырыптар бағытты түсінуге көмектеседі. Соңғы мазмұн бағдарлама таңдалған кезде нақтыланады.') }}</p></template>
+        </section>
+        <section v-if="version?.outcomes || version?.documentDescription" class="ed-program-section" aria-labelledby="program-outcomes"><p class="ed-commerce-kicker">02 / {{ tr('После обучения', 'Оқудан кейін') }}</p><h2 id="program-outcomes">{{ tr('Результат и документы', 'Нәтиже мен құжаттар') }}</h2><p v-if="version.outcomes">{{ version.outcomes }}</p><p v-if="version.documentDescription">{{ version.documentDescription }}</p></section>
+        <section class="ed-program-section" aria-labelledby="program-before"><p class="ed-commerce-kicker">{{ version?.outcomes || version?.documentDescription ? '03' : '02' }} / {{ tr('Перед началом', 'Бастамас бұрын') }}</p><h2 id="program-before">{{ tr('Что нужно учесть', 'Нені ескеру керек') }}</h2><p v-if="version?.prerequisites">{{ version.prerequisites }}</p><p v-if="version?.limitations">{{ version.limitations }}</p><p v-if="version?.retakePolicy">{{ version.retakePolicy }}</p><p v-if="version?.support">{{ version.support }}</p><p v-if="!version">{{ tr('Подготовьте сведения о должности, видах работ и требованиях работодателя. Для команды укажите число сотрудников и удобный график.', 'Лауазым, жұмыс түрлері және жұмыс берушінің талаптары туралы мәліметтерді дайындаңыз. Команда үшін қызметкерлер санын және қолайлы кестені көрсетіңіз.') }}</p><NuxtLink class="ed-commerce-text-link" :to="path('/public-offer')">{{ tr('Общие условия обучения', 'Оқудың жалпы шарттары') }} <span aria-hidden="true">↗</span></NuxtLink><p v-if="version?.reviewedAt" class="ed-commerce-caption">{{ tr('Содержание проверено', 'Мазмұны тексерілген') }}: {{ date(version.reviewedAt) }}</p></section>
+      </div>
+    </LmsState>
+  </LmsShell>
 </template>

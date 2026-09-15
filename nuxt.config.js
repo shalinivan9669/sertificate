@@ -10,6 +10,7 @@ const compatibilityDate = '2025-11-20';
 const organizationLd = {
   '@type': 'EducationalOrganization',
   name: siteName,
+  telephone: '+77766803282',
   url: siteUrl,
   logo: `${siteUrl}/logo.png`,
   sameAs: [siteUrl],
@@ -54,7 +55,7 @@ export default defineNuxtConfig({
     },
   },
   modules: ['@nuxtjs/i18n', '@nuxtjs/robots', '@nuxtjs/sitemap', '@nuxtjs/tailwindcss'],
-  css: ['~/assets/css/tailwind.css'],
+  css: ['~/assets/css/tailwind.css', '~/assets/css/editorial.css', '~/assets/css/editorial-lms.css', '~/assets/css/editorial-navigation.css', '~/assets/css/editorial-public.css', '~/assets/css/editorial-commerce.css'],
   postcss: {
     plugins: {
       tailwindcss: {},
@@ -85,7 +86,8 @@ export default defineNuxtConfig({
         { rel: 'apple-touch-icon', sizes: '512x512', href: '/logo.png' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap' },
+        { rel: 'preload', href: '/fonts/ot-display.woff2', as: 'font', type: 'font/woff2', crossorigin: '' },
+        { rel: 'preload', href: '/fonts/ot-sans.woff2', as: 'font', type: 'font/woff2', crossorigin: '' },
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0' },
       ],
       script: [

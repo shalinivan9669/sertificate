@@ -1,0 +1,176 @@
+{
+  "name": "OT Center / Знания, на которых держится дело",
+  "version": 2,
+  "scope": ".editorial-site",
+  "variables": {
+    "--ed-ink": "#10262a",
+    "--ed-night": "#0b171a",
+    "--ed-raised": "#193237",
+    "--ed-paper": "#f5f5f0",
+    "--ed-white": "#fff",
+    "--ed-cream": "#f7f4ea",
+    "--ed-muted": "#526365",
+    "--ed-muted-dark": "#c4ceca",
+    "--ed-amber": "#efb44c",
+    "--ed-amber-hover": "#fac56c",
+    "--ed-brass": "#a38c63",
+    "--ed-rule": "#ccd3cd",
+    "--ed-dark-rule": "#405354",
+    "--ed-field": "#778684",
+    "--ed-soft": "#e8ede7",
+    "--ed-success": "#27543b",
+    "--ed-success-bg": "#edf6ee",
+    "--ed-error": "#922d32",
+    "--ed-error-bg": "#fff0ed",
+    "--ed-warning": "#765019",
+    "--ed-warning-bg": "#fff0d5",
+    "--ed-focus": "#986118",
+    "--ed-display": "\"OT Display\",Georgia,serif",
+    "--ed-sans": "\"OT Sans\",Arial,sans-serif",
+    "--ed-radius": "4px",
+    "--ed-space": "clamp(20px,3.33vw,56px)",
+    "--ed-max": "1360px",
+    "--ed-motion": "180ms",
+    "--ed-ease": "cubic-bezier(.2,.7,.3,1)"
+  },
+  "textPairs": [
+    {
+      "foreground": "ink",
+      "background": "paper",
+      "contrast": 14.41,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "paper",
+      "contrast": 5.76,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "cream",
+      "background": "night",
+      "contrast": 16.57,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted-dark",
+      "background": "night",
+      "contrast": 11.31,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "night",
+      "background": "amber",
+      "contrast": 9.81,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "success",
+      "background": "success-bg",
+      "contrast": 7.87,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "error",
+      "background": "error-bg",
+      "contrast": 7.16,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "warning",
+      "background": "warning-bg",
+      "contrast": 6.37,
+      "minimum": 4.5
+    }
+  ],
+  "typography": {
+    "display": {
+      "family": "OT Display",
+      "source": "Noto Serif Display",
+      "weight": 500,
+      "desktop": "clamp(72px,6.65vw,104px)",
+      "phone": "clamp(44px,12vw,67px)"
+    },
+    "interface": {
+      "family": "OT Sans",
+      "source": "Noto Sans",
+      "size": 16
+    },
+    "reading": {
+      "size": 18,
+      "phone": 17,
+      "lineHeight": 1.85,
+      "maxMeasure": "66ch"
+    },
+    "license": "SIL OFL 1.1",
+    "requiredCharacters": "ӘәҒғҚқҢңӨөҰұҮүҺһІіЁё№₸«»—–"
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    20,
+    24,
+    32,
+    40,
+    48,
+    64,
+    80,
+    96
+  ],
+  "grid": {
+    "maxWidth": 1360,
+    "columns": 12,
+    "phoneGutter": 20,
+    "coverRatio": "desktop: copy on a calm left area, scene to the right; phone: copy above scene",
+    "breakpoints": [
+      640,
+      700,
+      900,
+      1000,
+      1200
+    ],
+    "verificationWidths": [
+      360,
+      390,
+      820,
+      1280,
+      1440
+    ]
+  },
+  "borders": {
+    "width": 1,
+    "radius": 4,
+    "round": "only isolated direction controls and symbols"
+  },
+  "layers": {
+    "art": -2,
+    "shade": -1,
+    "content": 0,
+    "dialog": "native top layer"
+  },
+  "motion": {
+    "interaction": 180,
+    "easing": "cubic-bezier(.2,.7,.3,1)",
+    "reducedMotion": "no animation or smooth scrolling"
+  },
+  "states": {
+    "control": [
+      "default",
+      "hover",
+      "focus-visible",
+      "pressed",
+      "selected",
+      "disabled",
+      "loading"
+    ],
+    "data": [
+      "empty",
+      "error",
+      "saving",
+      "conflict",
+      "success"
+    ]
+  }
+}

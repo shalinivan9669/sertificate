@@ -10,6 +10,10 @@ const { tr, errorText } = useLmsApi();
 const path = useLocalePath();
 const route = useRoute();
 const unauthorized = computed(() => lmsErrorStatus(props.error) === 401);
+const hydrated = ref(false);
+onMounted(() => { hydrated.value = true; });
+// A fragment is absent from the HTTP request. Restore it only after hydration.
+const loginReturnTo = computed(() => hydrated.value ? route.fullPath : route.fullPath.split('#')[0]);
 </script>
 <template>
   <div v-if="pending" class="lms-note" role="status" aria-live="polite">
@@ -20,7 +24,7 @@ const unauthorized = computed(() => lmsErrorStatus(props.error) === 401);
     <NuxtLink
       v-if="unauthorized"
       class="lms-button"
-      :to="{ path: path('/auth/login'), query: { returnTo: route.fullPath } }"
+      :to="{ path: path('/auth/login'), query: { returnTo: loginReturnTo } }"
       >{{ tr("Войти в аккаунт", "Аккаунтқа кіру") }}</NuxtLink
     ><button
       v-else

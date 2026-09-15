@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { leadContextQuery } from '~/shared/lead-context';
 const route = useRoute();
 const path = useLocalePath();
 const { api, tr, locale, money, errorText } = useLmsApi();
@@ -15,12 +16,21 @@ const program = computed(() => data.value?.program || data.value);
 const version = computed(() =>
   program.value?.versions?.find((v: any) => v.id === route.query.versionId),
 );
+const contextQuery = computed(() => leadContextQuery({ city: route.query.city, format: route.query.format }));
+const backQuery = computed(() => ({
+  ...contextQuery.value,
+  ...(typeof route.query.versionId === 'string' ? { versionId: route.query.versionId } : {}),
+  ...(typeof route.query.q === 'string' ? { q: route.query.q } : {}),
+  ...(typeof route.query.direction === 'string' ? { direction: route.query.direction } : {}),
+}));
+const consultationQuery = computed(() => leadContextQuery({ programId: program.value?.id || id, ...contextQuery.value }));
+watch(() => version.value?.id, () => { orderKey = ''; accepted.value = false; });
 const { track } = useLmsAnalytics();
 onMounted(() => {
   watch(() => version.value?.id, value => { if (value && program.value?.id) track('checkout_view', { programId: program.value.id, audience: version.value?.billingBasis === 'organization' ? 'b2b' : 'b2c' }); }, { immediate: true });
 });
 async function createOrder() {
-  if (!version.value || version.value.billingBasis === "organization") return;
+  if (busy.value || !accepted.value || !version.value || version.value.intakeOpen === false || version.value.priceMinor == null || version.value.billingBasis === "organization") return;
   busy.value = true;
   failure.value = "";
   try {
@@ -32,7 +42,7 @@ async function createOrder() {
     });
     await navigateTo({
       path: path("/payment/pending"),
-      query: { order: result.order.id },
+      query: { order: result.order.id, ...contextQuery.value },
     });
   } catch (e) {
     if (lmsErrorStatus(e) === 401)
@@ -54,14 +64,16 @@ useHead(() => ({
   <LmsShell
     :title="tr('Запись на обучение', 'Оқуға жазылу')"
     :back="'/courses/' + id"
+    :back-query="backQuery"
     ><LmsState :pending="pending" :error="error" @retry="refresh"
-      ><div class="lms-card max-w-2xl space-y-5">
+      ><div class="lms-card ed-order-sheet max-w-2xl space-y-5">
+        <p class="ed-commerce-kicker">{{ tr('Проверьте выбранную программу', 'Таңдалған бағдарламаны тексеріңіз') }}</p>
         <h2 class="text-xl font-semibold">
           {{ program?.title?.[locale === "kk" ? "kk" : "ru"] }}
         </h2>
         <div v-if="version?.intakeOpen === false" class="space-y-4">
           <p class="lms-note">{{ tr("Набор на эту версию программы приостановлен. Новый заказ сейчас недоступен.", "Бағдарламаның осы нұсқасына қабылдау тоқтатылған. Жаңа тапсырыс қазір қолжетімсіз.") }}</p>
-          <NuxtLink class="lms-button secondary" :to="{ path: path('/contacts'), query: { program: id } }">{{ tr("Обсудить обучение", "Оқуды талқылау") }}</NuxtLink>
+          <NuxtLink class="lms-button secondary" :to="{ path: path('/contacts'), query: consultationQuery }">{{ tr("Обсудить обучение", "Оқуды талқылау") }}</NuxtLink>
         </div>
         <div v-else-if="version?.billingBasis === 'organization'" class="space-y-4">
           <p class="lms-note">
@@ -72,13 +84,13 @@ useHead(() => ({
               )
             }}
           </p>
-          <NuxtLink class="lms-button" :to="path('/cabinet/organization')">{{
+          <NuxtLink class="lms-button" :to="{ path: path('/cabinet/organization'), query: backQuery }">{{
             tr("Кабинет организации", "Ұйым кабинеті")
           }}</NuxtLink>
         </div>
         <template v-else-if="version"
           ><p>{{ version.title }} · {{ version.language.toUpperCase() }}</p>
-          <p class="text-3xl font-bold">
+          <p class="ed-program-price">
             {{ money(version.priceMinor, version.currency) }}
           </p>
           <p class="lms-note">
@@ -131,7 +143,7 @@ useHead(() => ({
           }}
         </p>
         <p v-if="failure" class="lms-error" role="alert">{{ failure }}</p>
-        <NuxtLink class="lms-button secondary" :to="path('/contacts')">{{
+        <NuxtLink class="ed-commerce-text-link" :to="{ path: path('/contacts'), query: consultationQuery }">{{
           tr("Согласовать условия", "Шарттарды келісу")
         }}</NuxtLink>
       </div></LmsState

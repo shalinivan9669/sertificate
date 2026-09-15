@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const route = useRoute();
 const path = useLocalePath();
+const router = useRouter();
 const { api, tr, errorText } = useLmsApi();
 const { track } = useLmsAnalytics();
 let viewedLesson = '';
@@ -27,6 +28,11 @@ const lessons = computed(
 const current = computed(() =>
   lessons.value.find((l) => l.id === selected.value),
 );
+const currentIndex = computed(() => lessons.value.findIndex(l => l.id === selected.value));
+const nextLesson = computed(() => currentIndex.value >= 0 ? lessons.value[currentIndex.value + 1] : undefined);
+watch(() => route.query.lesson, value => {
+  if (typeof value === 'string' && value !== selected.value && lessons.value.some(l => l.id === value)) void openLesson(value, true);
+});
 const lessonArticle = ref<HTMLElement | null>(null);
 const contentsHeading = ref<HTMLElement | null>(null);
 let lessonRequest = 0;
@@ -43,6 +49,9 @@ async function openLesson(lessonId: string, focusAfterLoad = false) {
   const request = ++lessonRequest;
   requestedFocus = focusAfterLoad ? request : 0;
   selected.value = lessonId;
+  if (import.meta.client && focusAfterLoad && route.query.lesson !== lessonId) {
+    void router.push({ path: route.path, query: { ...route.query, lesson: lessonId }, hash: route.hash });
+  }
   loadingLesson.value = true;
   lessonError.value = null;
   lessonData.value = null;
@@ -143,9 +152,10 @@ useHead(() => ({
   <LmsShell :title="enrollment?.title || tr('Обучение', 'Оқу')" back="/cabinet"
     ><LmsState :pending="pending" :error="error" @retry="refresh"
       ><template v-if="enrollment">
-        <div class="lms-note flex flex-wrap justify-between gap-3">
+        <div class="ed-learning-progress">
+          <EditorialProgress :value="enrollment.progress.percent" :label="tr('Ваш прогресс', 'Сіздің оқу барысыңыз')" />
           <span
-            >{{ tr("Подтверждённый прогресс", "Расталған оқу барысы") }}:
+            >{{ tr("Изучено уроков", "Оқылған сабақтар") }}:
             {{ enrollment.progress.completed }} /
             {{ enrollment.progress.total }} ·
             {{ enrollment.progress.percent }}%</span
@@ -156,8 +166,8 @@ useHead(() => ({
             →</NuxtLink
           >
         </div>
-        <div class="grid items-start gap-6 lg:grid-cols-[290px_1fr]">
-          <aside class="lms-card space-y-5" aria-labelledby="lesson-contents">
+        <div class="ed-learning-layout">
+          <aside class="lms-card ed-learning-contents space-y-5" aria-labelledby="lesson-contents">
             <h2 id="lesson-contents" ref="contentsHeading" tabindex="-1" class="scroll-mt-4 font-bold">{{ tr("Содержание", "Мазмұны") }}</h2>
             <section
               v-for="m in enrollment.modules"
@@ -193,7 +203,8 @@ useHead(() => ({
               </button>
             </section>
           </aside>
-          <article ref="lessonArticle" class="lms-card min-w-0 space-y-6">
+          <article ref="lessonArticle" class="lms-card ed-learning-article min-w-0 space-y-6">
+            <p class="ed-lesson-position">{{ tr('Урок', 'Сабақ') }} {{ currentIndex + 1 }} {{ tr('из', '/') }} {{ lessons.length }}</p>
             <a href="#lesson-contents" class="lms-button secondary" @click.prevent="returnToContents">
               {{ tr("К содержанию", "Мазмұнға") }}
             </a>
@@ -227,8 +238,8 @@ useHead(() => ({
                 >
                   {{
                     tr(
-                      "Урок завершён. Прогресс сохранён на сервере.",
-                      "Сабақ аяқталды. Оқу барысы серверде сақталды.",
+                      "Урок завершён. Ваш прогресс сохранён.",
+                      "Сабақ аяқталды. Оқу барысыңыз сақталды.",
                     )
                   }}
                 </p>
@@ -247,6 +258,11 @@ useHead(() => ({
                         )
                   }}
                 </button>
+                <nav class="ed-lesson-next" :aria-label="tr('Продолжить обучение', 'Оқуды жалғастыру')">
+                  <button v-if="nextLesson" class="lms-button secondary" :disabled="saving" @click="openLesson(nextLesson.id, true)"><span>{{ tr('Следующий урок', 'Келесі сабақ') }}<small>{{ nextLesson.title }}</small></span><CivicIcon name="arrow" /></button>
+                  <NuxtLink v-else :to="path('/learn/' + id + '/pre-test')" class="lms-button secondary">{{ tr('Перейти к условиям проверки', 'Тексеру шарттарына өту') }}<CivicIcon name="arrow" /></NuxtLink>
+                  <p>{{ tr('Переход дальше не отмечает урок завершённым.', 'Келесі сабаққа өту бұл сабақты аяқталған деп белгілемейді.') }}</p>
+                </nav>
                 <p v-if="saveMessage" class="lms-success" role="status">
                   {{ saveMessage }}
                 </p>

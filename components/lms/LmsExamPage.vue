@@ -246,7 +246,7 @@ useHead(() => ({
         >
       </div>
       <template v-else-if="terminal"
-        ><div class="lms-card max-w-3xl space-y-5">
+        ><div class="lms-card ed-exam-result max-w-3xl space-y-5" :data-passed="attempt.result?.pass">
           <p class="text-sm text-slate-500">
             {{ date(attempt.result?.gradedAt || attempt.deadlineAt) }}
           </p>
@@ -260,7 +260,7 @@ useHead(() => ({
                   )
             }}
           </h2>
-          <p v-if="attempt.result" class="text-lg">
+          <p v-if="attempt.result" class="ed-exam-score">
             {{ tr("Результат", "Нәтиже") }}: {{ attempt.result.score }}% ·
             {{ attempt.result.correct }} / {{ attempt.result.total }}
           </p>
@@ -335,7 +335,7 @@ useHead(() => ({
       </div>
       <template v-else
         ><div
-          class="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm"
+          class="ed-exam-toolbar sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm"
         >
           <span
             class="font-mono text-xl font-bold"
@@ -403,7 +403,7 @@ useHead(() => ({
           }}
         </div>
         <nav
-          class="flex flex-wrap gap-2"
+          class="ed-exam-question-nav flex flex-wrap gap-2"
           :aria-label="tr('Вопросы экзамена', 'Емтихан сұрақтары')"
         >
           <button
@@ -428,7 +428,7 @@ useHead(() => ({
             {{ index + 1 }}
           </button>
         </nav>
-        <section v-if="question" class="lms-card space-y-5">
+        <section v-if="question" class="lms-card ed-exam-question space-y-5">
           <h2 class="text-xl font-semibold">
             {{ active + 1 }}. {{ question.text }}
           </h2>

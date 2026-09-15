@@ -6,7 +6,7 @@ import { cities } from '~/config/cities';
 import { licenseDownloadFiles } from '~/config/licenses-files';
 import { getCityName, getCityPrepositional } from '~/composables/useCity';
 import { additionalSourceDirections, sourceProductCardSummaries } from '~/shared/source-products';
-import { getPublicCoursePricing } from '~/shared/public-course-pricing';
+import { getPublicCourseValue } from '~/shared/public-course-value';
 
 const props = defineProps({
   city: {
@@ -41,9 +41,9 @@ const homeCourses = computed(() => [
   ...additionalSourceDirections.map(direction => ({
     slug: direction.id, title: direction.title[courseLanguage.value],
     description: sourceProductCardSummaries[direction.id]?.[courseLanguage.value] || '', isNew: true,
-    pricing: getPublicCoursePricing(direction.id),
+    value: getPublicCourseValue(direction.id),
   })),
-  ...directions.value.map(direction => ({ ...direction, isNew: false, pricing: getPublicCoursePricing(direction.slug) })),
+  ...directions.value.map(direction => ({ ...direction, isNew: false, value: getPublicCourseValue(direction.slug) })),
 ]);
 const visibleCourses = computed(() => homeCourses.value.filter(course =>
   courseGroup.value === 'all' || (courseGroup.value === 'new' ? course.isNew : !course.isNew),
@@ -163,10 +163,8 @@ const blogArticles = computed(() => getSortedBlogPosts().map(localizePost).slice
           <h3 class="text-lg font-semibold text-slate-900 group-hover:text-brand">{{ direction.title }}</h3>
           <p class="mb-4 mt-2 flex-1 text-sm text-slate-700">{{ direction.description }}</p>
           <div class="border-t border-slate-100 pt-4">
-            <p class="text-lg font-bold text-brand">{{ direction.pricing.label[courseLanguage] }}</p>
-            <p v-if="direction.pricing.basis" class="mt-1 text-sm text-slate-600">
-              {{ direction.pricing.basisLabel[courseLanguage] }}<span v-if="direction.pricing.taxLabel[courseLanguage]"> · {{ direction.pricing.taxLabel[courseLanguage] }}</span>
-            </p>
+            <p v-if="direction.value" class="text-lg font-bold text-brand">{{ direction.value.purpose[courseLanguage] }}</p>
+            <p class="mt-1 text-sm text-slate-600">{{ courseLanguage === 'kk' ? 'Бағасы сұрау бойынша' : 'Стоимость по запросу' }}</p>
             <p class="mt-3 text-sm font-semibold text-brand-accent">{{ direction.isNew ? courseCopy.conditions : courseCopy.details }} →</p>
           </div>
         </NuxtLink>
@@ -337,7 +335,7 @@ const blogArticles = computed(() => getSortedBlogPosts().map(localizePost).slice
       <p class="text-slate-700">{{ t('home.contactDescription') }}</p>
       <div class="flex justify-center gap-3">
         <NuxtLink :to="localePath('/contacts')" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition">{{ t('cta.apply') }}</NuxtLink>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871">{{ t('cta.call') }}</a>
+        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77766803282">{{ t('cta.call') }}</a>
       </div>
     </section>
   </div>

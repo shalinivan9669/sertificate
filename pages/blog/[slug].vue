@@ -1,4 +1,5 @@
 <script setup>
+import { leadContextQuery } from '~/shared/lead-context';
 import { computed } from 'vue';
 import { useHead, useRoute, createError, useLocalePath, useI18n, useRuntimeConfig } from '#imports';
 import { findBlogPost, formatBlogDate, getSortedBlogPosts } from '~/config/blog';
@@ -10,6 +11,7 @@ const { locale, t } = useI18n();
 const runtimeConfig = useRuntimeConfig();
 const localize = (value) => value?.[locale.value] || value?.ru || value;
 const absoluteUrl = (path) => new URL(path, runtimeConfig.public.siteUrl).toString();
+const contextRoute = (path) => ({ path: localePath(path), query: leadContextQuery(route.query) });
 const formatDate = (date) => formatBlogDate(date, locale.value);
 const copy = computed(() => locale.value === 'kk' ? {
   home: 'Басты бет', blog: 'Блог', breadcrumbs: 'Навигация жолы',
@@ -125,115 +127,53 @@ useHead(() => {
 </script>
 
 <template>
-  <div v-if="localizedPost" class="mx-auto max-w-6xl">
-    <nav :aria-label="copy.breadcrumbs" class="mb-8 text-sm leading-relaxed text-slate-500">
-      <ol class="flex flex-wrap gap-x-2 gap-y-1">
-        <li><NuxtLink :to="localePath('/')" class="hover:text-brand-accent hover:underline">{{ copy.home }}</NuxtLink></li>
-        <li aria-hidden="true">/</li>
-        <li><NuxtLink :to="localePath('/blog')" class="hover:text-brand-accent hover:underline">{{ copy.blog }}</NuxtLink></li>
-        <li aria-hidden="true">/</li>
-        <li aria-current="page" class="text-slate-700">{{ localizedPost.title }}</li>
-      </ol>
-    </nav>
-
+  <div v-if="localizedPost" class="ed-public ed-article">
     <article>
-      <header class="max-w-4xl space-y-5">
-        <div class="flex flex-wrap gap-2">
-          <span v-for="tag in localizedPost.tags" :key="tag" class="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-accent">{{ tag }}</span>
-        </div>
-        <h1 class="font-headline text-3xl font-extrabold leading-tight text-slate-900 sm:text-4xl lg:text-5xl">{{ localizedPost.title }}</h1>
-        <p class="text-base leading-relaxed text-slate-600 sm:text-xl">{{ localizedPost.description }}</p>
-        <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
-          <span>{{ copy.published }}: <time :datetime="localizedPost.date">{{ formatDate(localizedPost.date) }}</time></span>
-          <span v-if="localizedPost.updatedAt && localizedPost.updatedAt !== localizedPost.date">{{ copy.updated }}: <time :datetime="localizedPost.updatedAt">{{ formatDate(localizedPost.updatedAt) }}</time></span>
-          <span>≈ {{ readingMinutes }} {{ copy.minutes }}</span>
-        </div>
-        <p class="text-sm text-slate-600">{{ copy.author }} <NuxtLink :to="localePath('/contacts')" class="font-semibold text-brand-accent hover:underline">OT Center</NuxtLink></p>
-      </header>
-
-      <figure v-if="localizedPost.image?.src" class="mt-8 mb-10">
-        <img :src="localizedPost.image.src" :alt="localizedPost.imageAlt" :width="localizedPost.image.width" :height="localizedPost.image.height" fetchpriority="high" loading="eager" decoding="async" class="aspect-[3/2] max-h-[540px] w-full rounded-2xl bg-slate-100 object-cover" />
-        <figcaption class="mt-2 text-xs leading-relaxed text-slate-500">{{ copy.imageNote }}</figcaption>
-      </figure>
-
-      <div class="mt-10 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-12">
-        <aside v-if="localizedPost.toc.length" class="rounded-xl border border-slate-200 bg-white p-5 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1">
-          <nav :aria-label="copy.contents">
-            <p class="mb-4 text-sm font-bold text-slate-900">{{ copy.contents }}</p>
-            <ol class="space-y-3">
-              <li v-for="item in localizedPost.toc" :key="item.id" class="text-sm leading-relaxed">
-                <a :href="`#${item.id}`" class="text-slate-600 underline decoration-slate-200 underline-offset-4 hover:text-brand-accent hover:decoration-brand-accent">{{ item.title }}</a>
-              </li>
-            </ol>
-          </nav>
-        </aside>
-
-        <div class="min-w-0 max-w-3xl lg:col-start-1 lg:row-start-1">
+      <EditorialPageHeader :title="localizedPost.title" :lead="localizedPost.description" :back-to="contextRoute('/blog')" :back-label="copy.allArticles">
+        <template #context><div class="ed-public-tags"><span v-for="tag in localizedPost.tags" :key="tag">{{ tag }}</span></div></template>
+        <div class="ed-journal-meta"><span>{{ copy.published }}: <time :datetime="localizedPost.date">{{ formatDate(localizedPost.date) }}</time></span><span v-if="localizedPost.updatedAt && localizedPost.updatedAt !== localizedPost.date">{{ copy.updated }}: <time :datetime="localizedPost.updatedAt">{{ formatDate(localizedPost.updatedAt) }}</time></span><span>≈ {{ readingMinutes }} {{ copy.minutes }}</span><span>{{ copy.author }} <NuxtLink :to="contextRoute('/contacts')">OT Center</NuxtLink></span></div>
+      </EditorialPageHeader>
+      <figure v-if="localizedPost.image?.src" class="ed-article-figure"><img :src="localizedPost.image.src" :alt="localizedPost.imageAlt" :width="localizedPost.image.width" :height="localizedPost.image.height" fetchpriority="high" loading="eager" decoding="async" /><figcaption>{{ copy.imageNote }}</figcaption></figure>
+      <div class="ed-public-body">
+        <div class="ed-public-content ed-legal-body">
           <div class="article-content" v-html="localizedPost.bodyHtml" />
-
-          <section class="mt-10 rounded-2xl bg-brand p-6 text-white sm:p-8">
-            <h2 class="font-headline text-xl font-bold sm:text-2xl">{{ copy.helpTitle }}</h2>
-            <p class="mt-3 text-sm leading-relaxed text-slate-300 sm:text-base">{{ copy.helpText }}</p>
-            <NuxtLink :to="localePath('/contacts')" class="mt-5 inline-flex rounded-lg bg-white px-5 py-3 text-sm font-semibold text-brand hover:bg-slate-100">{{ copy.contact }}</NuxtLink>
-          </section>
-
-          <section v-if="localizedPost.relatedCourses.length" class="mt-8 space-y-4">
-            <h2 class="text-lg font-bold text-slate-900">{{ t('blogPost.relatedTitle') }}</h2>
-            <div class="flex flex-wrap gap-3">
-              <NuxtLink v-for="course in localizedPost.relatedCourses" :key="course" :to="localePath(`/${course}`)" class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-brand-accent hover:text-brand-accent">{{ getCourseName(course) }} <span aria-hidden="true">→</span></NuxtLink>
-            </div>
-          </section>
+          <section class="ed-public-callout"><h2>{{ copy.helpTitle }}</h2><p>{{ copy.helpText }}</p><div class="ed-public-actions"><NuxtLink :to="contextRoute('/contacts')" class="ed-public-button">{{ copy.contact }}</NuxtLink></div></section>
+          <section v-if="localizedPost.relatedCourses.length" class="ed-public-section"><h2>{{ t('blogPost.relatedTitle') }}</h2><div class="ed-public-links"><NuxtLink v-for="course in localizedPost.relatedCourses" :key="course" :to="contextRoute(`/${course}`)">{{ getCourseName(course) }}</NuxtLink></div></section>
         </div>
+        <nav v-if="localizedPost.toc.length" class="ed-public-toc" :aria-label="copy.contents"><h2>{{ copy.contents }}</h2><ol><li v-for="item in localizedPost.toc" :key="item.id"><a :href="`#${item.id}`">{{ item.title }}</a></li></ol></nav>
       </div>
     </article>
-
-    <section v-if="relatedPosts.length" class="mt-14 border-t border-slate-200 pt-10">
-      <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h2 class="font-headline text-2xl font-bold text-slate-900">{{ copy.related }}</h2>
-        <NuxtLink :to="localePath('/blog')" class="text-sm font-semibold text-brand-accent hover:underline">{{ copy.allArticles }} <span aria-hidden="true">→</span></NuxtLink>
-      </div>
-      <div class="grid gap-6 md:grid-cols-3">
-        <article v-for="relatedPost in relatedPosts" :key="relatedPost.slug" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <NuxtLink v-if="relatedPost.image?.src" :to="localePath(relatedPost._path)" tabindex="-1" aria-hidden="true">
-            <img :src="relatedPost.image.src" alt="" :width="relatedPost.image.width" :height="relatedPost.image.height" loading="lazy" decoding="async" class="aspect-[3/2] w-full bg-slate-100 object-cover" />
-          </NuxtLink>
-          <div class="p-5">
-            <h3 class="text-base font-bold leading-snug text-slate-900"><NuxtLink :to="localePath(relatedPost._path)" class="hover:text-brand-accent hover:underline">{{ relatedPost.title }}</NuxtLink></h3>
-            <p class="mt-3 text-sm leading-relaxed text-slate-600">{{ relatedPost.description }}</p>
-          </div>
-        </article>
-      </div>
-    </section>
+    <section v-if="relatedPosts.length" class="ed-article-related"><h2>{{ copy.related }}</h2><div class="ed-article-related-list"><article v-for="relatedPost in relatedPosts" :key="relatedPost.slug"><NuxtLink v-if="relatedPost.image?.src" :to="contextRoute(relatedPost._path)" tabindex="-1" aria-hidden="true"><img :src="relatedPost.image.src" alt="" :width="relatedPost.image.width" :height="relatedPost.image.height" loading="lazy" decoding="async" /></NuxtLink><h3><NuxtLink :to="contextRoute(relatedPost._path)">{{ relatedPost.title }}</NuxtLink></h3><p>{{ relatedPost.description }}</p></article></div><NuxtLink :to="contextRoute('/blog')" class="ed-public-link">{{ copy.allArticles }}</NuxtLink></section>
   </div>
-  <p v-else class="text-slate-700">{{ t('blogPost.notFound') }}</p>
+  <p v-else>{{ t('blogPost.notFound') }}</p>
 </template>
 
 <style scoped>
-.article-content { color: #334155; font-size: 1.0625rem; line-height: 1.85; overflow-wrap: anywhere; }
+.article-content { color: var(--ed-ink); font-size: 1.0625rem; line-height: 1.85; overflow-wrap: anywhere; }
 .article-content :deep(> :first-child) { margin-top: 0; }
-.article-content :deep(h2), .article-content :deep(h3) { color: #0f172a; font-family: 'Manrope', system-ui, sans-serif; font-weight: 800; line-height: 1.35; scroll-margin-top: 1.5rem; }
-.article-content :deep(h2) { margin: 2.5rem 0 1rem; font-size: 1.6rem; }
-.article-content :deep(h3) { margin: 1.75rem 0 .75rem; font-size: 1.2rem; }
+.article-content :deep(h2), .article-content :deep(h3) { color: var(--ed-ink); font-family: var(--ed-display); font-weight: 500; line-height: 1.35; scroll-margin-top: 2rem; }
+.article-content :deep(h2) { margin: 2.5rem 0 1rem; font-size: 2rem; }
+.article-content :deep(h3) { margin: 1.75rem 0 .75rem; font-size: 1.45rem; }
 .article-content :deep(p) { margin: 1rem 0; }
-.article-content :deep(strong) { color: #0f172a; font-weight: 700; }
+.article-content :deep(strong) { color: var(--ed-ink); font-weight: 700; }
 .article-content :deep(ul), .article-content :deep(ol) { margin: 1rem 0; padding-left: 1.5rem; }
 .article-content :deep(ul) { list-style: disc; }
 .article-content :deep(ol) { list-style: decimal; }
 .article-content :deep(li) { margin: .5rem 0; padding-left: .2rem; }
-.article-content :deep(li::marker) { color: #2b7a78; }
-.article-content :deep(a) { color: #236663; font-weight: 500; text-decoration: underline; text-decoration-color: #98bdb8; text-underline-offset: 3px; }
-.article-content :deep(a:hover) { color: #0f172a; text-decoration-color: currentColor; }
-.article-content :deep(a:focus-visible) { outline: 2px solid #2b7a78; outline-offset: 4px; border-radius: 2px; }
-.article-content :deep(blockquote), .article-content :deep(.callout) { margin: 1.5rem 0; border-left: 3px solid #2b7a78; border-radius: 0 .75rem .75rem 0; background: #e9f1f0; padding: 1rem 1.25rem; }
+.article-content :deep(li::marker) { color: var(--ed-ink); }
+.article-content :deep(a) { color: var(--ed-ink); font-weight: 500; text-decoration: underline; text-decoration-color: var(--ed-rule); text-underline-offset: 3px; }
+.article-content :deep(a:hover) { color: var(--ed-ink); text-decoration-color: currentColor; }
+.article-content :deep(a:focus-visible) { outline: 2px solid var(--ed-ink); outline-offset: 4px; border-radius: 2px; }
+.article-content :deep(blockquote), .article-content :deep(.callout) { margin: 1.5rem 0; border-left: 3px solid var(--ed-ink); border-radius: 0 var(--ed-radius) var(--ed-radius) 0; background: var(--ed-soft); padding: 1rem 1.25rem; }
 .article-content :deep(blockquote p:first-child), .article-content :deep(.callout p:first-child) { margin-top: 0; }
 .article-content :deep(blockquote p:last-child), .article-content :deep(.callout p:last-child) { margin-bottom: 0; }
 .article-content :deep(.table-wrap), .article-content :deep(.table-scroll) { max-width: 100%; overflow-x: auto; }
-.article-content :deep(table) { display: block; width: 100%; max-width: 100%; overflow-x: auto; margin: 1.5rem 0; border-collapse: collapse; border: 1px solid #cbd5e1; font-size: .875rem; line-height: 1.65; }
-.article-content :deep(th), .article-content :deep(td) { min-width: 10rem; border: 1px solid #cbd5e1; padding: .85rem 1rem; text-align: left; vertical-align: top; }
-.article-content :deep(th) { background: #e9f1f0; color: #0f172a; font-weight: 700; }
-.article-content :deep(tbody tr:nth-child(even)) { background: #f8fafc; }
-.article-content :deep(caption) { padding: .75rem; text-align: left; font-weight: 600; color: #0f172a; }
-.article-content :deep(hr) { margin: 2rem 0; border-color: #e2e8f0; }
+.article-content :deep(table) { display: block; width: 100%; max-width: 100%; overflow-x: auto; margin: 1.5rem 0; border-collapse: collapse; border: 1px solid var(--ed-rule); font-size: .875rem; line-height: 1.65; }
+.article-content :deep(th), .article-content :deep(td) { min-width: 10rem; border: 1px solid var(--ed-rule); padding: .85rem 1rem; text-align: left; vertical-align: top; }
+.article-content :deep(th) { background: var(--ed-soft); color: var(--ed-ink); font-weight: 700; }
+.article-content :deep(tbody tr:nth-child(even)) { background: var(--ed-paper); }
+.article-content :deep(caption) { padding: .75rem; text-align: left; font-weight: 600; color: var(--ed-ink); }
+.article-content :deep(hr) { margin: 2rem 0; border-color: var(--ed-rule); }
 .article-content :deep(.sources) { font-size: .875rem; }
 @media (max-width: 639px) {
   .article-content { font-size: 1rem; line-height: 1.8; }

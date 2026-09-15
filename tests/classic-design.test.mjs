@@ -1,4 +1,4 @@
 import { test } from 'node:test';
 import { assertClassicSource } from './classic-design-contract.mjs';
 
-test('HomePageClassic retains the reviewed classic with owner-approved catalogue changes and the original index route', assertClassicSource);
+test('reviewed classic source remains at /second while the root renders the requested editorial design', assertClassicSource);

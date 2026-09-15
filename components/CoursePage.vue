@@ -3,9 +3,10 @@ import { computed } from 'vue';
 import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
 import { getCityName, getCityPrepositional } from '~/composables/useCity';
 import { resolveCourseDirection } from '~/shared/course-registry';
-import { getPublicCoursePricing } from '~/shared/public-course-pricing';
-import { leadContextQuery } from '~/shared/lead-context';
+import { getPublicCourseValue } from '~/shared/public-course-value';
+import { leadContextQuery, leadFormats } from '~/shared/lead-context';
 import { directionDetails } from '~/content/direction-details';
+import { getCityContentBySlug, getCourseContentBySlug, useSeoContent } from '~/composables/useSeoContent';
 
 const props = defineProps({
   course: {
@@ -32,6 +33,7 @@ const consultationRoute = computed(() => ({
   path: localePath('/contacts'),
   query: leadContextQuery({ programId: props.course.slug, city: resolvedCity.value?.slug || route.query.city, format: route.query.format }),
 }));
+const priceRequestRoute = computed(() => ({ ...consultationRoute.value, query: { ...consultationRoute.value.query, request: 'price' }, hash: '#request-form' }));
 onMounted(() => {
   watch(() => [props.course.slug, resolvedCity.value?.slug], () => {
     const direction = resolveCourseDirection(props.course.slug);
@@ -39,8 +41,14 @@ onMounted(() => {
   }, { immediate: true });
 });
 
+const localSeoContent = useSeoContent(
+  computed(() => getCityContentBySlug(resolvedCity.value?.slug)),
+  computed(() => getCourseContentBySlug(props.course.slug)),
+);
+const cityOrganization = computed(() => localSeoContent.value?.modules.scenarios.items[2]);
+
 const courseName = computed(() => props.course.name[locale.value] || props.course.name.ru);
-const pricing = computed(() => getPublicCoursePricing(props.course.slug));
+const courseValue = computed(() => getPublicCourseValue(props.course.slug));
 const cityName = computed(
   () =>
     getCityName(resolvedCity.value, locale.value) ||
@@ -341,9 +349,23 @@ const programSelectionRoute = computed(() => ({
   },
 }));
 
+const selectedFormat = computed(() => leadFormats.find(item => item.id === route.query.format)?.title[locale.value === 'kk' ? 'kk' : 'ru']);
+const programDetailsRoute = computed(() => ({
+  path: localePath('/courses/' + (resolveCourseDirection(props.course.slug)?.alias || props.course.slug)),
+  query: leadContextQuery({ city: resolvedCity.value?.slug || route.query.city, format: route.query.format }),
+}));
+const contextualLink = (to) => ({ path: to, query: leadContextQuery({ city: resolvedCity.value?.slug || route.query.city, format: route.query.format }) });
+const standardSections = computed(() => [
+  { id: 'included', title: t('course.includesTitle'), items: includesItems.value },
+  { id: 'benefits', title: t('course.benefitsTitle'), items: benefitsItems.value },
+  { id: 'process', title: t('course.processTitle'), items: processItems.value },
+  { id: 'why', title: t('course.whyTitle'), items: whyItems.value },
+  { id: 'requirements', title: t('course.requirementsTitle'), items: requirementsItems.value },
+]);
 const pageTitle = computed(() => specialContent.value?.title || metaTitle.value);
 const pageDescription = computed(() => specialDescription.value || metaDescription.value);
-const pageHeading = computed(() => specialContent.value?.heading || courseName.value);
+// The former non-special template used the localized SEO title, including its city.
+const pageHeading = computed(() => specialContent.value?.heading || metaTitle.value);
 const breadcrumbCurrentName = computed(() => specialContent.value?.heading || courseName.value);
 
 const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://otcenter.kz');
@@ -489,236 +511,77 @@ useHead(() => ({
 </script>
 
 <template>
-  <article v-if="specialContent" class="space-y-10">
-    <nav aria-label="Breadcrumb" class="text-sm text-slate-500">
-      <ol class="flex flex-wrap items-center gap-2">
-        <li>
-          <NuxtLink :to="localePath('/')" class="hover:text-brand">{{ t('nav.home') }}</NuxtLink>
-        </li>
-        <li class="text-slate-300">/</li>
-        <li v-if="resolvedCity?.slug">
-          <NuxtLink
-            :to="localePath(`/${resolvedCity.slug}`)"
-            class="hover:text-brand"
-          >
-            {{ getCityName(resolvedCity, locale) }}
-          </NuxtLink>
-        </li>
-        <li v-if="resolvedCity?.slug" class="text-slate-300">/</li>
-        <li aria-current="page" class="text-slate-700">
-          {{ pageHeading }}
-        </li>
-      </ol>
-    </nav>
-
-    <p v-if="resolvedCity?.slug" class="text-sm text-slate-600">
-      {{ locale === 'kk' ? 'Бағыт туралы толығырақ:' : 'Подробнее о направлении:' }}
-      <NuxtLink
-        :to="localePath('/ohrana-truda')"
-        class="font-medium text-brand hover:underline"
-      >
-        {{ locale === 'kk' ? 'еңбекті қорғау бойынша оқыту' : 'обучение по охране труда' }}
-      </NuxtLink>
-    </p>
-
-    <section
-      v-if="cityIntro"
-      class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5 text-sm text-slate-700 shadow-sm"
-    >
-      {{ cityIntro }}
-    </section>
-
-    <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm space-y-4">
-      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">{{ t('course.badge') }}</p>
-      <h1 class="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">{{ pageHeading }}</h1>
-      <p class="text-lg text-slate-700">
-        {{ pageDescription }}
-      </p>
-      <div class="rounded-xl border border-emerald-100 bg-brand-soft px-4 py-3 space-y-1">
-        <p class="text-sm text-slate-600">{{ locale === 'kk' ? 'Оқу құны' : 'Стоимость обучения' }}</p>
-        <p class="text-2xl font-bold text-brand">{{ pricing.label[locale === 'kk' ? 'kk' : 'ru'] }}</p>
-        <p v-if="pricing.basis" class="text-sm text-slate-600">
-          {{ pricing.basisLabel[locale === 'kk' ? 'kk' : 'ru'] }} · {{ pricing.taxLabel[locale === 'kk' ? 'kk' : 'ru'] }}
-        </p>
+  <article class="ed-public ed-direction">
+    <EditorialPageHeader :title="pageHeading" :lead="pageDescription" :back-to="contextualLink(localePath('/courses'))" :back-label="locale === 'kk' ? 'Оқу бағыттары' : 'Направления обучения'">
+      <template #context>
+        <NuxtLink v-if="resolvedCity?.slug" :to="contextualLink(localePath(`/${resolvedCity.slug}`))">{{ getCityName(resolvedCity, locale) }}</NuxtLink><span v-if="selectedFormat">{{ selectedFormat }}</span>
+      </template>
+      <div class="ed-public-actions">
+        <NuxtLink :to="programSelectionRoute" class="ed-public-button">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink>
+        <NuxtLink :to="priceRequestRoute" class="ed-public-button ed-public-button--quiet" @click="recordContact">{{ locale === 'kk' ? 'Бағасын сұрау' : 'Запросить стоимость' }}</NuxtLink>
       </div>
-      <div class="flex flex-wrap gap-3 text-sm text-slate-700">
-        <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">{{ t('course.durationLabel') }}:</strong>
-          {{ durationText }}
-        </span>
-        <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">{{ t('course.mandatoryLabel') }}:</strong>
-          {{ course.mandatoryByLaw ? t('course.mandatoryYes') : t('course.mandatoryNo') }}
-        </span>
-        <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">{{ t('course.cityLabel') }}:</strong>
-          {{ getCityName(resolvedCity, locale) || t('course.anyRegion') }}
-        </span>
+      <dl class="ed-public-facts">
+        <div>
+          <dt>{{ locale === 'kk' ? 'Жұмысыңызға пайдасы' : 'Ценность для вашей работы' }}</dt>
+          <dd class="ed-public-value">{{ courseValue?.purpose[locale === 'kk' ? 'kk' : 'ru'] || courseName }}</dd>
+        </div>
+        <div><dt>{{ t('course.durationLabel') }}</dt><dd>{{ durationText }}</dd></div>
+        <div><dt>{{ t('course.cityLabel') }}</dt><dd>{{ getCityName(resolvedCity, locale) || t('course.anyRegion') }}<small>{{ t('course.mandatoryLabel') }}: {{ course.mandatoryByLaw ? t('course.mandatoryYes') : t('course.mandatoryNo') }}</small></dd></div>
+      </dl>
+    </EditorialPageHeader>
+
+    <div class="ed-public-body">
+      <div class="ed-public-content">
+        <p v-if="cityIntro" class="ed-public-note">{{ cityIntro }}</p>
+        <section v-if="cityOrganization" id="city-organization" class="ed-public-section">
+          <h2>{{ cityOrganization.title }}</h2>
+          <p>{{ cityOrganization.text }}</p>
+        </section>
+        <template v-if="specialContent">
+          <section v-for="section in specialContent.sections" :id="section.id" :key="section.id" class="ed-public-section">
+            <h2>{{ section.title }}</h2>
+            <p v-if="section.text">{{ section.text }}</p>
+            <ul v-if="section.bullets" class="ed-public-list"><li v-for="item in section.bullets" :key="item">{{ item }}</li></ul>
+            <div v-if="section.links" class="ed-public-links">
+              <NuxtLink v-for="link in section.links" :key="link.to" :to="link.consultation ? consultationRoute : contextualLink(link.to)">{{ link.label }}</NuxtLink>
+            </div>
+          </section>
+        </template>
+        <template v-else>
+          <section id="programme" class="ed-public-section">
+            <h2>{{ t('course.programTitle') }}</h2>
+            <div v-if="courseContentHtml" class="prose max-w-none prose-slate" v-html="courseContentHtml" />
+            <div v-else-if="directionContent">
+              <p>{{ directionContent.audience }}</p>
+              <ul class="ed-public-list"><li v-for="topic in directionContent.topics" :key="topic">{{ topic }}</li></ul>
+              <p>{{ directionContent.clarify }}</p>
+            </div>
+            <p v-else>{{ t('course.programFallback', { courseName, cityPrepositional }) }}</p>
+            <NuxtLink :to="programDetailsRoute" class="ed-public-link">{{ locale === 'kk' ? 'Бағдарламаның мазмұны мен оқу шарттары' : 'Содержание программы и условия обучения' }}</NuxtLink>
+          </section>
+          <section v-for="section in standardSections" :id="section.id" :key="section.id" class="ed-public-section">
+            <h2>{{ section.title }}</h2>
+            <ul class="ed-public-list"><li v-for="item in section.items" :key="item">{{ item }}</li></ul>
+          </section>
+        </template>
+        <section id="questions" class="ed-public-section ed-public-faq">
+          <h2>{{ specialContent?.faqTitle || t('course.faqTitle') }}</h2>
+          <details v-for="item in faqItems" :key="item.q"><summary>{{ item.q }}</summary><p>{{ item.a }}</p></details>
+        </section>
+        <section class="ed-public-callout">
+          <h2>{{ t('course.signupTitle') }}</h2>
+          <p>{{ t('course.signupText') }}</p>
+          <div class="ed-public-actions"><NuxtLink :to="programSelectionRoute" class="ed-public-button">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink><a href="tel:+77766803282" class="ed-public-link" @click="recordContact">{{ t('cta.call') }}</a></div>
+        </section>
       </div>
-      <div class="flex flex-wrap gap-3">
-        <NuxtLink
-          class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition"
-          :to="programSelectionRoute"
-        >
-          {{ locale === 'kk' ? 'Бағдарламаны таңдау' : 'Подобрать программу' }}
-        </NuxtLink>
-        <NuxtLink
-          class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition"
-          :to="consultationRoute"
-          @click="recordContact"
-        >
-          {{ locale === 'kk' ? 'Кеңеске өтінім' : 'Заявка на консультацию' }}
-        </NuxtLink>
-        <a
-          class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition"
-          href="tel:+77755619871"
-          @click="recordContact"
-        >
-          {{ t('cta.call') }}
-        </a>
-      </div>
-    </header>
-
-    <section
-      v-for="section in specialContent.sections"
-      :key="section.id"
-      class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3"
-    >
-      <h2 class="text-xl font-semibold text-slate-900">{{ section.title }}</h2>
-      <p v-if="section.text" class="text-slate-700">{{ section.text }}</p>
-      <ul v-if="section.bullets" class="grid gap-2 text-slate-700 list-disc ml-4">
-        <li v-for="item in section.bullets" :key="item">{{ item }}</li>
-      </ul>
-      <div v-if="section.links" class="flex flex-wrap gap-2 pt-1">
-        <NuxtLink
-          v-for="link in section.links"
-          :key="link.to"
-          :to="link.consultation ? consultationRoute : link.to"
-          class="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 hover:border-brand hover:text-brand transition"
-        >
-          {{ link.label }}
-        </NuxtLink>
-      </div>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">{{ specialContent.faqTitle }}</h2>
-      <div class="divide-y divide-slate-200">
-        <details v-for="item in faqItems" :key="item.q" class="py-3">
-          <summary class="cursor-pointer font-semibold text-slate-900">{{ item.q }}</summary>
-          <p class="mt-2 text-slate-700">{{ item.a }}</p>
-        </details>
-      </div>
-    </section>
-  </article>
-
-  <article v-else class="space-y-10">
-    <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm space-y-4">
-      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">{{ t('course.badge') }}</p>
-      <h1 class="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">{{ metaTitle }}</h1>
-      <p class="text-lg text-slate-700">
-        {{ metaDescription }}
-      </p>
-      <div class="rounded-xl border border-emerald-100 bg-brand-soft px-4 py-3 space-y-1">
-        <p class="text-sm text-slate-600">{{ locale === 'kk' ? 'Оқу құны' : 'Стоимость обучения' }}</p>
-        <p class="text-2xl font-bold text-brand">{{ pricing.label[locale === 'kk' ? 'kk' : 'ru'] }}</p>
-        <p v-if="pricing.basis" class="text-sm text-slate-600">
-          {{ pricing.basisLabel[locale === 'kk' ? 'kk' : 'ru'] }} · {{ pricing.taxLabel[locale === 'kk' ? 'kk' : 'ru'] }}
-        </p>
-      </div>
-      <div class="flex flex-wrap gap-3 text-sm text-slate-700">
-        <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">{{ t('course.durationLabel') }}:</strong>
-          {{ durationText }}
-        </span>
-        <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">{{ t('course.mandatoryLabel') }}:</strong>
-          {{ course.mandatoryByLaw ? t('course.mandatoryYes') : t('course.mandatoryNo') }}
-        </span>
-        <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 border border-slate-200">
-          <strong class="font-semibold text-slate-900">{{ t('course.cityLabel') }}:</strong>
-          {{ getCityName(resolvedCity, locale) || t('course.anyRegion') }}
-        </span>
-      </div>
-    </header>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.includesTitle') }}</h2>
-      <ul class="grid gap-2 text-slate-700 list-disc ml-4">
-        <li v-for="item in includesItems" :key="item">{{ item }}</li>
-      </ul>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.programTitle') }}</h2>
-      <div v-if="courseContentHtml" class="prose max-w-none prose-slate" v-html="courseContentHtml" />
-      <div v-else-if="directionContent" class="space-y-4 text-slate-700">
-        <p>{{ directionContent.audience }}</p>
-        <ul class="grid gap-2 list-disc ml-4">
-          <li v-for="topic in directionContent.topics" :key="topic">{{ topic }}</li>
-        </ul>
-        <p>{{ directionContent.clarify }}</p>
-        <NuxtLink :to="localePath('/courses/' + (resolveCourseDirection(course.slug)?.alias || course.slug))" class="inline-flex font-semibold text-brand-accent hover:underline">
-          {{ locale === 'kk' ? 'Бағдарламаның мазмұны мен оқу шарттары' : 'Содержание программы и условия обучения' }}
-        </NuxtLink>
-      </div>
-      <div v-else class="text-slate-700">
-        {{ t('course.programFallback', { courseName, cityPrepositional }) }}
-      </div>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.benefitsTitle') }}</h2>
-      <ul class="grid gap-2 text-slate-700 list-disc ml-4">
-        <li v-for="item in benefitsItems" :key="item">{{ item }}</li>
-      </ul>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.processTitle') }}</h2>
-      <ul class="grid gap-2 text-slate-700 list-disc ml-4">
-        <li v-for="item in processItems" :key="item">{{ item }}</li>
-      </ul>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.signupTitle') }}</h2>
-      <p class="text-slate-700">
-        {{ t('course.signupText') }}
-      </p>
-      <div class="flex flex-wrap gap-3">
-        <NuxtLink
-          class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition"
-          :to="programSelectionRoute"
-        >
-          {{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}
-        </NuxtLink>
-        <a class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" href="tel:+77755619871" @click="recordContact">{{ t('cta.call') }}</a>
-      </div>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.whyTitle') }}</h2>
-      <ul class="grid gap-2 text-slate-700 list-disc ml-4">
-        <li v-for="item in whyItems" :key="item">{{ item }}</li>
-      </ul>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.requirementsTitle') }}</h2>
-      <ul class="grid gap-2 text-slate-700 list-disc ml-4">
-        <li v-for="item in requirementsItems" :key="item">{{ item }}</li>
-      </ul>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-      <h2 class="text-xl font-semibold text-slate-900">{{ t('course.faqTitle') }}</h2>
-      <div class="divide-y divide-slate-200">
-        <details v-for="item in faqItems" :key="item.q" class="py-3">
-          <summary class="cursor-pointer font-semibold text-slate-900">{{ item.q }}</summary>
-          <p class="mt-2 text-slate-700">{{ item.a }}</p>
-        </details>
-      </div>
-    </section>
+      <nav class="ed-public-toc" :aria-label="locale === 'kk' ? 'Осы бетте' : 'На этой странице'">
+        <h2>{{ locale === 'kk' ? 'Осы бетте' : 'На этой странице' }}</h2>
+        <a v-if="cityOrganization" href="#city-organization">{{ cityOrganization.title }}</a>
+        <ul v-if="specialContent"><li v-for="section in specialContent.sections" :key="section.id"><a :href="`#${section.id}`">{{ section.title }}</a></li></ul>
+        <ul v-else><li><a href="#programme">{{ t('course.programTitle') }}</a></li><li v-for="section in standardSections" :key="section.id"><a :href="`#${section.id}`">{{ section.title }}</a></li></ul>
+        <a href="#questions">{{ t('course.faqTitle') }}</a>
+        <NuxtLink :to="programDetailsRoute">{{ locale === 'kk' ? 'Бағдарламаны ашу' : 'Открыть программу' }}</NuxtLink>
+      </nav>
+    </div>
   </article>
 </template>

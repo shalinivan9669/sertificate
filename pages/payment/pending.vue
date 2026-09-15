@@ -1,27 +1,29 @@
 <script setup lang="ts">
+import { leadContextQuery } from '~/shared/lead-context';
 const route = useRoute();
 const path = useLocalePath();
 const { api, tr, money, date, statusLabel, errorText } = useLmsApi();
-const id = typeof route.query.order === "string" ? route.query.order : "";
+const id = computed(() => typeof route.query.order === "string" ? route.query.order : "");
+const contextQuery = computed(() => leadContextQuery({ city: route.query.city, format: route.query.format }));
 const busy = ref(false);
 const failure = ref("");
 const checkout = ref<any>(null);
 const { data, pending, error, refresh } = await useAsyncData(
-  "lms-order-" + id,
+  computed(() => "lms-order-" + id.value),
   () =>
-    id ? api<any>("/orders/" + encodeURIComponent(id)) : Promise.resolve(null),
+    id.value ? api<any>("/orders/" + encodeURIComponent(id.value)) : Promise.resolve(null),
 );
 const { data: commerce } = await useAsyncData("lms-commerce", () =>
   api<any>("/commerce/me"),
 );
 const order = computed(() => data.value?.order);
 async function startCheckout() {
-  if (!id) return;
+  if (!id.value || busy.value) return;
   busy.value = true;
   failure.value = "";
   try {
     checkout.value = await api(
-      "/orders/" + encodeURIComponent(id) + "/checkout",
+      "/orders/" + encodeURIComponent(id.value) + "/checkout",
       { method: "POST", body: {} },
     );
     await refresh();
@@ -37,7 +39,7 @@ useHead(() => ({
 }));
 </script>
 <template>
-  <LmsShell :title="tr('Статус заказа', 'Тапсырыс күйі')" back="/cabinet"
+  <LmsShell :title="tr('Статус заказа', 'Тапсырыс күйі')" back="/cabinet" :back-query="contextQuery"
     ><LmsState
       :pending="pending"
       :error="error"
@@ -49,9 +51,10 @@ useHead(() => ({
         )
       "
       @retry="refresh"
-      ><div v-if="order" class="lms-card max-w-2xl space-y-5">
+      ><div v-if="order" class="lms-card ed-order-sheet max-w-2xl space-y-5">
+        <p class="ed-commerce-kicker">{{ tr('Состояние заказа', 'Тапсырыс күйі') }}</p>
         <h2 class="text-xl font-semibold">{{ statusLabel(order.status) }}</h2>
-        <p class="text-3xl font-bold">
+        <p class="ed-program-price">
           {{ money(order.amountMinor, order.currency) }}
         </p>
         <p class="text-sm text-slate-600">{{ date(order.createdAt) }}</p>
@@ -100,13 +103,14 @@ useHead(() => ({
         </p>
         <p v-if="failure" class="lms-error" role="alert">{{ failure }}</p>
         <div class="flex flex-wrap gap-3">
+          <NuxtLink v-if="['paid', 'succeeded'].includes(order.status)" class="lms-button" :to="{ path: path('/cabinet'), hash: '#learning' }">{{ tr('Перейти к моему обучению', 'Менің оқуыма өту') }}</NuxtLink>
           <button
             class="lms-button secondary"
             :disabled="pending"
             @click="refresh()"
           >
             {{ tr("Обновить статус", "Күйін жаңарту") }}</button
-          ><NuxtLink class="lms-button secondary" :to="path('/contacts')">{{
+          ><NuxtLink class="lms-button secondary" :to="{ path: path('/contacts'), query: contextQuery }">{{
             tr("Связаться с учебным центром", "Оқу орталығына хабарласу")
           }}</NuxtLink>
         </div>

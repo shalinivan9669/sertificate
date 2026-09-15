@@ -9,14 +9,15 @@ import { computed, ref } from 'vue';
 // responses. Rendering, Nuxt routing and the real API are covered by browser tests.
 const file = await readFile(new URL('../pages/learn/[id]/index.vue', import.meta.url), 'utf8');
 const { descriptor } = parse(file);
-const compiled = ts.transpileModule(descriptor.scriptSetup.content, {
+// Exercise the client branch Nuxt replaces at build time.
+const compiled = ts.transpileModule(descriptor.scriptSetup.content.replaceAll('import.meta.client', 'true'), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
 }).outputText;
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const setup = new AsyncFunction(
   'useRoute', 'useLocalePath', 'useLmsApi', 'useLmsAnalytics', 'useAsyncData',
   'ref', 'computed', 'onMounted', 'onBeforeUnmount', 'watch', 'useHead',
-  'nextTick',
+  'nextTick', 'useRouter',
   compiled + '\nreturn { openLesson, complete, returnToContents, lessonArticle, contentsHeading, selected, lessonData, loadingLesson, lessonError, saving, saveMessage, saveError };',
 );
 const lesson = (id, completed = false, revision = 0) => ({ id, title: 'SYNTHETIC ' + id, kind: 'text', required: true, completed, revision });
@@ -30,14 +31,17 @@ function deferred() {
 async function page(api, nextTick = async () => {}) {
   const data = ref(enrollment());
   const refreshes = [];
+  const navigations = [];
+  const route = { params: { id: 'SYNTHETIC' }, path: '/learn/SYNTHETIC', query: { city: 'almaty', format: 'classroom' }, hash: '#reading' };
   let unmount;
   const methods = await setup(
-    () => ({ params: { id: 'SYNTHETIC' }, query: {} }), () => value => value,
+    () => route, () => value => value,
     () => ({ api, tr: ru => ru, errorText: error => error.message }), () => ({ track() {} }),
     async () => ({ data, pending: ref(false), error: ref(null), refresh: async () => { refreshes.push(true); } }),
     ref, computed, () => {}, callback => { unmount = callback; }, () => {}, () => {}, nextTick,
+    () => ({ push: async destination => { navigations.push(destination); route.query = destination.query; } }),
   );
-  return { ...methods, data, refreshes, unmount: () => unmount() };
+  return { ...methods, data, refreshes, navigations, unmount: () => unmount() };
 }
 
 function focusTargets(view) {
@@ -47,6 +51,16 @@ function focusTargets(view) {
   view.contentsHeading.value = target('contents');
   return events;
 }
+
+test('explicit chapter navigation preserves city, format and anchor; initial loading leaves browser history alone', async () => {
+  const view = await page(async path => detail(path.split('/').pop()));
+  await view.openLesson('A');
+  assert.deepEqual(view.navigations, []);
+  await view.openLesson('B', true);
+  assert.deepEqual(view.navigations, [{ path: '/learn/SYNTHETIC', query: { city: 'almaty', format: 'classroom', lesson: 'B' }, hash: '#reading' }]);
+  await view.openLesson('B', true);
+  assert.equal(view.navigations.length, 1, 'The current chapter does not add a duplicate history entry');
+});
 
 test('a prior A response cannot replace the latest A after A→B→A navigation', async () => {
   const requests = [];

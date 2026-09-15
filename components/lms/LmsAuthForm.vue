@@ -6,6 +6,7 @@ const { tr, locale, request, errorText } = useLmsApi();
 const attribution = useLeadAttribution();
 const path = useLocalePath();
 const route = useRoute();
+const router = useRouter();
 const busy = ref(false);
 const failure = ref("");
 const message = ref("");
@@ -26,6 +27,11 @@ const {
 const destination = computed(() =>
   safeLmsReturnTo(route.query.returnTo, path("/cabinet")),
 );
+const authRoute = (mode: string) => ({
+  path: path('/auth/' + mode),
+  query: { returnTo: destination.value },
+});
+const authCallback = (mode: string) => router.resolve(authRoute(mode)).href;
 const showEmailHelp = computed(() =>
   authConfig.value?.available &&
   !authConfig.value.emailDeliveryConfigured &&
@@ -82,10 +88,7 @@ async function submit() {
           name: name.value,
           email: email.value,
           password: password.value,
-          callbackURL:
-            path("/auth/verify") +
-            "?returnTo=" +
-            encodeURIComponent(destination.value),
+          callbackURL: authCallback('verify'),
         },
       });
       message.value = authConfig.value?.emailDeliveryConfigured
@@ -100,7 +103,7 @@ async function submit() {
     } else if (props.mode === "forgot") {
       await request("/api/auth/request-password-reset", {
         method: "POST",
-        body: { email: email.value, redirectTo: path("/auth/reset") },
+        body: { email: email.value, redirectTo: authCallback('reset') },
       });
       message.value = authConfig.value?.emailDeliveryConfigured
         ? tr(
@@ -137,10 +140,7 @@ async function submit() {
           method: "POST",
           body: {
             email: email.value,
-            callbackURL:
-              path("/auth/verify") +
-              "?returnTo=" +
-              encodeURIComponent(destination.value),
+            callbackURL: authCallback('verify'),
           },
         });
         message.value = authConfig.value?.emailDeliveryConfigured
@@ -176,7 +176,8 @@ async function submit() {
 </script>
 <template>
   <LmsShell :title="title"
-    ><div class="lms-card mx-auto max-w-xl space-y-6">
+    ><div class="lms-card ed-auth-form mx-auto max-w-xl space-y-6">
+      <p class="ed-auth-intro">{{ mode === 'login' ? tr('Войдите, чтобы продолжить обучение, увидеть свои заказы и получить документы.', 'Оқуды жалғастыру, тапсырыстарыңызды көру және құжаттарды алу үшін кіріңіз.') : mode === 'signup' ? tr('Укажите свои данные. Для доступа к назначенной программе потребуется подтверждение почты.', 'Деректеріңізді көрсетіңіз. Тағайындалған бағдарламаға қол жеткізу үшін поштаны растау қажет.') : tr('Следуйте подсказкам ниже. После входа вы вернётесь к выбранной задаче.', 'Төмендегі нұсқауларды орындаңыз. Кіргеннен кейін таңдалған міндетке ораласыз.') }}</p>
       <p
         v-if="authConfig && !authConfig.available"
         class="lms-note"
@@ -328,17 +329,17 @@ async function submit() {
       <div class="flex flex-wrap gap-x-5 gap-y-3 text-sm">
         <NuxtLink
           v-if="mode !== 'login'"
-          :to="{ path: path('/auth/login'), query: { returnTo: destination } }"
+          :to="authRoute('login')"
           >{{ tr("Войти", "Кіру") }}</NuxtLink
         ><NuxtLink
           v-if="mode === 'login'"
-          :to="{ path: path('/auth/signup'), query: { returnTo: destination } }"
+          :to="authRoute('signup')"
           >{{ tr("Создать аккаунт", "Аккаунт ашу") }}</NuxtLink
         ><NuxtLink
           v-if="['login', 'reset'].includes(mode)"
-          :to="path('/auth/forgot')"
+          :to="authRoute('forgot')"
           >{{ tr("Забыли пароль?", "Құпиясөзді ұмыттыңыз ба?") }}</NuxtLink
-        ><NuxtLink v-if="mode === 'login'" :to="path('/auth/verify')">{{
+        ><NuxtLink v-if="mode === 'login'" :to="authRoute('verify')">{{
           tr("Подтвердить почту", "Поштаны растау")
         }}</NuxtLink>
       </div>

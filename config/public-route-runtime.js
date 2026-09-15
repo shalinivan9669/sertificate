@@ -8,7 +8,7 @@ import { formats } from './formats.js';
 export const nonIndexableRoots = [
   '/auth', '/cabinet', '/account', '/organizations', '/learn', '/exam', '/payment', '/orders', '/certificates',
   '/verify', '/admin', '/api', '/preview', '/src', '/second',
-  '/program-selection', '/wizard', '/categories',
+  '/program-selection', '/wizard', '/categories', '/ui-kit',
 ];
 
 export function stripLocale(path) {

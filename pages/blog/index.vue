@@ -1,4 +1,5 @@
 <script setup>
+import { leadContextQuery } from '~/shared/lead-context';
 import { computed } from 'vue';
 import { useHead, useRoute, useLocalePath, useI18n, useRuntimeConfig } from '#imports';
 import { formatBlogDate, getSortedBlogPosts } from '~/config/blog';
@@ -10,6 +11,7 @@ const runtimeConfig = useRuntimeConfig();
 const pageSize = 10;
 const localize = (value) => value?.[locale.value] || value?.ru || value;
 const readingMinutes = (html) => Math.max(1, Math.ceil(String(html || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length / 180));
+const contextRoute = (path) => ({ path: localePath(path), query: leadContextQuery(route.query) });
 const formatDate = (date) => formatBlogDate(date, locale.value);
 const copy = computed(() => locale.value === 'kk' ? {
   title: 'Қазақстандағы еңбек және өнеркәсіптік қауіпсіздік туралы блог',
@@ -70,67 +72,24 @@ useHead(() => ({
 </script>
 
 <template>
-  <div class="space-y-10 md:space-y-14">
-    <header class="max-w-4xl space-y-4">
-      <p class="text-xs font-semibold text-brand-accent uppercase tracking-widest">{{ copy.badge }}</p>
-      <h1 class="font-headline text-3xl font-extrabold leading-tight text-slate-900 sm:text-4xl lg:text-5xl">{{ copy.heading }}</h1>
-      <p class="max-w-3xl text-base leading-relaxed text-slate-600 sm:text-lg">{{ copy.introduction }}</p>
-    </header>
-
-    <section class="grid gap-6 md:grid-cols-2" :aria-label="t('blog.title')">
-      <article
-        v-for="(post, index) in paginatedPosts"
-        :key="post._path"
-        class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-        :class="{ 'md:col-span-2 md:grid md:grid-cols-2': index === 0 }"
-      >
-        <NuxtLink v-if="post.image?.src" :to="localePath(post._path)" class="block overflow-hidden bg-slate-100" tabindex="-1" aria-hidden="true">
-          <img
-            :src="post.image.src"
-            alt=""
-            :width="post.image.width"
-            :height="post.image.height"
-            :loading="index === 0 ? 'eager' : 'lazy'"
-            :fetchpriority="index === 0 ? 'high' : 'auto'"
-            decoding="async"
-            class="aspect-[3/2] h-full w-full object-cover"
-          />
-        </NuxtLink>
-        <div class="flex flex-col p-6 sm:p-8" :class="{ 'justify-center': index === 0 }">
-          <div v-if="post.tags.length" class="mb-4 flex flex-wrap gap-2">
-            <span v-for="tag in post.tags.slice(0, 2)" :key="tag" class="rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand-accent">{{ tag }}</span>
-          </div>
-          <h2 class="font-headline text-xl font-bold leading-snug text-slate-900" :class="{ 'sm:text-2xl': index === 0 }">
-            <NuxtLink :to="localePath(post._path)" class="rounded-sm hover:text-brand-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-accent">{{ post.title }}</NuxtLink>
-          </h2>
-          <p class="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">{{ post.description }}</p>
-          <div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs leading-relaxed text-slate-500">
-            <span>
-              <span v-if="post.updatedAt && post.updatedAt !== post.date">{{ copy.updated }}: </span>
-              <time :datetime="post.updatedAt || post.date">{{ formatDate(post.updatedAt || post.date) }}</time>
-            </span>
-            <span>≈ {{ post.readingMinutes }} {{ copy.minutes }}</span>
-          </div>
-          <NuxtLink :to="localePath(post._path)" class="mt-6 inline-flex items-center gap-2 self-start text-sm font-semibold text-brand-accent hover:underline">
-            {{ copy.read }} <span aria-hidden="true">→</span>
-          </NuxtLink>
+  <div class="ed-public ed-journal">
+    <EditorialPageHeader :title="locale === 'kk' ? 'Қауіпсіз жұмыс туралы' : 'О безопасной работе'" :lead="copy.introduction" />
+    <section class="ed-journal-list" :aria-label="t('blog.title')">
+      <article v-for="(post, index) in paginatedPosts" :key="post._path" class="ed-journal-entry" :class="{ 'ed-journal-entry--feature': index === 0 }">
+        <NuxtLink v-if="post.image?.src" :to="contextRoute(post._path)" tabindex="-1" aria-hidden="true"><img :src="post.image.src" alt="" :width="post.image.width" :height="post.image.height" :loading="index === 0 ? 'eager' : 'lazy'" :fetchpriority="index === 0 ? 'high' : 'auto'" decoding="async" /></NuxtLink>
+        <div>
+          <div v-if="post.tags.length" class="ed-public-tags"><span v-for="tag in post.tags.slice(0, 2)" :key="tag">{{ tag }}</span></div>
+          <h2><NuxtLink :to="contextRoute(post._path)">{{ post.title }}</NuxtLink></h2>
+          <p>{{ post.description }}</p>
+          <div class="ed-journal-meta"><span><span v-if="post.updatedAt && post.updatedAt !== post.date">{{ copy.updated }}: </span><time :datetime="post.updatedAt || post.date">{{ formatDate(post.updatedAt || post.date) }}</time></span><span>≈ {{ post.readingMinutes }} {{ copy.minutes }}</span></div>
+          <NuxtLink :to="contextRoute(post._path)" class="ed-public-link">{{ copy.read }}</NuxtLink>
         </div>
       </article>
-      <p v-if="!paginatedPosts.length" class="col-span-full text-slate-600">{{ t('blog.empty') }}</p>
+      <p v-if="!paginatedPosts.length" class="ed-public-note">{{ t('blog.empty') }}</p>
     </section>
-
-    <nav v-if="totalPages > 1" class="flex items-center gap-4 text-sm text-slate-700" :aria-label="t('blog.paginationLabel')">
-      <NuxtLink v-if="page > 1" :to="`${localePath('/blog')}?page=${page - 1}`" class="rounded border border-slate-200 bg-white px-3 py-2 hover:border-brand">{{ t('blog.prev') }}</NuxtLink>
-      <span>{{ t('blog.pageOf', { page, total: totalPages }) }}</span>
-      <NuxtLink v-if="page < totalPages" :to="`${localePath('/blog')}?page=${page + 1}`" class="rounded border border-slate-200 bg-white px-3 py-2 hover:border-brand">{{ t('blog.next') }}</NuxtLink>
+    <nav v-if="totalPages > 1" class="ed-journal-pagination" :aria-label="t('blog.paginationLabel')">
+      <NuxtLink v-if="page > 1" :to="{ ...contextRoute('/blog'), query: { ...leadContextQuery(route.query), page: page - 1 } }" class="ed-public-button ed-public-button--quiet">{{ t('blog.prev') }}</NuxtLink><span>{{ t('blog.pageOf', { page, total: totalPages }) }}</span><NuxtLink v-if="page < totalPages" :to="{ ...contextRoute('/blog'), query: { ...leadContextQuery(route.query), page: page + 1 } }" class="ed-public-button ed-public-button--quiet">{{ t('blog.next') }}</NuxtLink>
     </nav>
-
-    <section class="rounded-2xl bg-brand p-6 text-white sm:p-8 md:flex md:items-center md:justify-between md:gap-8">
-      <div class="max-w-2xl">
-        <h2 class="font-headline text-xl font-bold sm:text-2xl">{{ copy.helpTitle }}</h2>
-        <p class="mt-3 text-sm leading-relaxed text-slate-300 sm:text-base">{{ copy.helpText }}</p>
-      </div>
-      <NuxtLink :to="localePath('/contacts')" class="mt-6 inline-flex shrink-0 justify-center rounded-lg bg-white px-5 py-3 text-sm font-semibold text-brand hover:bg-slate-100 md:mt-0">{{ copy.contact }}</NuxtLink>
-    </section>
+    <section class="ed-public-callout"><h2>{{ copy.helpTitle }}</h2><p>{{ copy.helpText }}</p><div class="ed-public-actions"><NuxtLink :to="contextRoute('/contacts')" class="ed-public-button">{{ copy.contact }}</NuxtLink></div></section>
   </div>
 </template>

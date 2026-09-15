@@ -18,6 +18,9 @@ const {
   error: commerceError,
   refresh: refreshCommerce,
 } = await useAsyncData("lms-commerce", () => api<any>("/commerce/me"));
+const nextEnrollment = computed(() => data.value?.enrollments.find((item) =>
+  item.status === 'active' && item.progress.percent < 100,
+));
 useHead(() => ({
   title: tr("Личный кабинет — OT Center", "Жеке кабинет — OT Center"),
   meta: [{ name: "robots", content: "noindex, nofollow" }],
@@ -41,7 +44,7 @@ async function logout() {
     <LmsState :pending="mePending" :error="meError" @retry="refreshMe"
       ><div
         v-if="me?.user"
-        class="lms-card flex flex-wrap items-center justify-between gap-5"
+        class="ed-cabinet-profile"
       >
         <div>
           <h2 class="text-xl font-semibold">{{ me.user.name }}</h2>
@@ -49,24 +52,24 @@ async function logout() {
         </div>
         <div class="flex flex-wrap gap-3">
           <NuxtLink
-            class="lms-button secondary"
+            class="ed-cabinet-profile-link"
             :to="path('/cabinet/security')"
             >{{ tr("Безопасность", "Қауіпсіздік") }}</NuxtLink
           ><NuxtLink
-            class="lms-button secondary"
+            class="ed-cabinet-profile-link"
             :to="path('/cabinet/organization')"
             >{{ tr("Моя организация", "Менің ұйымым") }}</NuxtLink
           ><NuxtLink
-            class="lms-button secondary"
+            class="ed-cabinet-profile-link"
             :to="path('/cabinet/reminders')"
             >{{ tr("Напоминания", "Еске салулар") }}</NuxtLink
           ><NuxtLink
             v-if="me.user.role !== 'learner'"
-            class="lms-button secondary"
+            class="ed-cabinet-profile-link"
             :to="path('/admin')"
             >{{ tr("Управление", "Басқару") }}</NuxtLink
           ><button
-            class="lms-button secondary"
+            class="ed-cabinet-profile-link"
             :disabled="signingOut"
             @click="logout"
           >
@@ -76,7 +79,24 @@ async function logout() {
         <p v-if="failure" role="alert" class="lms-error">{{ failure }}</p>
       </div></LmsState
     >
-    <section v-if="me?.user" class="space-y-4">
+    <nav v-if="me?.user" class="ed-cabinet-sections" :aria-label="tr('Разделы кабинета', 'Кабинет бөлімдері')">
+      <a href="#learning">{{ tr('Моё обучение', 'Менің оқуым') }}</a>
+      <a href="#assessments">{{ tr('Проверка знаний', 'Білімді тексеру') }}</a>
+      <a href="#documents">{{ tr('Документы', 'Құжаттар') }}</a>
+      <a href="#orders">{{ tr('Заказы', 'Тапсырыстар') }}</a>
+    </nav>
+    <section v-if="me?.user && nextEnrollment && !error" class="ed-cabinet-next" :aria-label="tr('Продолжить обучение', 'Оқуды жалғастыру')">
+      <div>
+        <p class="ed-kicker">{{ tr('Продолжить обучение', 'Оқуды жалғастыру') }}</p>
+        <h2>{{ nextEnrollment.title }}</h2>
+        <p v-if="nextEnrollment.accessUntil">{{ tr('Доступ до', 'Қолжетімділік мерзімі') }} {{ date(nextEnrollment.accessUntil) }}</p>
+      </div>
+      <div>
+        <EditorialProgress :value="nextEnrollment.progress.percent" :label="`${tr('Изучено уроков', 'Оқылған сабақтар')}: ${nextEnrollment.progress.completed} / ${nextEnrollment.progress.total}`" />
+        <NuxtLink class="lms-button" :to="path('/learn/' + nextEnrollment.id)">{{ tr('Вернуться к урокам', 'Сабақтарға оралу') }} <CivicIcon name="arrow" /></NuxtLink>
+      </div>
+    </section>
+    <section v-if="me?.user" id="learning" class="space-y-4 ed-menu-destination" tabindex="-1">
       <h2 class="text-2xl font-bold">
         {{ tr("Моё обучение", "Менің оқуым") }}
       </h2>
@@ -95,24 +115,11 @@ async function logout() {
           <article
             v-for="e in data?.enrollments"
             :key="e.id"
-            class="lms-card space-y-4"
+            class="lms-card ed-learning-card"
           >
             <p class="text-sm text-brand-accent">{{ statusLabel(e.status) }}</p>
             <h3 class="text-xl font-semibold">{{ e.title }}</h3>
-            <div>
-              <div class="mb-2 flex justify-between text-sm">
-                <span
-                  >{{ tr("Завершено уроков", "Аяқталған сабақтар") }}:
-                  {{ e.progress.completed }} / {{ e.progress.total }}</span
-                ><span>{{ e.progress.percent }}%</span>
-              </div>
-              <progress
-                class="h-2 w-full accent-brand-accent"
-                :value="e.progress.percent"
-                max="100"
-                :aria-label="tr('Прогресс обучения', 'Оқу барысы')"
-              />
-            </div>
+            <EditorialProgress :value="e.progress.percent" :label="`${tr('Завершено уроков', 'Аяқталған сабақтар')}: ${e.progress.completed} / ${e.progress.total}`" />
             <p v-if="e.accessUntil" class="text-sm text-slate-600">
               {{ tr("Доступ до", "Қолжетімділік мерзімі") }}
               {{ date(e.accessUntil) }}
@@ -124,13 +131,20 @@ async function logout() {
         </div></LmsState
       >
     </section>
+    <section v-if="me?.user" id="assessments" class="space-y-4 ed-menu-destination" tabindex="-1">
+      <h2 class="text-2xl font-bold">{{ tr('Проверка знаний', 'Білімді тексеру') }}</h2>
+      <p class="text-sm text-slate-600">{{ tr('Выберите назначенный курс. На следующей странице — условия допуска, число попыток и время проверки. Открытие условий не запускает таймер.', 'Тағайындалған курсты таңдаңыз. Келесі бетте рұқсат шарттары, әрекеттер саны және тексеру уақыты көрсетілген. Шарттарды ашу таймерді іске қоспайды.') }}</p>
+      <LmsState :pending="pending" :error="error" :empty="!data?.enrollments.length" :empty-text="tr('Проверка станет доступна в назначенной программе. Сначала выберите обучение или уточните назначение у ответственного.', 'Тексеру тағайындалған бағдарламада қолжетімді болады. Алдымен оқуды таңдаңыз немесе тағайындауды жауапты адамнан нақтылаңыз.')" @retry="refresh">
+        <div class="ed-assessment-links"><NuxtLink v-for="item in data?.enrollments" :key="item.id" :to="path('/learn/' + item.id + '/pre-test')"><span>{{ item.title }}</span><span>{{ tr('Условия проверки', 'Тексеру шарттары') }} <span aria-hidden="true">↗</span></span></NuxtLink></div>
+      </LmsState>
+    </section>
     <section v-if="me?.user" class="space-y-4">
       <h2 class="text-2xl font-bold">
         {{ tr("Документы и заказы", "Құжаттар мен тапсырыстар") }}
       </h2>
       <LmsState :error="commerceError" @retry="refreshCommerce"
         ><div class="grid gap-5 md:grid-cols-2">
-          <div class="lms-card space-y-4">
+          <div id="documents" class="lms-card space-y-4 ed-menu-destination" tabindex="-1">
             <h3 class="font-semibold">
               {{ tr("Мои документы", "Менің құжаттарым") }}
             </h3>
@@ -156,7 +170,7 @@ async function logout() {
               ></NuxtLink
             >
           </div>
-          <div class="lms-card space-y-4">
+          <div id="orders" class="lms-card space-y-4 ed-menu-destination" tabindex="-1">
             <h3 class="font-semibold">
               {{ tr("Мои заказы", "Менің тапсырыстарым") }}
             </h3>

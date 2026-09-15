@@ -11,7 +11,7 @@ const { tr } = useLmsApi();
 </script>
 
 <template>
-  <div class="min-w-0 space-y-6">
+  <div class="lms-reading min-w-0 space-y-6">
     <component :is="headingLevel === 4 ? 'h4' : 'h2'" :tabindex="headingTabindex" class="scroll-mt-4 font-headline text-2xl font-bold">
       {{ lesson.title }}
     </component>

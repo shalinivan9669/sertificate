@@ -1,7 +1,7 @@
 <script setup>
-import { onBeforeUnmount, onMounted, reactive, ref, useHead, useI18n, useLocalePath, useNuxtApp, useRoute, useRouter } from '#imports';
+import { onBeforeUnmount, onMounted, reactive, ref, watch, useHead, useI18n, useLocalePath, useNuxtApp, useRoute, useRouter } from '#imports';
 import { courseDirections } from '~/shared/course-registry';
-import { leadCities, leadCityLabel, leadCityValue, leadFormats, readLeadContext } from '~/shared/lead-context';
+import { leadCities, leadCityLabel, leadCityValue, leadFormats, leadContextQuery, readLeadContext } from '~/shared/lead-context';
 
 const { t, locale } = useI18n();
 const path = useLocalePath();
@@ -13,20 +13,28 @@ const isSubmitting = ref(false);
 const status = ref('');
 const failure = ref('');
 const context = reactive({ programId: '', city: '', format: '' });
+const priceRequested = ref(false);
 const nuxtApp = useNuxtApp();
 const router = useRouter();
 let stopContextPrefill = () => {};
+let stopCitySync = () => {};
+let appliedCity = '';
 onMounted(() => {
   const applyContext = () => {
+    priceRequested.value = router.currentRoute.value.query.request === 'price';
     const initial = readLeadContext(router.currentRoute.value.query);
     const values = { ...initial, city: leadCityLabel(initial.city, locale.value) };
-    for (const key of ['programId', 'city', 'format']) if (!context[key]) context[key] = values[key];
+    for (const key of ['programId', 'format']) if (!context[key]) context[key] = values[key];
+    // Preserve a manually entered location when the page city changes.
+    if (!context.city || leadCityValue(context.city) === appliedCity) context.city = values.city;
+    appliedCity = initial.city;
   };
   // Prerendered routes restore their query after suspense resolves.
   if (nuxtApp.isHydrating) stopContextPrefill = nuxtApp.hooks.hookOnce('app:suspense:resolve', applyContext);
   else applyContext();
+  stopCitySync = watch([() => router.currentRoute.value.query.city, () => router.currentRoute.value.query.request, locale], applyContext);
 });
-onBeforeUnmount(() => stopContextPrefill());
+onBeforeUnmount(() => { stopContextPrefill(); stopCitySync(); });
 let submissionKey = '';
 let submittedPayload = '';
 
@@ -49,7 +57,7 @@ const handleSubmit = async (event) => {
     city,
     programId: selectedContext.programId,
     format: selectedContext.format,
-    comment,
+    comment: priceRequested.value ? [tr('Запрос стоимости обучения.', 'Оқу бағасын сұрау.'), comment].filter(Boolean).join('\n') : comment,
     company: String(formData.get('company') || '').trim(),
     locale: locale.value === 'kk' ? 'kk' : 'ru',
     sourcePath: route.path,
@@ -110,60 +118,32 @@ useHead(() => ({
 </script>
 
 <template>
-  <main class="space-y-8">
-    <header class="space-y-2">
-      <p class="text-sm font-semibold text-brand-accent uppercase tracking-wide">{{ t('nav.contacts') }}</p>
-      <h1 class="text-3xl font-bold text-slate-900">{{ t('contacts.title') }}</h1>
-      <p class="text-slate-700">{{ t('contacts.subtitle') }}</p>
-    </header>
-
-    <div class="grid gap-6 md:grid-cols-3">
-      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-        <h2 class="text-xl font-semibold text-slate-900">{{ t('contacts.detailsTitle') }}</h2>
-        <p class="text-slate-700">{{ t('footer.phoneLabel') }}: <a href="tel:+77755619871" class="text-brand" @click="track('contact_click')">+77755619871</a></p>
-        <p class="text-slate-700">{{ t('footer.emailLabel') }}: <a href="mailto:otcenterkz@proton.me" class="text-brand" @click="track('contact_click')">otcenterkz@proton.me</a></p>
-        <p class="text-slate-700">{{ t('contacts.scheduleLabel') }}: {{ t('contacts.scheduleValue') }}</p>
-      </section>
-
-      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3 md:col-span-2">
-        <h2 class="text-xl font-semibold text-slate-900">{{ t('contacts.formTitle') }}</h2>
-        <form class="grid gap-3 md:grid-cols-2" :aria-busy="isSubmitting" @input.once="track('lead_form_start')" @submit.prevent="handleSubmit">
-          <input type="text" name="name" maxlength="120" autocomplete="name" :aria-label="t('contacts.namePlaceholder')" :placeholder="t('contacts.namePlaceholder')" class="rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent" />
-          <input type="tel" name="phone" maxlength="30" autocomplete="tel" :aria-label="t('contacts.phonePlaceholder')" :placeholder="t('contacts.phonePlaceholder')" class="rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent" />
-          <input type="email" name="email" maxlength="254" autocomplete="email" :aria-label="t('contacts.emailPlaceholder')" :placeholder="t('contacts.emailPlaceholder')" class="rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent" />
+  <div class="ed-public ed-contacts">
+    <EditorialPageHeader :title="t('contacts.title')" :lead="t('contacts.subtitle')" />
+    <div class="ed-request-layout">
+      <aside class="ed-contact-details">
+        <h2>{{ t('contacts.detailsTitle') }}</h2>
+        <dl><div class="ed-contact-method"><dt>{{ t('footer.phoneLabel') }}</dt><dd><a href="tel:+77766803282" @click="track('contact_click')">8 (776) 680-32-82</a></dd></div><div class="ed-contact-method"><dt>{{ t('footer.emailLabel') }}</dt><dd><a href="mailto:otcenterkz@proton.me" @click="track('contact_click')">otcenterkz@proton.me</a></dd></div><div class="ed-contact-method"><dt>{{ t('contacts.scheduleLabel') }}</dt><dd>{{ t('contacts.scheduleValue') }}</dd></div></dl>
+        <NuxtLink class="ed-public-link" :to="{ path: path('/b2b'), query: leadContextQuery({ ...context, city: leadCityValue(context.city) }) }">{{ tr('Обучение сотрудников компании', 'Компания қызметкерлерін оқыту') }}</NuxtLink>
+      </aside>
+      <section id="request-form" class="ed-request-panel">
+        <h2>{{ priceRequested ? tr('Узнать стоимость обучения', 'Оқу бағасын білу') : t('contacts.formTitle') }}</h2>
+        <p>{{ priceRequested ? tr('Уточните направление, формат и число участников — мы подготовим предложение по вашей задаче. Для ответа оставьте телефон или email.', 'Бағытты, форматты және қатысушылар санын нақтылаңыз — міндетіңізге сай ұсыныс дайындаймыз. Жауап алу үшін телефон немесе email қалдырыңыз.') : tr('Расскажите, какое обучение вам нужно. Для ответа укажите телефон или email.', 'Қандай оқу қажет екенін жазыңыз. Жауап алу үшін телефон немесе email көрсетіңіз.') }}</p>
+        <form class="ed-request-form" :aria-busy="isSubmitting" @input.once="track('lead_form_start')" @submit.prevent="handleSubmit">
+          <label><span>{{ tr('Ваше имя', 'Атыңыз') }}</span><input type="text" name="name" maxlength="120" autocomplete="name" :placeholder="t('contacts.namePlaceholder')" /></label>
+          <label><span>{{ tr('Телефон', 'Телефон') }}</span><input type="tel" name="phone" maxlength="30" autocomplete="tel" :placeholder="t('contacts.phonePlaceholder')" /></label>
+          <label><span>Email</span><input type="email" name="email" maxlength="254" autocomplete="email" :placeholder="t('contacts.emailPlaceholder')" /></label>
           <input type="text" name="company" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true" />
-          <label class="space-y-1 text-sm text-slate-700">
-            <span>{{ tr('Город', 'Қала') }}</span>
-            <input v-model="context.city" type="text" name="city" list="contact-cities" maxlength="80" autocomplete="address-level2" :aria-label="t('contacts.cityPlaceholder')" :placeholder="t('contacts.cityPlaceholder')" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent" />
-            <datalist id="contact-cities"><option v-for="city in leadCities" :key="city.id" :value="city.title[locale === 'kk' ? 'kk' : 'ru']" /></datalist>
-          </label>
-          <label class="space-y-1 text-sm text-slate-700">
-            <span>{{ tr('Направление', 'Бағыт') }}</span>
-            <select v-model="context.programId" name="programId" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent">
-              <option value="">{{ tr('Нужна помощь с выбором', 'Таңдауға көмек керек') }}</option>
-              <option v-for="direction in courseDirections" :key="direction.id" :value="direction.id">{{ direction.title[locale === 'kk' ? 'kk' : 'ru'] }}</option>
-            </select>
-          </label>
-          <label class="space-y-1 text-sm text-slate-700">
-            <span>{{ tr('Предпочтительный формат', 'Қалаулы формат') }}</span>
-            <select v-model="context.format" name="format" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent">
-              <option value="">{{ tr('Обсудить со специалистом', 'Маманмен талқылау') }}</option>
-              <option v-for="format in leadFormats" :key="format.id" :value="format.id">{{ format.title[locale === 'kk' ? 'kk' : 'ru'] }}</option>
-            </select>
-          </label>
-          <textarea name="comment" maxlength="3000" :aria-label="t('contacts.commentPlaceholder')" :placeholder="t('contacts.commentPlaceholder')" rows="3" class="md:col-span-2 rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-accent"></textarea>
-          <label class="md:col-span-2 flex items-start gap-2 text-sm text-slate-700">
-            <input type="checkbox" name="consent" required class="mt-1 shrink-0" />
-            <span>{{ tr('Согласен на обработку данных для ответа на заявку.', 'Өтінімге жауап беру үшін деректерді өңдеуге келісемін.') }} <NuxtLink :to="path('/privacy')" class="text-brand underline">{{ tr('Политика конфиденциальности', 'Құпиялылық саясаты') }}</NuxtLink></span>
-          </label>
-          <p v-if="status" role="status" class="md:col-span-2 text-emerald-800">{{ status }}</p>
-          <p v-if="failure" role="alert" class="md:col-span-2 text-red-800">{{ failure }}</p>
-          <div class="md:col-span-2 flex flex-wrap gap-3">
-            <button type="submit" :disabled="isSubmitting" class="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-brand-accent text-white font-semibold hover:bg-emerald-700 transition disabled:opacity-70 disabled:cursor-not-allowed">{{ isSubmitting ? tr('Отправка…', 'Жіберілуде…') : t('contacts.submit') }}</button>
-            <a href="tel:+77755619871" class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-slate-200 text-brand font-semibold hover:border-brand hover:text-brand transition" @click="track('contact_click')">{{ t('cta.call') }}</a>
-          </div>
+          <label><span>{{ tr('Город', 'Қала') }}</span><input v-model="context.city" type="text" name="city" list="contact-cities" maxlength="80" autocomplete="address-level2" :placeholder="t('contacts.cityPlaceholder')" /><datalist id="contact-cities"><option v-for="city in leadCities" :key="city.id" :value="city.title[locale === 'kk' ? 'kk' : 'ru']" /></datalist></label>
+          <label><span>{{ tr('Направление', 'Бағыт') }}</span><select v-model="context.programId" name="programId"><option value="">{{ tr('Нужна помощь с выбором', 'Таңдауға көмек керек') }}</option><option v-for="direction in courseDirections" :key="direction.id" :value="direction.id">{{ direction.title[locale === 'kk' ? 'kk' : 'ru'] }}</option></select></label>
+          <label><span>{{ tr('Предпочтительный формат', 'Қалаулы формат') }}</span><select v-model="context.format" name="format"><option value="">{{ tr('Обсудить со специалистом', 'Маманмен талқылау') }}</option><option v-for="format in leadFormats" :key="format.id" :value="format.id">{{ format.title[locale === 'kk' ? 'kk' : 'ru'] }}</option></select></label>
+          <label class="ed-request-wide"><span>{{ tr('Задача или вопрос', 'Міндет немесе сұрақ') }}</span><textarea name="comment" maxlength="3000" :placeholder="t('contacts.commentPlaceholder')" rows="4" /></label>
+          <label class="ed-request-wide ed-request-consent"><input type="checkbox" name="consent" required /><span>{{ tr('Согласен на обработку данных для ответа на заявку.', 'Өтінімге жауап беру үшін деректерді өңдеуге келісемін.') }} <NuxtLink :to="path('/privacy')">{{ tr('Политика конфиденциальности', 'Құпиялылық саясаты') }}</NuxtLink></span></label>
+          <p v-if="status" role="status" class="ed-request-wide lms-success">{{ status }}</p><p v-if="failure" role="alert" class="ed-request-wide lms-error">{{ failure }}</p>
+          <div class="ed-request-wide ed-public-actions"><button type="submit" :disabled="isSubmitting" class="ed-public-button">{{ isSubmitting ? tr('Отправка…', 'Жіберілуде…') : priceRequested ? tr('Запросить стоимость', 'Бағасын сұрау') : t('contacts.submit') }}</button></div>
         </form>
       </section>
+
     </div>
-  </main>
+  </div>
 </template>
