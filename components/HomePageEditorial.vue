@@ -105,7 +105,7 @@ const description = (id: string) =>
   );
 const priceRequest = (id: string) => ({
   ...link('/contacts', { hash: '#request-form' }),
-  query: { ...leadContextQuery({ ...link('/contacts').query, programId: id }), request: 'price' },
+  query: { ...leadContextQuery({ city: link('/contacts').query.city, format: link('/contacts').query.format, programId: id }), request: 'price' },
 });
 const entryCards = computed(() => [
   {

@@ -44,7 +44,7 @@ const { data: post, error } = await useAsyncData(`blog:${slug}:${locale.value}`,
 if (error.value) throw createError(error.value);
 const articleLeadRoute = computed(() => ({
   path: localePath('/b2b'),
-  query: leadContextQuery({ ...route.query, program: post.value?.relatedCourses?.[0] }),
+  query: leadContextQuery({ city: route.query.city, format: route.query.format, program: post.value?.relatedCourses?.[0] }),
   hash: '#team-request',
 }));
 

@@ -24,14 +24,52 @@ export function readLeadContext(input: unknown) {
   };
 }
 
-/** Explicit CTA context wins; callers never mix it with an unrelated stored selection. */
-export function leadContextQuery(input: unknown): Record<string, string> {
+/** Accept only known direction IDs/aliases, preserving selection order. */
+export function readLeadPrograms(input: unknown): string[] {
+  const value = input && typeof input === 'object' && !Array.isArray(input)
+    ? input as Record<string, unknown> : {};
+  const selected = Object.hasOwn(value, 'programs') ? value.programs
+    : Object.hasOwn(value, 'programIds') ? value.programIds
+      : Object.hasOwn(value, 'directionIds') ? value.directionIds
+        : readLeadContext(input).programId;
+  // An explicitly empty list clears the selection instead of restoring its
+  // legacy first ID. Query content is never used as a title or a comment.
+  const candidates = Array.isArray(selected) ? selected.slice(0, 64) : [selected];
+  const ids = new Set<string>();
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string' || candidate.length > 4096) continue;
+    for (const token of candidate.split(',').slice(0, 64)) {
+      const direction = resolveCourseDirection(token.trim());
+      if (direction) ids.add(direction.id);
+    }
+  }
+  return [...ids];
+}
+
+/** Safe routing context; the first program remains compatible with old forms. */
+export function leadProgramQuery(input: unknown): Record<string, string> {
   const context = readLeadContext(input);
+  const programs = readLeadPrograms(input);
   return {
-    ...(context.programId ? { program: context.programId } : {}),
+    ...(programs[0] ? { program: programs[0] } : {}),
+    ...(programs.length > 1 ? { programs: programs.join(',') } : {}),
     ...(context.city ? { city: context.city } : {}),
     ...(context.format ? { format: context.format } : {}),
   };
+}
+
+/** Explicit CTA context wins; callers never mix it with an unrelated stored selection. */
+export function leadContextQuery(input: unknown): Record<string, string> {
+  return leadProgramQuery(input);
+}
+
+/** Only registry-owned titles reach the editable multi-program comment. */
+export function leadProgramsComment(input: unknown, locale: unknown) {
+  const programs = readLeadPrograms(input);
+  if (programs.length < 2) return '';
+  const language = locale === 'kk' ? 'kk' : 'ru';
+  const heading = language === 'kk' ? 'Қажетті оқу бағыттары:' : 'Интересуют направления обучения:';
+  return [heading, ...programs.map(id => `• ${resolveCourseDirection(id)!.title[language]}`)].join('\n');
 }
 
 export function leadCityLabel(slug: string, locale: unknown) {

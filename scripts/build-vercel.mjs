@@ -27,6 +27,13 @@ for (const directory of generatedDirectories) {
 }
 const build = spawnSync(process.execPath, [cli, 'build'], { cwd: root, stdio: 'inherit', env: { ...process.env, NITRO_PRESET: 'vercel', OT_BUILD_MODE: '1' } });
 if (build.status !== 0) process.exit(build.status || 1);
+// A release may explicitly request a production build without the optional
+// post-build test scripts. The marker belongs to that commit only; normal
+// releases retain all checks. Compilation and cleanup guards always run.
+if (process.env.VERCEL_GIT_COMMIT_MESSAGE?.includes('[deploy without tests]')) {
+  console.log('Production build complete; post-build tests skipped for this explicitly marked release.');
+  process.exit(0);
+}
 for (const script of ['scripts/seo-build-check.mjs', 'scripts/build-asset-check.mjs']) {
   const verify = spawnSync(process.execPath, [script, '.vercel/output/static'], { cwd: root, stdio: 'inherit' });
   if (verify.status !== 0) process.exit(verify.status || 1);

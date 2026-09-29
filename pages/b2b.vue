@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { leadCities, leadCityLabel, leadCityValue, leadFormats, readLeadContext } from '~/shared/lead-context';
+import { leadCities, leadCityLabel, leadCityValue, leadFormats, leadProgramsComment, readLeadContext, readLeadPrograms } from '~/shared/lead-context';
 const { tr, locale, request, errorText } = useLmsApi();
 const path = useLocalePath();
 const route = useRoute();
@@ -8,6 +8,7 @@ const busy = ref(false);
 const failure = ref("");
 const success = ref(false);
 const consent = ref(false);
+const commentEdited = ref(false);
 let leadKey = "";
 let submittedPayload = "";
 const form = reactive({
@@ -27,19 +28,43 @@ const router = useRouter();
 let stopContextPrefill = () => {};
 let stopCitySync = () => {};
 let appliedCity = '';
+let appliedProgram = '';
+let appliedFormat = '';
+let lastGeneratedComment = '';
 onMounted(() => {
   const applyContext = () => {
-    const initial = readLeadContext(router.currentRoute.value.query);
+    const query = router.currentRoute.value.query;
+    const programs = readLeadPrograms(query);
+    const initial = { ...readLeadContext(query), programId: programs[0] || '' };
     const values = { ...initial, city: leadCityLabel(initial.city, locale.value) };
-    for (const key of ['programId', 'format'] as const) if (!form[key]) form[key] = values[key];
+    // Query and language changes may refresh automatic values, never a field
+    // the user has since changed or intentionally cleared.
+    if (form.programId === appliedProgram) {
+      form.programId = values.programId;
+      appliedProgram = values.programId;
+    }
+    if (form.format === appliedFormat) {
+      form.format = values.format;
+      appliedFormat = values.format;
+    }
     // Follow a changed page city only while this field still has its automatic value.
     if (!form.city || leadCityValue(form.city) === appliedCity) form.city = values.city;
     appliedCity = initial.city;
+    if (!commentEdited.value && (!form.comment.trim() || form.comment === lastGeneratedComment)) {
+      lastGeneratedComment = leadProgramsComment(query, locale.value);
+      form.comment = lastGeneratedComment;
+    }
   };
   // Prerendered routes restore their query after suspense resolves.
   if (nuxtApp.isHydrating) stopContextPrefill = nuxtApp.hooks.hookOnce('app:suspense:resolve', applyContext);
   else applyContext();
-  stopCitySync = watch([() => router.currentRoute.value.query.city, locale], applyContext);
+  stopCitySync = watch([
+    () => router.currentRoute.value.query.city,
+    () => router.currentRoute.value.query.program,
+    () => router.currentRoute.value.query.programs,
+    () => router.currentRoute.value.query.format,
+    locale,
+  ], applyContext);
 });
 onBeforeUnmount(() => { stopContextPrefill(); stopCitySync(); });
 async function submit() {
@@ -238,6 +263,7 @@ useHead(() => ({
             }}</span
             ><textarea
               v-model="form.comment"
+              @input="commentEdited = true"
               rows="4"
               maxlength="3000"
             /></label
