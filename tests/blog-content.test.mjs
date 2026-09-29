@@ -20,7 +20,7 @@ test('blog articles have distinct localized metadata, real covers and valid edit
       assert.equal(new Date(date).toISOString().slice(0, 10), date);
     }
     assert.ok(post.updatedAt >= post.date, `${post.slug}: revision precedes publication`);
-    assert.match(post.image.src, /^\/images\/blog\/[a-z0-9-]+\.webp$/);
+    assert.match(post.image.src, /^\/images\/(?:blog|optimized)\/[a-z0-9-]+\.webp$/);
     assert.ok(!images.has(post.image.src), `${post.slug}: cover is reused`);
     images.add(post.image.src);
     const bytes = await readFile(new URL(`../public${post.image.src}`, import.meta.url));

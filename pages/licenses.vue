@@ -13,7 +13,7 @@ useHead(() => ({ title: tr('Сведения и документы учебно�
       <div class="ed-public-actions"><NuxtLink :to="path('/contacts')" class="ed-public-button">{{ tr('Запросить сведения', 'Мәліметтерді сұрату') }}</NuxtLink></div>
     </EditorialPageHeader>
     <section v-if="publishedDocument" class="ed-license-document" aria-labelledby="published-document-title">
-      <a v-if="publishedDocument.preview" :href="publishedDocument.file" target="_blank" rel="noopener noreferrer" class="ed-license-preview" :aria-label="tr('Открыть аттестат KZ07VEK00018551 в PDF', 'KZ07VEK00018551 аттестатын PDF форматында ашу')"><img :src="publishedDocument.preview" :alt="tr('Первая страница аттестата KZ07VEK00018551', 'KZ07VEK00018551 аттестатының бірінші беті')" width="527" height="745" loading="lazy" /></a>
+      <a v-if="publishedDocument.preview" :href="publishedDocument.file" target="_blank" rel="noopener noreferrer" class="ed-license-preview" :aria-label="tr('Открыть аттестат KZ07VEK00018551 в PDF', 'KZ07VEK00018551 аттестатын PDF форматында ашу')"><ResponsiveImage sizes="(max-width: 639px) calc(100vw - 40px), 527px" :src="publishedDocument.preview" :alt="tr('Первая страница аттестата KZ07VEK00018551', 'KZ07VEK00018551 аттестатының бірінші беті')" width="527" height="745" loading="lazy" /></a>
       <div>
         <p class="ed-license-type">{{ tr('Опубликованный документ', 'Жарияланған құжат') }}</p>
         <h2 id="published-document-title">{{ tr('Аттестат на право проведения работ в области промышленной безопасности', 'Өнеркәсіптік қауіпсіздік саласында жұмыстар жүргізу құқығына аттестат') }}</h2>

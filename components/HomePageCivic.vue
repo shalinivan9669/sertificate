@@ -69,7 +69,7 @@ const faqs = computed(() => [
       </div>
       <div class="civic-hero-art">
         <div class="civic-art-label"><span class="civic-status-dot" />{{ tr('Среда, в которой хорошо', 'Жайлы орта') }}</div>
-        <img src="/images/civic-city.png" width="1536" height="1024" fetchpriority="high" :alt="tr('Светлый зелёный город: учебный центр, больница, общественный транспорт и пешеходные дорожки.', 'Жарық жасыл қала: оқу орталығы, аурухана, қоғамдық көлік және жаяу жүргінші жолдары.')">
+        <ResponsiveImage sizes="(max-width: 767px) 100vw, 60vw" loading="eager" src="/images/civic-city.png" width="1536" height="1024" fetchpriority="high" :alt="tr('Светлый зелёный город: учебный центр, больница, общественный транспорт и пешеходные дорожки.', 'Жарық жасыл қала: оқу орталығы, аурухана, қоғамдық көлік және жаяу жүргінші жолдары.')" />
         <div class="civic-art-caption"><span class="civic-caption-icon"><CivicIcon name="shield" /></span><div><strong>{{ tr('Безопасность начинается', 'Қауіпсіздік') }}<br>{{ tr('со знаний', 'білімнен басталады') }}</strong><span>{{ tr('В работе. В городе. В жизни.', 'Жұмыста. Қалада. Өмірде.') }}</span></div></div>
         <span class="civic-art-index" aria-hidden="true">OT / {{ new Date().getFullYear() }}</span>
       </div>

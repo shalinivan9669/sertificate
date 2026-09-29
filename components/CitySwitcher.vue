@@ -53,6 +53,7 @@ const changeCity = (event) => {
     <label class="text-sm text-slate-600" :for="selectId">{{ t('citySwitcher.label') }}</label>
     <select
       :id="selectId"
+      :aria-label="t('citySwitcher.label')"
       class="rounded border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent"
       :value="currentCity || ''"
       @change="changeCity"

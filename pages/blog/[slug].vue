@@ -1,10 +1,14 @@
 <script setup>
 import { leadContextQuery } from '~/shared/lead-context';
 import { computed } from 'vue';
-import { useHead, useRoute, createError, useLocalePath, useI18n, useRuntimeConfig } from '#imports';
-import { findBlogPost, formatBlogDate, getSortedBlogPosts } from '~/config/blog';
+import { useHead, useRoute, createError, useLocalePath, useI18n, useRuntimeConfig, useAsyncData } from '#imports';
+import { formatBlogDate, getBlogWordCount } from '~/config/blog-format';
+import { getSortedBlogPosts } from '#build/blog-summaries.mjs';
+import { loadBlogPost } from '#build/blog-loaders.mjs';
 import { courses } from '~/config/courses';
 
+// Re-run setup for another article/language, including its 404 and SSR metadata.
+definePageMeta({ key: (route) => route.path });
 const route = useRoute();
 const localePath = useLocalePath();
 const { locale, t } = useI18n();
@@ -31,11 +35,13 @@ const copy = computed(() => locale.value === 'kk' ? {
   contact: 'Обсудить обучение группы', related: 'Ещё по теме', allArticles: 'Все статьи',
 });
 
-const post = computed(() => {
-  const slug = Array.isArray(route.params.slug) ? route.params.slug[0] : route.params.slug;
-  return findBlogPost(slug);
-});
-if (!post.value) throw createError({ statusCode: 404, statusMessage: 'Post not found' });
+const slug = Array.isArray(route.params.slug) ? route.params.slug[0] : route.params.slug;
+const { data: post, error } = await useAsyncData(`blog:${slug}:${locale.value}`, async () => {
+  const article = await loadBlogPost(slug, locale.value);
+  if (!article) throw createError({ statusCode: 404, statusMessage: 'Post not found' });
+  return article;
+}, { deep: false });
+if (error.value) throw createError(error.value);
 const articleLeadRoute = computed(() => ({
   path: localePath('/b2b'),
   query: leadContextQuery({ ...route.query, program: post.value?.relatedCourses?.[0] }),
@@ -54,7 +60,7 @@ const localizedPost = computed(() => post.value ? {
   bodyHtml: localize(post.value.bodyHtml) || '',
   relatedCourses: post.value.relatedCourses || [],
 } : null);
-const wordCount = computed(() => String(localizedPost.value?.bodyHtml || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length);
+const wordCount = computed(() => getBlogWordCount(localizedPost.value?.bodyHtml));
 const readingMinutes = computed(() => Math.max(1, Math.ceil(wordCount.value / 180)));
 const relatedPosts = computed(() => getSortedBlogPosts()
   .filter((item) => item.slug !== post.value?.slug)
@@ -137,9 +143,9 @@ useHead(() => {
     <article>
       <EditorialPageHeader :title="localizedPost.title" :lead="localizedPost.description" :back-to="contextRoute('/blog')" :back-label="copy.allArticles">
         <template #context><div class="ed-public-tags"><span v-for="tag in localizedPost.tags" :key="tag">{{ tag }}</span></div></template>
-        <div class="ed-journal-meta"><span>{{ copy.published }}: <time :datetime="localizedPost.date">{{ formatDate(localizedPost.date) }}</time></span><span v-if="localizedPost.updatedAt && localizedPost.updatedAt !== localizedPost.date">{{ copy.updated }}: <time :datetime="localizedPost.updatedAt">{{ formatDate(localizedPost.updatedAt) }}</time></span><span>≈ {{ readingMinutes }} {{ copy.minutes }}</span><span>{{ copy.author }} <NuxtLink :to="contextRoute('/contacts')">OT Center</NuxtLink></span></div>
+        <div class="ed-journal-meta"><span>{{ copy.published }}: <time :datetime="localizedPost.date">{{ formatDate(localizedPost.date) }}</time></span><span v-if="localizedPost.updatedAt && localizedPost.updatedAt !== localizedPost.date">{{ copy.updated }}: <time :datetime="localizedPost.updatedAt">{{ formatDate(localizedPost.updatedAt) }}</time></span><span>≈ {{ readingMinutes }} {{ copy.minutes }}</span><span>{{ copy.author }} <NuxtLink :to="contextRoute('/contacts')" :aria-label="locale === 'kk' ? 'OT Center редакциясының байланыстары' : 'Контакты редакции OT Center'">OT Center</NuxtLink></span></div>
       </EditorialPageHeader>
-      <figure v-if="localizedPost.image?.src" class="ed-article-figure"><img :src="localizedPost.image.src" :alt="localizedPost.imageAlt" :width="localizedPost.image.width" :height="localizedPost.image.height" :style="localizedPost.image.fit === 'contain' ? { objectFit: 'contain' } : undefined" fetchpriority="high" loading="eager" decoding="async" /><figcaption>{{ localizedPost.imageCaption }}</figcaption></figure>
+      <figure v-if="localizedPost.image?.src" class="ed-article-figure"><ResponsiveImage sizes="(max-width: 767px) calc(100vw - 40px), (max-width: 1360px) calc(100vw - 96px), 1264px" :src="localizedPost.image.src" :alt="localizedPost.imageAlt" :width="localizedPost.image.width" :height="localizedPost.image.height" :style="localizedPost.image.fit === 'contain' ? { objectFit: 'contain' } : undefined" fetchpriority="high" loading="eager" decoding="async" /><figcaption>{{ localizedPost.imageCaption }}</figcaption></figure>
       <div class="ed-public-body">
         <div class="ed-public-content ed-legal-body">
           <div class="article-content" v-html="localizedPost.bodyHtml" />
@@ -149,7 +155,7 @@ useHead(() => {
         <nav v-if="localizedPost.toc.length" class="ed-public-toc" :aria-label="copy.contents"><h2>{{ copy.contents }}</h2><ol><li v-for="item in localizedPost.toc" :key="item.id"><a :href="`#${item.id}`">{{ item.title }}</a></li></ol></nav>
       </div>
     </article>
-    <section v-if="relatedPosts.length" class="ed-article-related"><h2>{{ copy.related }}</h2><div class="ed-article-related-list"><article v-for="relatedPost in relatedPosts" :key="relatedPost.slug"><NuxtLink v-if="relatedPost.image?.src" :to="contextRoute(relatedPost._path)" tabindex="-1" aria-hidden="true"><img :src="relatedPost.image.src" alt="" :width="relatedPost.image.width" :height="relatedPost.image.height" loading="lazy" decoding="async" /></NuxtLink><h3><NuxtLink :to="contextRoute(relatedPost._path)">{{ relatedPost.title }}</NuxtLink></h3><p>{{ relatedPost.description }}</p></article></div><NuxtLink :to="contextRoute('/blog')" class="ed-public-link">{{ copy.allArticles }}</NuxtLink></section>
+    <section v-if="relatedPosts.length" class="ed-article-related"><h2>{{ copy.related }}</h2><div class="ed-article-related-list"><article v-for="relatedPost in relatedPosts" :key="relatedPost.slug"><NuxtLink v-if="relatedPost.image?.src" :to="contextRoute(relatedPost._path)" tabindex="-1" aria-hidden="true"><ResponsiveImage sizes="(max-width: 767px) calc(100vw - 40px), (max-width: 1360px) 30vw, 400px" :src="relatedPost.image.src" alt="" :width="relatedPost.image.width" :height="relatedPost.image.height" loading="lazy" decoding="async" /></NuxtLink><h3><NuxtLink :to="contextRoute(relatedPost._path)">{{ relatedPost.title }}</NuxtLink></h3><p>{{ relatedPost.description }}</p></article></div><NuxtLink :to="contextRoute('/blog')" class="ed-public-link">{{ copy.allArticles }}</NuxtLink></section>
   </div>
   <p v-else>{{ t('blogPost.notFound') }}</p>
 </template>

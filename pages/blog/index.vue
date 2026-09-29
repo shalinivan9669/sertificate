@@ -2,14 +2,14 @@
 import { leadContextQuery } from '~/shared/lead-context';
 import { computed } from 'vue';
 import { useHead, useRoute, useLocalePath, useI18n, useRuntimeConfig } from '#imports';
-import { formatBlogDate, getSortedBlogPosts } from '~/config/blog';
+import { formatBlogDate } from '~/config/blog-format';
+import { getSortedBlogPosts } from '#build/blog-summaries.mjs';
 
 const route = useRoute();
 const localePath = useLocalePath();
 const { locale, t } = useI18n();
 const runtimeConfig = useRuntimeConfig();
 const localize = (value) => value?.[locale.value] || value?.ru || value;
-const readingMinutes = (html) => Math.max(1, Math.ceil(String(html || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length / 180));
 const contextRoute = (path) => ({ path: localePath(path), query: leadContextQuery(route.query) });
 const formatDate = (date) => formatBlogDate(date, locale.value);
 const copy = computed(() => locale.value === 'kk' ? {
@@ -40,7 +40,7 @@ const allPosts = computed(() => getSortedBlogPosts().map((post) => ({
   description: localize(post.description),
   tags: localize(post.tags) || [],
   imageAlt: localize(post.image?.alt),
-  readingMinutes: readingMinutes(localize(post.bodyHtml)),
+  readingMinutes: localize(post.readingMinutes),
 })));
 const absoluteUrl = (path) => new URL(path, runtimeConfig.public.siteUrl).toString();
 
@@ -69,7 +69,7 @@ useHead(() => ({
     <EditorialPageHeader :title="locale === 'kk' ? 'Қауіпсіз жұмыс туралы' : 'О безопасной работе'" :lead="copy.introduction" />
     <section class="ed-journal-list" :aria-label="t('blog.title')">
       <article v-for="(post, index) in allPosts" :key="post._path" class="ed-journal-entry" :class="{ 'ed-journal-entry--feature': index === 0 }">
-        <NuxtLink v-if="post.image?.src" :to="contextRoute(post._path)" tabindex="-1" aria-hidden="true"><img :src="post.image.src" alt="" :width="post.image.width" :height="post.image.height" :loading="index === 0 ? 'eager' : 'lazy'" :fetchpriority="index === 0 ? 'high' : 'auto'" decoding="async" /></NuxtLink>
+        <NuxtLink v-if="post.image?.src" :to="contextRoute(post._path)" tabindex="-1" aria-hidden="true"><ResponsiveImage :sizes="index === 0 ? '(max-width: 767px) calc(100vw - 40px), (max-width: 1200px) 48vw, 620px' : '(max-width: 767px) calc(100vw - 40px), (max-width: 1200px) 230px, 280px'" :src="post.image.src" alt="" :width="post.image.width" :height="post.image.height" :loading="index === 0 ? 'eager' : 'lazy'" :fetchpriority="index === 0 ? 'high' : 'auto'" decoding="async" /></NuxtLink>
         <div>
           <div v-if="post.tags.length" class="ed-public-tags"><span v-for="tag in post.tags.slice(0, 2)" :key="tag">{{ tag }}</span></div>
           <h2><NuxtLink :to="contextRoute(post._path)">{{ post.title }}</NuxtLink></h2>

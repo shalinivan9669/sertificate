@@ -1,5 +1,5 @@
-@font-face { font-family:"OT Display"; src:url("/fonts/ot-display.woff2") format("woff2"); font-weight:100 900; font-style:normal; font-display:swap; }
-@font-face { font-family:"OT Sans"; src:url("/fonts/ot-sans.woff2") format("woff2"); font-weight:100 900; font-style:normal; font-display:swap; }
+@font-face { font-family:"OT Display"; src:url("/fonts/ot-display-ru-kk-latin-v1.woff2") format("woff2"); font-weight:100 900; font-style:normal; font-display:swap; }
+@font-face { font-family:"OT Sans"; src:url("/fonts/ot-sans-ru-kk-latin-v1.woff2") format("woff2"); font-weight:100 900; font-style:normal; font-display:swap; }
 
 /* Identity tokens. Civic aliases support existing templates during migration. */
 .editorial-site {

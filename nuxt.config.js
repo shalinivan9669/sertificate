@@ -30,6 +30,10 @@ export default defineNuxtConfig({
   ssr: true,
   compatibilityDate,
   devtools: { enabled: process.env.NODE_ENV !== 'production' },
+  experimental: {
+    // Visible blog cards must not download every linked article on page load.
+    defaults: { nuxtLink: { prefetchOn: { visibility: false, interaction: true } } },
+  },
   runtimeConfig: {
     amoBaseUrl: process.env.AMO_BASE_URL,
     amoAccessToken: process.env.AMO_ACCESS_TOKEN,
@@ -54,7 +58,7 @@ export default defineNuxtConfig({
       },
     },
   },
-  modules: ['@nuxtjs/i18n', '@nuxtjs/robots', '@nuxtjs/sitemap', '@nuxtjs/tailwindcss'],
+  modules: ['./modules/blog-data.mjs', '@nuxtjs/i18n', '@nuxtjs/robots', '@nuxtjs/sitemap', '@nuxtjs/tailwindcss'],
   css: ['~/assets/css/tailwind.css', '~/assets/css/editorial.css', '~/assets/css/editorial-lms.css', '~/assets/css/editorial-navigation.css', '~/assets/css/editorial-public.css', '~/assets/css/editorial-commerce.css'],
   postcss: {
     plugins: {
@@ -84,11 +88,8 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/logo.png' },
         { rel: 'apple-touch-icon', sizes: '512x512', href: '/logo.png' },
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        { rel: 'preload', href: '/fonts/ot-display.woff2', as: 'font', type: 'font/woff2', crossorigin: '' },
-        { rel: 'preload', href: '/fonts/ot-sans.woff2', as: 'font', type: 'font/woff2', crossorigin: '' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0' },
+        { rel: 'preload', href: '/fonts/ot-display-ru-kk-latin-v1.woff2', as: 'font', type: 'font/woff2', crossorigin: '' },
+        { rel: 'preload', href: '/fonts/ot-sans-ru-kk-latin-v1.woff2', as: 'font', type: 'font/woff2', crossorigin: '' },
       ],
       script: [
         {
@@ -137,7 +138,12 @@ export default defineNuxtConfig({
     disallowNonIndexableRoutes: false,
     mergeWithRobotsTxtPath: false,
   },
-  routeRules: buildPrivateRouteRules(),
+  routeRules: {
+    ...buildPrivateRouteRules(),
+    '/images/optimized/**': { headers: { 'cache-control': 'public, max-age=31536000, immutable' } },
+    '/fonts/ot-display-ru-kk-latin-v1.woff2': { headers: { 'cache-control': 'public, max-age=31536000, immutable' } },
+    '/fonts/ot-sans-ru-kk-latin-v1.woff2': { headers: { 'cache-control': 'public, max-age=31536000, immutable' } },
+  },
   nitro: {
     // Nitro's auto-detection currently falls back to Node 22 even on a Node 24
     // build host. Keep the generated function runtime aligned with engines.node.

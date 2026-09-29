@@ -7,11 +7,6 @@ defineProps<{
   caption: string;
 }>();
 const failed = ref(false);
-const artwork = ref<HTMLImageElement>();
-onMounted(() => {
-  if (artwork.value?.complete && artwork.value.naturalWidth === 0)
-    failed.value = true;
-});
 </script>
 <template>
   <section
@@ -19,17 +14,18 @@ onMounted(() => {
     :class="{ 'ed-cover--fallback': failed }"
     aria-labelledby="ed-cover-title"
   >
-    <picture v-if="!failed" class="ed-cover-art"
-      >
-      <img
-        ref="artwork"
+    <ResponsiveImage
+        v-if="!failed"
+        picture-class="ed-cover-art"
         src="/images/editorial/workshop-mentor-v2.png"
         width="1672"
         height="941"
+        sizes="(max-width: 639px) 490px, 100vw"
+        loading="eager"
         fetchpriority="high"
         :alt="imageAlt"
         @error="failed = true"
-    /></picture>
+    />
     <div class="ed-cover-shade" aria-hidden="true" />
     <div class="ed-cover-inner">
       <div class="ed-cover-copy">

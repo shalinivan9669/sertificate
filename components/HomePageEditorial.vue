@@ -439,10 +439,11 @@ const faqs = computed(() => [
         />
         <div class="ed-story-layout">
           <div class="ed-story-photo">
-            <img
+            <ResponsiveImage
               src="/images/editorial/knowledge-city-960.webp"
               width="960"
               height="549"
+              sizes="(max-width: 767px) 580px, (max-width: 1200px) 50vw, 640px"
               loading="lazy"
               :alt="
                 tr(
