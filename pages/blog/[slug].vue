@@ -18,17 +18,17 @@ const copy = computed(() => locale.value === 'kk' ? {
   published: 'Жарияланды', updated: 'Жаңартылды', minutes: 'мин оқу',
   author: 'Материалды дайындаған', contents: 'Мақала мазмұны',
   imageNote: 'Тақырыптық иллюстрация жасанды интеллект көмегімен жасалды.',
-  helpTitle: 'Қандай оқу қажет екенін анықтауға көмектесеміз',
-  helpText: 'Лауазымдарды, жұмыс түрлерін және соңғы білім тексеру күндерін дайындаңыз. Бағдарламаны таңдау және оқуды ұйымдастыру үшін OT Center-ге хабарласыңыз.',
-  contact: 'Оқу бойынша кеңес алу', related: 'Тақырып бойынша тағы', allArticles: 'Барлық мақалалар',
+  helpTitle: 'Компания қызметкерлеріне оқу таңдаңыз',
+  helpText: 'Рөлдерді, адам санын, қаланы және мерзімдерді көрсетіңіз. Бағдарламаны, форматты және топ құнын келісуге көмектесеміз. Алғашқы өтінімге қызметкерлердің дербес деректері қажет емес.',
+  contact: 'Топтық оқуды талқылау', related: 'Тақырып бойынша тағы', allArticles: 'Барлық мақалалар',
 } : {
   home: 'Главная', blog: 'Блог', breadcrumbs: 'Хлебные крошки',
   published: 'Опубликовано', updated: 'Обновлено', minutes: 'мин чтения',
   author: 'Материал подготовлен', contents: 'В этой статье',
   imageNote: 'Тематическая иллюстрация создана с помощью искусственного интеллекта.',
-  helpTitle: 'Поможем определить, какое обучение нужно',
-  helpText: 'Подготовьте должности сотрудников, виды работ и даты последней проверки знаний. Обратитесь в OT Center, чтобы подобрать программы и организовать обучение.',
-  contact: 'Обсудить обучение', related: 'Ещё по теме', allArticles: 'Все статьи',
+  helpTitle: 'Подберите обучение для сотрудников компании',
+  helpText: 'Укажите роли, количество человек, город и сроки. Поможем согласовать программу, формат и расчёт для группы. Персональные данные работников для первого обращения не нужны.',
+  contact: 'Обсудить обучение группы', related: 'Ещё по теме', allArticles: 'Все статьи',
 });
 
 const post = computed(() => {
@@ -36,6 +36,11 @@ const post = computed(() => {
   return findBlogPost(slug);
 });
 if (!post.value) throw createError({ statusCode: 404, statusMessage: 'Post not found' });
+const articleLeadRoute = computed(() => ({
+  path: localePath('/b2b'),
+  query: leadContextQuery({ ...route.query, program: post.value?.relatedCourses?.[0] }),
+  hash: '#team-request',
+}));
 
 const localizedPost = computed(() => post.value ? {
   ...post.value,
@@ -45,6 +50,7 @@ const localizedPost = computed(() => post.value ? {
   tags: localize(post.value.tags) || [],
   toc: localize(post.value.toc) || [],
   imageAlt: localize(post.value.image?.alt),
+  imageCaption: localize(post.value.image?.caption) || copy.value.imageNote,
   bodyHtml: localize(post.value.bodyHtml) || '',
   relatedCourses: post.value.relatedCourses || [],
 } : null);
@@ -133,11 +139,11 @@ useHead(() => {
         <template #context><div class="ed-public-tags"><span v-for="tag in localizedPost.tags" :key="tag">{{ tag }}</span></div></template>
         <div class="ed-journal-meta"><span>{{ copy.published }}: <time :datetime="localizedPost.date">{{ formatDate(localizedPost.date) }}</time></span><span v-if="localizedPost.updatedAt && localizedPost.updatedAt !== localizedPost.date">{{ copy.updated }}: <time :datetime="localizedPost.updatedAt">{{ formatDate(localizedPost.updatedAt) }}</time></span><span>≈ {{ readingMinutes }} {{ copy.minutes }}</span><span>{{ copy.author }} <NuxtLink :to="contextRoute('/contacts')">OT Center</NuxtLink></span></div>
       </EditorialPageHeader>
-      <figure v-if="localizedPost.image?.src" class="ed-article-figure"><img :src="localizedPost.image.src" :alt="localizedPost.imageAlt" :width="localizedPost.image.width" :height="localizedPost.image.height" fetchpriority="high" loading="eager" decoding="async" /><figcaption>{{ copy.imageNote }}</figcaption></figure>
+      <figure v-if="localizedPost.image?.src" class="ed-article-figure"><img :src="localizedPost.image.src" :alt="localizedPost.imageAlt" :width="localizedPost.image.width" :height="localizedPost.image.height" :style="localizedPost.image.fit === 'contain' ? { objectFit: 'contain' } : undefined" fetchpriority="high" loading="eager" decoding="async" /><figcaption>{{ localizedPost.imageCaption }}</figcaption></figure>
       <div class="ed-public-body">
         <div class="ed-public-content ed-legal-body">
           <div class="article-content" v-html="localizedPost.bodyHtml" />
-          <section class="ed-public-callout"><h2>{{ copy.helpTitle }}</h2><p>{{ copy.helpText }}</p><div class="ed-public-actions"><NuxtLink :to="contextRoute('/contacts')" class="ed-public-button">{{ copy.contact }}</NuxtLink></div></section>
+          <section class="ed-public-callout"><h2>{{ copy.helpTitle }}</h2><p>{{ copy.helpText }}</p><div class="ed-public-actions"><NuxtLink :to="articleLeadRoute" class="ed-public-button">{{ copy.contact }}</NuxtLink></div></section>
           <section v-if="localizedPost.relatedCourses.length" class="ed-public-section"><h2>{{ t('blogPost.relatedTitle') }}</h2><div class="ed-public-links"><NuxtLink v-for="course in localizedPost.relatedCourses" :key="course" :to="contextRoute(`/${course}`)">{{ getCourseName(course) }}</NuxtLink></div></section>
         </div>
         <nav v-if="localizedPost.toc.length" class="ed-public-toc" :aria-label="copy.contents"><h2>{{ copy.contents }}</h2><ol><li v-for="item in localizedPost.toc" :key="item.id"><a :href="`#${item.id}`">{{ item.title }}</a></li></ol></nav>

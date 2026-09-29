@@ -3,8 +3,22 @@ import industrialSafety from '../content/blog/promyshlennaya-bezopasnost-kazakhs
 import fireSafety from '../content/blog/pozharnyj-tekhnicheskiy-minimum.js';
 import electricalSafety from '../content/blog/elektrobezopasnost-gruppy-dopuska-kazakhstan-2026.js';
 import workAtHeight from '../content/blog/raboty-na-vysote-kazakhstan-2026.js';
+import biotChanges from '../content/blog/biot-novye-pravila-2026-2027.js';
+import ptmExplained from '../content/blog/ptm-rasshifrovka-programmy-2026.js';
+import riskRegister from '../content/blog/reestr-professionalnyh-riskov-2026.js';
+import gasWork from '../content/blog/gazoopasnye-raboty-dopusk-kazakhstan.js';
+import industrialFrequency from '../content/blog/prombezopasnost-itr-periodichnost-obucheniya.js';
+import electricalDocuments from '../content/blog/elektrobezopasnost-prisvoenie-gruppy-dokumenty-rk.js';
+import documentVerification from '../content/blog/udostoverenie-ohrana-truda-proverka-kazakhstan.js';
+import trainingDirections from '../content/blog/ohrana-truda-tehnika-bezopasnosti-raznica.js';
+import briefings from '../content/blog/instruktazhi-ohrana-truda-zhurnal-kazakhstan.js';
+import trainingPlan from '../content/blog/plan-obucheniya-personala-2027.js';
 
-export const blogPosts = [occupationalSafety, industrialSafety, fireSafety, electricalSafety, workAtHeight];
+export const blogPosts = [
+  gasWork, industrialFrequency, ptmExplained, electricalDocuments, documentVerification,
+  trainingDirections, biotChanges, briefings, riskRegister, trainingPlan,
+  occupationalSafety, industrialSafety, fireSafety, electricalSafety, workAtHeight,
+];
 
 // Content revision dates reflect editorial updates, not deployment timestamps.
 export const getSortedBlogPosts = () =>

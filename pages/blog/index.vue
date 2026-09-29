@@ -8,7 +8,6 @@ const route = useRoute();
 const localePath = useLocalePath();
 const { locale, t } = useI18n();
 const runtimeConfig = useRuntimeConfig();
-const pageSize = 10;
 const localize = (value) => value?.[locale.value] || value?.ru || value;
 const readingMinutes = (html) => Math.max(1, Math.ceil(String(html || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length / 180));
 const contextRoute = (path) => ({ path: localePath(path), query: leadContextQuery(route.query) });
@@ -43,12 +42,6 @@ const allPosts = computed(() => getSortedBlogPosts().map((post) => ({
   imageAlt: localize(post.image?.alt),
   readingMinutes: readingMinutes(localize(post.bodyHtml)),
 })));
-const totalPages = computed(() => Math.max(1, Math.ceil(allPosts.value.length / pageSize)));
-const page = computed(() => {
-  const requested = Number(route.query.page);
-  return Number.isInteger(requested) && requested > 0 ? Math.min(requested, totalPages.value) : 1;
-});
-const paginatedPosts = computed(() => allPosts.value.slice((page.value - 1) * pageSize, page.value * pageSize));
 const absoluteUrl = (path) => new URL(path, runtimeConfig.public.siteUrl).toString();
 
 useHead(() => ({
@@ -75,7 +68,7 @@ useHead(() => ({
   <div class="ed-public ed-journal">
     <EditorialPageHeader :title="locale === 'kk' ? 'Қауіпсіз жұмыс туралы' : 'О безопасной работе'" :lead="copy.introduction" />
     <section class="ed-journal-list" :aria-label="t('blog.title')">
-      <article v-for="(post, index) in paginatedPosts" :key="post._path" class="ed-journal-entry" :class="{ 'ed-journal-entry--feature': index === 0 }">
+      <article v-for="(post, index) in allPosts" :key="post._path" class="ed-journal-entry" :class="{ 'ed-journal-entry--feature': index === 0 }">
         <NuxtLink v-if="post.image?.src" :to="contextRoute(post._path)" tabindex="-1" aria-hidden="true"><img :src="post.image.src" alt="" :width="post.image.width" :height="post.image.height" :loading="index === 0 ? 'eager' : 'lazy'" :fetchpriority="index === 0 ? 'high' : 'auto'" decoding="async" /></NuxtLink>
         <div>
           <div v-if="post.tags.length" class="ed-public-tags"><span v-for="tag in post.tags.slice(0, 2)" :key="tag">{{ tag }}</span></div>
@@ -85,11 +78,8 @@ useHead(() => ({
           <NuxtLink :to="contextRoute(post._path)" class="ed-public-link">{{ copy.read }}</NuxtLink>
         </div>
       </article>
-      <p v-if="!paginatedPosts.length" class="ed-public-note">{{ t('blog.empty') }}</p>
+      <p v-if="!allPosts.length" class="ed-public-note">{{ t('blog.empty') }}</p>
     </section>
-    <nav v-if="totalPages > 1" class="ed-journal-pagination" :aria-label="t('blog.paginationLabel')">
-      <NuxtLink v-if="page > 1" :to="{ ...contextRoute('/blog'), query: { ...leadContextQuery(route.query), page: page - 1 } }" class="ed-public-button ed-public-button--quiet">{{ t('blog.prev') }}</NuxtLink><span>{{ t('blog.pageOf', { page, total: totalPages }) }}</span><NuxtLink v-if="page < totalPages" :to="{ ...contextRoute('/blog'), query: { ...leadContextQuery(route.query), page: page + 1 } }" class="ed-public-button ed-public-button--quiet">{{ t('blog.next') }}</NuxtLink>
-    </nav>
     <section class="ed-public-callout"><h2>{{ copy.helpTitle }}</h2><p>{{ copy.helpText }}</p><div class="ed-public-actions"><NuxtLink :to="contextRoute('/contacts')" class="ed-public-button">{{ copy.contact }}</NuxtLink></div></section>
   </div>
 </template>
