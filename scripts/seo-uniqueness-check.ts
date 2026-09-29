@@ -1,9 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { cities } from '../content/cities';
 import { courses } from '../content/courses';
+import { canonicalPublicPath, defaultSiteUrl } from '../config/public-route-policy.js';
+import { buildCourseContractRoutes, inspectPublicHtml } from './seo-http-check.mjs';
 
-type PageType = 'city' | 'course' | 'city-course';
+type PageType = 'city' | 'course' | 'city-course' | 'course-detail';
 
 type PageEntry = {
   route: string;
@@ -19,19 +22,28 @@ type PageEntry = {
 };
 
 type DuplicateIssue = {
-  kind: 'title' | 'h1' | 'title+description';
+  kind: 'title' | 'description' | 'h1' | 'title+description';
   a: string;
   b: string;
   value: string;
 };
 
-const OUTPUT_DIR = path.resolve('.output/public');
+const cliValue = (flag: string) => {
+  const index = process.argv.indexOf(flag);
+  if (index === -1) return undefined;
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith('--')) throw new Error(`${flag} requires a directory`);
+  return value;
+};
+const OUTPUT_DIR = path.resolve(cliValue('--output-dir') || process.env.SEO_OUTPUT_DIR || '.output/public');
+const ARTIFACT_DIR = path.resolve(cliValue('--artifact-dir') || process.env.SEO_ARTIFACT_DIR || 'artifacts/seo');
 const SSR_BASE_URL = process.env.SEO_BASE_URL;
 const SHINGLE_SIZE = 5;
 const SIMILARITY_THRESHOLDS: Record<PageType, number> = {
   city: 0.7,
   course: 0.7,
   'city-course': 0.7,
+  'course-detail': 0.7,
 };
 
 const locales = ['ru', 'kk'];
@@ -165,7 +177,7 @@ const parseRouteInfo = (route: string) => {
 
   return {
     citySlug: null,
-    courseSlug: localizedParts[0] || null,
+    courseSlug: localizedParts[0] === 'courses' ? localizedParts[1] || null : localizedParts[0] || null,
   };
 };
 
@@ -188,6 +200,9 @@ const readEntry = async (localizedRoute: string, type: PageType) => {
     })
     : await fs.readFile(filePath, 'utf8');
   const text = extractMainText(html);
+  if (type === 'course-detail') {
+    inspectPublicHtml(html, localizedRoute, process.env.NUXT_PUBLIC_SITE_URL || defaultSiteUrl, { indexable: process.env.OT_NOINDEX !== 'true' });
+  }
   if (!extractTitle(html) || !extractMetaContent(html, 'name', 'description') || !extractFirstH1(html)) {
     throw new Error(`${localizedRoute}: missing rendered title, description or H1`);
   }
@@ -216,12 +231,13 @@ const buildEntries = async () => {
   const { cityRoutes, courseRoutes, cityCourseRoutes } = buildRoutes();
   const entries: PageEntry[] = [];
   const canonicalIssues: Array<{ route: string; canonicalPath: string | null }> = [];
+  const requiresHttpVerification: string[] = [];
 
   for (const locale of locales) {
     for (const route of cityRoutes) {
       const localizedRoute = withLocale(route, locale);
       const { entry, canonicalPath } = await readEntry(localizedRoute, 'city');
-      if (canonicalPath !== normalizeRoute(localizedRoute)) {
+      if (canonicalPath !== canonicalPublicPath(localizedRoute)) {
         canonicalIssues.push({ route: localizedRoute, canonicalPath });
       }
       entries.push(entry);
@@ -230,7 +246,7 @@ const buildEntries = async () => {
     for (const route of courseRoutes) {
       const localizedRoute = withLocale(route, locale);
       const { entry, canonicalPath } = await readEntry(localizedRoute, 'course');
-      if (canonicalPath !== normalizeRoute(localizedRoute)) {
+      if (canonicalPath !== canonicalPublicPath(localizedRoute)) {
         canonicalIssues.push({ route: localizedRoute, canonicalPath });
       }
       entries.push(entry);
@@ -239,24 +255,52 @@ const buildEntries = async () => {
     for (const route of cityCourseRoutes) {
       const localizedRoute = withLocale(route, locale);
       const { entry, canonicalPath } = await readEntry(localizedRoute, 'city-course');
-      if (canonicalPath !== normalizeRoute(localizedRoute)) {
+      if (canonicalPath !== canonicalPublicPath(localizedRoute)) {
         canonicalIssues.push({ route: localizedRoute, canonicalPath });
       }
       entries.push(entry);
     }
   }
 
-  return { entries, canonicalIssues };
+  for (const localizedRoute of buildCourseContractRoutes()) {
+    if (!SSR_BASE_URL) {
+      try {
+        await fs.access(routeToFilePath(localizedRoute));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        // Core course details and old aliases are intentionally served by SSR;
+        // absence from prerender is not a failed route or a passing HTTP check.
+        requiresHttpVerification.push(localizedRoute);
+        continue;
+      }
+    }
+    const { entry, canonicalPath } = await readEntry(localizedRoute, 'course-detail');
+    if (canonicalPath !== canonicalPublicPath(localizedRoute)) {
+      canonicalIssues.push({ route: localizedRoute, canonicalPath });
+    }
+    entries.push(entry);
+  }
+
+  return { entries, canonicalIssues, requiresHttpVerification };
 };
 
-const collectDuplicateIssues = (list: PageEntry[]) => {
+export const collectDuplicateIssues = (list: PageEntry[]) => {
   const duplicates: DuplicateIssue[] = [];
   const titleMap = new Map<string, string>();
+  const descriptionMap = new Map<string, string>();
   const h1Map = new Map<string, string>();
   const titleDescriptionMap = new Map<string, string>();
+  const canonicalGroups = new Set<string>();
 
   list.forEach((entry) => {
+    // Only allow intentional aliases whose canonical has already been verified.
+    const preferredPath = canonicalPublicPath(entry.route);
+    if (entry.type === 'course-detail' && entry.canonicalPath === preferredPath) {
+      if (canonicalGroups.has(preferredPath)) return;
+      canonicalGroups.add(preferredPath);
+    }
     const titleKey = normalizeMeta(entry.title);
+    const descriptionKey = normalizeMeta(entry.description);
     const h1Key = normalizeMeta(entry.h1);
     const titleDescriptionKey = `${normalizeMeta(entry.title)}|${normalizeMeta(entry.description)}`;
 
@@ -266,6 +310,15 @@ const collectDuplicateIssues = (list: PageEntry[]) => {
         duplicates.push({ kind: 'title', a: existingRoute, b: entry.route, value: entry.title });
       } else {
         titleMap.set(titleKey, entry.route);
+      }
+    }
+
+    if (entry.type === 'course-detail' && descriptionKey) {
+      const existingRoute = descriptionMap.get(descriptionKey);
+      if (existingRoute && existingRoute !== entry.route) {
+        duplicates.push({ kind: 'description', a: existingRoute, b: entry.route, value: entry.description });
+      } else {
+        descriptionMap.set(descriptionKey, entry.route);
       }
     }
 
@@ -297,6 +350,10 @@ const collectDuplicateIssues = (list: PageEntry[]) => {
 };
 
 const canIgnoreTemplateSimilarity = (a: PageEntry, b: PageEntry) => {
+  if (a.type === 'course-detail' && b.type === 'course-detail'
+    && a.canonicalPath === canonicalPublicPath(a.route)
+    && b.canonicalPath === canonicalPublicPath(b.route)
+    && a.canonicalPath === b.canonicalPath) return true;
   const sameCourseAcrossCities =
     a.type === 'city-course' &&
     b.type === 'city-course' &&
@@ -322,7 +379,7 @@ const canIgnoreTemplateSimilarity = (a: PageEntry, b: PageEntry) => {
   );
 };
 
-const run = async () => {
+export const run = async () => {
   if (!SSR_BASE_URL) {
     try {
       await fs.access(OUTPUT_DIR);
@@ -331,7 +388,7 @@ const run = async () => {
     }
   }
 
-  const { entries, canonicalIssues } = await buildEntries();
+  const { entries, canonicalIssues, requiresHttpVerification } = await buildEntries();
   const groups = new Map<string, PageEntry[]>();
 
   entries.forEach((entry) => {
@@ -390,6 +447,15 @@ const run = async () => {
   }
 
   topPairs.sort((a, b) => b.similarity - a.similarity);
+  await fs.mkdir(ARTIFACT_DIR, { recursive: true });
+  await fs.writeFile(path.join(ARTIFACT_DIR, 'uniqueness-report.json'), `${JSON.stringify({
+    checkedAt: new Date().toISOString(), source: SSR_BASE_URL || OUTPUT_DIR,
+    checkedPages: entries.length, courseContractRoutes: buildCourseContractRoutes().length,
+    checkedCoursePages: entries.filter((entry) => entry.type === 'course-detail').length,
+    requiresHttpVerification, canonicalIssues, duplicateIssues,
+    hasSimilarityWarnings, topSimilarPairs: topPairs.slice(0, 10),
+    pages: entries.map(({ shingles: _shingles, ...entry }) => entry),
+  }, null, 2)}\n`);
   console.log('\nTop similar pairs:');
   topPairs.slice(0, 10).forEach((pair) => {
     console.log(`${pair.similarity.toFixed(3)}  ${pair.a}  <->  ${pair.b}`);
@@ -399,12 +465,15 @@ const run = async () => {
     console.error('\nUniqueness check failed: canonical or metadata contracts violated.');
     process.exitCode = 1;
   } else {
-    console.log('\nCanonical and metadata checks passed.');
+    console.log(`\nCanonical and metadata checks passed for ${entries.length} rendered pages.`);
   }
+  if (requiresHttpVerification.length) console.warn(`${requiresHttpVerification.length} dynamic course routes still require HTTP verification. Run seo-http-check.mjs against the fresh SSR build; see uniqueness-report.json.`);
   if (hasSimilarityWarnings) console.warn('Content similarity needs editorial review; shingle similarity alone is not a correctness gate.');
 };
 
-run().catch((error) => {
-  console.error('Uniqueness check error:', error);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  run().catch((error) => {
+    console.error('Uniqueness check error:', error);
+    process.exitCode = 1;
+  });
+}

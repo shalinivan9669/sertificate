@@ -1,5 +1,5 @@
 import { useHead, useLocaleHead, useRoute } from '#imports';
-import { isNonIndexableRoute } from '~/config/public-route-runtime';
+import { canonicalPublicUrl, isNonIndexableRoute } from '~/config/public-route-runtime';
 
 export function usePublicLocaleHead() {
   const route = useRoute();
@@ -9,9 +9,17 @@ export function usePublicLocaleHead() {
     const privateRoute = isNonIndexableRoute(route.path);
     return {
       htmlAttrs: localeHead.value.htmlAttrs,
-      link: privateRoute ? [] : localeHead.value.link,
+      link: privateRoute ? [] : localeHead.value.link?.map((link) => (
+        link.href && (link.rel === 'canonical' || link.rel === 'alternate')
+          ? { ...link, href: canonicalPublicUrl(link.href) }
+          : link
+      )),
       meta: [
-        ...localeHead.value.meta,
+        ...localeHead.value.meta.map((meta) => (
+          meta.property === 'og:url' && meta.content
+            ? { ...meta, content: canonicalPublicUrl(meta.content) }
+            : meta
+        )),
         ...(privateRoute ? [{ name: 'robots', content: 'noindex, nofollow, noarchive' }] : []),
       ],
     };

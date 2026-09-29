@@ -24,6 +24,10 @@ Robots закрывает API и разрешает получение `/_nuxt` 
 
 `usePublicLocaleHead` обслуживает default/fullwidth layouts через API i18n 10: `useLocaleHead({dir:true, lang:true, seo:{canonicalQueries:[]}})`. Используются `locales[].language=ru-KZ/kk-KZ`; KK имеет self canonical и взаимные ссылки на RU. Ручной второй canonical удалён. Бренд не добавляется повторно, если уже присутствует в title.
 
+Уточнение от 2026-09-30: три исторических ID карточек (`labor-safety`, `industrial-safety`, `fire-safety`) остаются доступны с HTTP 200 и исходными параметрами заявки. Их canonical, alternate и `og:url` указывают соответственно на `ohrana-truda`, `promyshlennaya-bezopasnost`, `ptm` в том же языке. Это объединяет только одинаковые карточки; национальные и городские страницы направлений сохраняют свои canonical. Реестр aliases — `config/course-card-aliases.js`, его соответствие основному реестру проверяет тест. Карточки не закрываются массовым noindex.
+
+Все 20 направлений имеют отдельные RU/KK title и description в `shared/public-course-seo.ts`, включая OG/Twitter. Полный HTTP-аудит проверяет 46 маршрутов карточек (20 ID и 3 aliases в двух языках), в том числе динамические адреса вне sitemap. File-only проверка отмечает недоступные в prerender динамические карточки как `requiresHttpVerification`; для выпуска требуется проверка свежего сервера с `--all`. На 2026-09-30 актуальный sitemap содержит 578 URL; количество 558 выше описывает прежний этап inventory.
+
 Сгенерированным sitemap владеет модуль. Старый `public/sitemap.xml` удалён, чтобы не перекрывать серверный результат. `npm run sitemap` создаёт только проверочный `.output/seo/sitemap-preview.xml`. Дата сборки не выдаётся за `lastmod` содержимого.
 
 JSON-LD описывает одну EducationalOrganization и `areaServed`. Не создаются LocalBusiness/адреса филиалов по списку городов. OG использует существующий локальный `logo.png`, без генератора изображений и внешних demo-assets.

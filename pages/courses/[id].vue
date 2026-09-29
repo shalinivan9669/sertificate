@@ -2,6 +2,7 @@
 import { leadContextQuery } from '~/shared/lead-context';
 import { preferredProgramVersion } from '~/shared/program-version-selection';
 import { getPublicCourseValue } from '~/shared/public-course-value';
+import { getPublicCourseSeo } from '~/shared/public-course-seo';
 
 type ProgramDetails = Omit<LmsProgram, 'versions'> & {
   versions: Array<LmsProgram['versions'][number] & { limitations?: string; support?: string }>;
@@ -10,14 +11,18 @@ const route = useRoute();
 const router = useRouter();
 const path = useLocalePath();
 const { api, tr, locale, date, errorText } = useLmsApi();
+const requestedProgramId = computed(() => String(route.params.id));
 const { data, pending, error, refresh } = await useAsyncData(
-  'lms-program-' + route.params.id,
-  () => api<{ program: ProgramDetails }>('/catalog/programs/' + encodeURIComponent(String(route.params.id))),
+  () => 'lms-program-' + requestedProgramId.value,
+  (_nuxtApp, { signal }) => api<{ program: ProgramDetails }>('/catalog/programs/' + encodeURIComponent(requestedProgramId.value), { signal }),
 );
 // Refresh after hydration: Nuxt reuses the prerender payload during onMounted.
 onNuxtReady(() => { void refresh(); });
 if (lmsErrorStatus(error.value) === 404)
   throw createError({ statusCode: 404, statusMessage: 'Программа не найдена' });
+watch(error, (value) => {
+  if (lmsErrorStatus(value) === 404) showError({ statusCode: 404, statusMessage: 'Программа не найдена' });
+});
 const program = computed(() => data.value?.program);
 const { track } = useLmsAnalytics();
 onMounted(() => {
@@ -44,7 +49,18 @@ const title = computed(() => program.value?.title[locale.value === 'kk' ? 'kk' :
 const guidance = computed(() => program.value?.sourceProduct?.guidance);
 const courseValue = computed(() => getPublicCourseValue(program.value?.directionId || program.value?.id));
 const audience = computed(() => version.value?.audience || guidance.value?.audience[locale.value === 'kk' ? 'kk' : 'ru']);
-useHead(() => ({ title: title.value + ' — OT Center' }));
+const seo = computed(() => getPublicCourseSeo(requestedProgramId.value, locale.value)
+  || getPublicCourseSeo(program.value?.directionId || program.value?.id, locale.value));
+useHead(() => ({
+  title: seo.value?.title || title.value + ' — OT Center',
+  meta: seo.value ? [
+    { name: 'description', content: seo.value.description },
+    { property: 'og:title', content: seo.value.title },
+    { property: 'og:description', content: seo.value.description },
+    { name: 'twitter:title', content: seo.value.title },
+    { name: 'twitter:description', content: seo.value.description },
+  ] : [],
+}));
 
 async function selectVersion(event: Event) {
   const id = (event.target as HTMLSelectElement).value;

@@ -4,7 +4,7 @@ import { formats } from './formats.js';
 import { blogPosts } from './blog.js';
 import { additionalSourceDirections } from '../shared/source-products.ts';
 import { localizePublicPath, nonIndexableRoots, stripLocale } from './public-route-runtime.js';
-export { isNonIndexableRoute, localizePublicPath, nonIndexableRoots, resolvePublicCityPage, stripLocale } from './public-route-runtime.js';
+export { canonicalPublicPath, canonicalPublicUrl, courseCardAliases, isNonIndexableRoute, localizePublicPath, nonIndexableRoots, resolvePublicCityPage, stripLocale } from './public-route-runtime.js';
 
 // One inventory is shared by Nitro, the sitemap generator and route contract tests.
 // Existing public addresses are retained; interactive and personal state is never

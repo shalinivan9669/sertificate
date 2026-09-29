@@ -236,11 +236,11 @@ useHead(() => ({
         <div class="space-y-4">
           <article v-for="direction in chosenDirections" :key="direction.id" class="space-y-3 rounded-xl border border-slate-200 p-5">
             <h3 class="text-lg font-bold">{{ locale === 'kk' ? direction.kk : direction.ru }}</h3>
-            <p v-if="matches[direction.id]?.error" class="lms-error" role="alert">{{ matches[direction.id].error }}</p>
+            <p v-if="matches[direction.id]?.error" class="lms-error" role="alert">{{ matches[direction.id]?.error }}</p>
             <template v-else-if="matches[direction.id]">
-              <div v-if="matches[direction.id].versions.length" class="space-y-2">
+              <div v-if="matches[direction.id]?.versions.length" class="space-y-2">
                 <p>{{ tr('Опубликованные варианты на выбранном языке и в выбранном формате:', 'Таңдалған тіл мен форматтағы жарияланған нұсқалар:') }}</p>
-                <ul class="list-disc pl-5"><li v-for="version in matches[direction.id].versions" :key="version.id">{{ version.title }}</li></ul>
+                <ul class="list-disc pl-5"><li v-for="version in matches[direction.id]?.versions || []" :key="version.id">{{ version.title }}</li></ul>
               </div>
               <p v-else class="text-slate-600">{{ tr('Опубликованный вариант пока не найден. Специалист уточнит доступные программы и условия.', 'Жарияланған нұсқа әзірге табылмады. Маман қолжетімді бағдарламалар мен шарттарды нақтылайды.') }}</p>
             </template>

@@ -6,6 +6,7 @@ import { resolveCourseDirection } from '~/shared/course-registry';
 import { getPublicCourseValue } from '~/shared/public-course-value';
 import { leadContextQuery, leadFormats } from '~/shared/lead-context';
 import { directionDetails } from '~/content/direction-details';
+import { getCourseGuidance } from '~/content/course-guidance';
 import { getCityContentBySlug, getCourseContentBySlug, useSeoContent } from '~/composables/useSeoContent';
 
 const props = defineProps({
@@ -74,7 +75,7 @@ const resolveSeoValue = (value, fallback) => {
   return fallback;
 };
 
-const durationText = computed(() => resolveSeoValue(
+const durationText = computed(() => specialContent.value?.duration || resolveSeoValue(
   props.course.durationLabel,
   `${props.course.durationHours} ${t('course.durationUnit')}`,
 ));
@@ -102,226 +103,35 @@ const isLaborSafety = computed(() => props.course.slug === 'ohrana-truda');
 const canonicalPath = computed(() => route.meta?.canonicalPath || route.path || '/');
 
 const specialContent = computed(() => {
-  if (!isLaborSafety.value) return null;
-
-  const isKk = locale.value === 'kk';
-  const copy = isKk
-    ? {
-        title: 'Еңбекті қорғау бойынша оқыту {{cityPrepositional}} — ОТ және ТБ курстары',
-      description:
-          'Еңбекті қорғау және техника қауіпсіздігі бойынша оқыту қызметкерлер мен жауапты тұлғаларға арналған. Формат, бағдарлама, оқудан кейінгі құжаттар және кеңеске өтінім.',
-        heading: 'Еңбекті қорғау бойынша оқыту {{cityPrepositional}}',
-        faqTitle: 'Жиі қойылатын сұрақтар',
-        sections: [
-          {
-            id: 'who-needs',
-            title: 'Кімдерге оқыту қажет',
-            bullets: [
-              'еңбекті қорғау бойынша міндеті бар басшылар мен мамандарға',
-              'нұсқама, рұқсат немесе бақылауға жауапты қызметкерлерге',
-              'ішкі талаптарда қарастырылған жағдайда басқа қызметкерлерге',
-              'ОТ және ТБ мәселелерін жүйелі жабу керек ұйымдарға',
-            ],
-          },
-          {
-            id: 'includes',
-            title: 'Оқуға не кіреді',
-            bullets: [
-              'еңбекті қорғаудың негізгі талаптары',
-              'жұмыс орнындағы типтік тәуекелдер',
-              'қауіпсіз жұмыс ережелері және оқиға кезіндегі әрекеттер',
-              'оқу қорытындысы бойынша білімді тексеру',
-              'компания міндетіне сай ұсыныстар',
-            ],
-          },
-          {
-            id: 'difference',
-            title: 'Еңбекті қорғау мен техника қауіпсіздігі: айырмашылығы',
-            text:
-              'Еңбекті қорғау - бұл талаптар, рәсімдер және жауапкершілік жүйесі. Техника қауіпсіздігі - нақты жұмыс орнында қауіпсіз жұмыс істеуге көмектесетін практикалық ережелер.',
-          },
-          {
-            id: 'format',
-            title: 'Өту форматы',
-            text:
-              'Қашықтан, күндізгі немесе көшпелі форматты таңдауға болады. Команда мен жұмыс кестесіне сай нұсқаны іріктейміз.',
-            links: [
-              { label: 'ҚТ және ТБ', to: '/online-obuchenie' },
-              { label: 'техника қауіпсіздігі курстары', to: '/ochnoe-obuchenie' },
-              { label: 'еңбекті қорғау және техника қауіпсіздігі бойынша оқыту', to: '/vyezdnoe-obuchenie' },
-            ],
-          },
-          {
-            id: 'docs',
-            title: 'Оқығаннан кейін берілетін құжаттар',
-            text:
-              'Оқыту аяқталған соң бағдарлама мен таңдалған форматта қарастырылған құжаттар рәсімделеді. Нақты тізімді алдын ала нақтылаған дұрыс.',
-          },
-          {
-            id: 'organizations',
-            title: 'Ұйымдар мен жауапты тұлғалар үшін',
-            bullets: [
-              'топты бөлімге немесе компанияға қарай таңдау',
-              'кестені тоқтаусыз келісу',
-              'қатысушылар тізімі мен құжаттар бойынша көмек',
-              'басталар алдында кеңес беру',
-            ],
-            links: [
-              { label: 'кеңеске өтінім', to: '/contacts' },
-              { label: 'лицензиялар', to: '/licenses' },
-            ],
-          },
-        ],
-        faqItems: [
-          {
-            q: 'Еңбекті қорғау бойынша оқуды кімдерден өту керек?',
-            a: 'Еңбекті қорғау бойынша міндеті бар басшыларға, мамандарға және жауапты тұлғаларға, сондай-ақ ішкі талаптар немесе бағдарламада қарастырылған қызметкерлерге.',
-          },
-          {
-            q: 'Еңбекті қорғау мен техника қауіпсіздігі несімен ерекшеленеді?',
-            a: 'Еңбекті қорғау - қауіпсіздікті ұйымдастыру талаптары мен жүйесі, ал техника қауіпсіздігі - нақты жұмыс орнындағы практикалық ережелер.',
-          },
-          {
-            q: 'Қашықтан оқуға бола ма?',
-            a: 'Иә, егер таңдалған формат пен міндет соған мүмкіндік берсе. Кейбір бағдарламалар қашықтан немесе аралас сценарийде өтеді.',
-          },
-          {
-            q: 'Қызметкер қандай құжат алады?',
-            a: 'Бұл бағдарлама мен форматқа байланысты. Құжаттар тізімін бастар алдында ұйым міндетіне сай келісіп алған дұрыс.',
-          },
-          {
-            q: 'Ұйымдар үшін қолайлы ма?',
-            a: 'Иә, форматты топқа, бөлімге немесе бүкіл компанияға қарай бейімдеуге болады.',
-          },
-          {
-            q: 'Қаншалықты жиі өту керек?',
-            a: 'Мерзімділік бағдарламаға және ұйымның ішкі талаптарына байланысты. Жазылмас бұрын ағымдағы кестені нақтылаған дұрыс.',
-          },
-          {
-            q: 'ОТ және ТБ деген не?',
-            a: 'Бұл еңбекті қорғау мен техника қауіпсіздігінің қысқартылған атауы.',
-          },
-        ],
-      }
-    : {
-        title: 'Обучение по охране труда {{cityPrepositional}} — курсы ОТ и ТБ',
-      description:
-          'Обучение по охране труда и технике безопасности для сотрудников и ответственных лиц. Формат, программа, документы после прохождения и заявка на консультацию.',
-        heading: 'Обучение по охране труда {{cityPrepositional}}',
-        faqTitle: 'Частые вопросы',
-        sections: [
-          {
-            id: 'who-needs',
-            title: 'Кому нужно обучение по охране труда',
-            bullets: [
-              'руководителям и специалистам, на которых возложены обязанности по охране труда',
-              'ответственным за инструктажи, допуск и контроль',
-              'сотрудникам, если это предусмотрено внутренними требованиями',
-              'организациям, которым нужно системно закрыть вопросы ОТ и ТБ',
-            ],
-          },
-          {
-            id: 'includes',
-            title: 'Что входит в обучение',
-            bullets: [
-              'базовые требования и роль охраны труда в организации',
-              'типовые риски на рабочем месте',
-              'правила безопасной работы и действия при инцидентах',
-              'проверка знаний по итогам обучения',
-              'рекомендации под задачу компании',
-            ],
-          },
-          {
-            id: 'difference',
-            title: 'Охрана труда и техника безопасности: в чём разница',
-            text:
-              'Охрана труда - это система требований, процедур и ответственности. Техника безопасности - практические правила, которые помогают работать безопасно на конкретном месте.',
-          },
-          {
-            id: 'format',
-            title: 'Формат прохождения',
-            text:
-              'Можно выбрать дистанционный, очный или выездной формат. Подберем вариант под команду и рабочий график.',
-            links: [
-              { label: 'ОТ и ТБ', to: '/online-obuchenie' },
-              { label: 'курсы по технике безопасности', to: '/ochnoe-obuchenie' },
-              { label: 'обучение по охране труда и технике безопасности', to: '/vyezdnoe-obuchenie' },
-            ],
-          },
-          {
-            id: 'docs',
-            title: 'Документы после обучения',
-            text:
-              'После обучения оформляются документы, предусмотренные программой и выбранным форматом. Точный комплект лучше уточнить заранее, чтобы учесть требования организации.',
-          },
-          {
-            id: 'organizations',
-            title: 'Для организаций и ответственных лиц',
-            bullets: [
-              'подбор группы под подразделение или компанию',
-              'согласование графика без лишнего простоя',
-              'помощь со списком участников и документами',
-              'консультация перед стартом',
-            ],
-            links: [
-              { label: 'заявка на консультацию', to: '/contacts' },
-              { label: 'лицензии', to: '/licenses' },
-            ],
-          },
-        ],
-        faqItems: [
-          {
-            q: 'Кому нужно проходить обучение по охране труда?',
-            a: 'Руководителям, специалистам и ответственным лицам, а также сотрудникам, для которых это предусмотрено внутренними требованиями или программой обучения.',
-          },
-          {
-            q: 'Чем отличается охрана труда от техники безопасности?',
-            a: 'Охрана труда описывает систему требований и организацию безопасности, а техника безопасности - конкретные правила безопасной работы на месте.',
-          },
-          {
-            q: 'Можно ли пройти обучение дистанционно?',
-            a: 'Да, если выбранный формат и задача это допускают. Для части программ подойдут онлайн- или смешанные сценарии.',
-          },
-          {
-            q: 'Какие документы получает сотрудник после обучения?',
-            a: 'Это зависит от программы и формата. Состав комплекта лучше заранее согласовать под задачу организации.',
-          },
-          {
-            q: 'Подходит ли обучение для организаций?',
-            a: 'Да, формат можно подбирать под группу, подразделение или всю компанию.',
-          },
-          {
-            q: 'Как часто нужно проходить обучение по охране труда?',
-            a: 'Периодичность зависит от программы и внутренних требований организации. Перед записью лучше сверить актуальный график.',
-          },
-          {
-            q: 'Что такое ОТ и ТБ?',
-            a: 'Это сокращение для охраны труда и техники безопасности.',
-          },
-        ],
-      };
-
+  const copy = getCourseGuidance(props.course.slug, locale.value);
+  if (!copy) return null;
+  const laborMetadata = isLaborSafety.value
+    ? locale.value === 'kk'
+      ? { title: 'Еңбекті қорғау бойынша оқыту {{cityPrepositional}} — ОТ және ТБ курстары', heading: 'Еңбекті қорғау бойынша оқыту {{cityPrepositional}}' }
+      : { title: 'Обучение по охране труда {{cityPrepositional}} — курсы ОТ и ТБ', heading: 'Обучение по охране труда {{cityPrepositional}}' }
+    : null;
   return {
-    title: fillTemplate(copy.title),
-    description: copy.description,
-    heading: fillTemplate(copy.heading),
-    faqTitle: copy.faqTitle,
-    sections: copy.sections.map((section) => ({
+    ...copy,
+    ...(laborMetadata ? { title: fillTemplate(laborMetadata.title), heading: fillTemplate(laborMetadata.heading) } : {}),
+    sections: copy.sections.map(section => ({
       ...section,
-      links: section.links
-        ? section.links.map((link) => ({
-            ...link,
-            to: localePath(link.to),
-            consultation: link.to === '/contacts',
-          }))
-        : undefined,
+      links: section.links?.map(link => ({ ...link, to: localePath(link.to) })),
     })),
-    faqItems: copy.faqItems,
+    articles: copy.articles.map(article => ({ ...article, to: localePath(article.to) })),
   };
 });
-
 const specialDescription = computed(() => {
-  if (!specialContent.value) return null;
+  if (props.course.slug === 'promyshlennaya-bezopasnost') {
+    return locale.value === 'kk'
+      ? `Өнеркәсіптік қауіпсіздік бойынша даярлық ${cityPrepositional.value}: персонал санаты, нысан және жұмыс міндеттеріне сай бағдарлама таңдау. Топ құрамы мен оқу шарттарын келісіңіз.`
+      : `Подготовка по промышленной безопасности ${cityPrepositional.value}: подбор программы по категории персонала, объекту и рабочим задачам. Согласуйте состав группы и условия обучения.`;
+  }
+  if (props.course.slug === 'elektrobezopasnost') {
+    return locale.value === 'kk'
+      ? `Электр қауіпсіздігі бойынша даярлық ${cityPrepositional.value}: қызметкердің міндеттері, жабдық және қазіргі тобына сай бағдарлама таңдау. Оқу және білімді тексеру шарттарын нақтылаңыз.`
+      : `Подготовка по электробезопасности ${cityPrepositional.value}: подбор программы с учётом задач сотрудника, оборудования и действующей группы. Уточните условия обучения и проверки знаний.`;
+  }
+  if (!isLaborSafety.value) return null;
 
   if (locale.value === 'kk') {
     return `Еңбекті қорғау және техника қауіпсіздігі бойынша оқыту қызметкерлер мен жауапты тұлғаларға арналған ${cityPrepositional.value}. Формат, бағдарлама, оқудан кейінгі құжаттар және кеңеске өтінім.`;
@@ -351,10 +161,10 @@ const programSelectionRoute = computed(() => ({
 
 const selectedFormat = computed(() => leadFormats.find(item => item.id === route.query.format)?.title[locale.value === 'kk' ? 'kk' : 'ru']);
 const programDetailsRoute = computed(() => ({
-  path: localePath('/courses/' + (resolveCourseDirection(props.course.slug)?.alias || props.course.slug)),
+  path: localePath('/courses/' + (resolveCourseDirection(props.course.slug)?.id || props.course.slug)),
   query: leadContextQuery({ city: resolvedCity.value?.slug || route.query.city, format: route.query.format }),
 }));
-const contextualLink = (to) => ({ path: to, query: leadContextQuery({ city: resolvedCity.value?.slug || route.query.city, format: route.query.format }) });
+const contextualLink = (to) => ({ path: to, query: leadContextQuery({ programId: props.course.slug, city: resolvedCity.value?.slug || route.query.city, format: route.query.format }) });
 const standardSections = computed(() => [
   { id: 'included', title: t('course.includesTitle'), items: includesItems.value },
   { id: 'benefits', title: t('course.benefitsTitle'), items: benefitsItems.value },
@@ -392,9 +202,7 @@ const defaultFaqItems = computed(() => {
 });
 const faqItems = computed(() => {
   if (!specialContent.value?.faqItems) return defaultFaqItems.value;
-  return durationAnswer.value
-    ? [...specialContent.value.faqItems, { q: t('course.faqItems.1.q'), a: durationAnswer.value }]
-    : specialContent.value.faqItems;
+  return specialContent.value.faqItems;
 });
 
 const courseSchema = computed(() => ({
@@ -410,9 +218,11 @@ const courseSchema = computed(() => ({
       'OT Center',
     url: baseUrl.value,
   },
-  educationalCredentialAwarded:
-    locale.value === 'kk' ? 'Куәлік/сертификат' : 'Удостоверение/сертификат',
-  courseMode: ['online', 'in-person'],
+  // Direction pages do not establish an approved document or available format.
+  ...(!specialContent.value ? {
+    educationalCredentialAwarded: locale.value === 'kk' ? 'Куәлік/сертификат' : 'Удостоверение/сертификат',
+    courseMode: ['online', 'in-person'],
+  } : {}),
   areaServed: resolvedCity.value
     ? [
         {
@@ -526,7 +336,7 @@ useHead(() => ({
           <dd class="ed-public-value">{{ courseValue?.purpose[locale === 'kk' ? 'kk' : 'ru'] || courseName }}</dd>
         </div>
         <div><dt>{{ t('course.durationLabel') }}</dt><dd>{{ durationText }}</dd></div>
-        <div><dt>{{ t('course.cityLabel') }}</dt><dd>{{ getCityName(resolvedCity, locale) || t('course.anyRegion') }}<small>{{ t('course.mandatoryLabel') }}: {{ course.mandatoryByLaw ? t('course.mandatoryYes') : t('course.mandatoryNo') }}</small></dd></div>
+        <div><dt>{{ t('course.cityLabel') }}</dt><dd>{{ getCityName(resolvedCity, locale) || t('course.anyRegion') }}<small v-if="!specialContent">{{ t('course.mandatoryLabel') }}: {{ course.mandatoryByLaw ? t('course.mandatoryYes') : t('course.mandatoryNo') }}</small><small v-else>{{ locale === 'kk' ? 'Бағдарлама міндеттеріңізге сай таңдалады' : 'Программа подбирается по вашим обязанностям' }}</small></dd></div>
       </dl>
     </EditorialPageHeader>
 
@@ -542,8 +352,9 @@ useHead(() => ({
             <h2>{{ section.title }}</h2>
             <p v-if="section.text">{{ section.text }}</p>
             <ul v-if="section.bullets" class="ed-public-list"><li v-for="item in section.bullets" :key="item">{{ item }}</li></ul>
+            <NuxtLink v-if="section.programLink" :to="programDetailsRoute" class="ed-public-link">{{ locale === 'kk' ? 'Бағдарламаның мазмұны мен оқу шарттары' : 'Содержание программы и условия обучения' }}</NuxtLink>
             <div v-if="section.links" class="ed-public-links">
-              <NuxtLink v-for="link in section.links" :key="link.to" :to="link.consultation ? consultationRoute : contextualLink(link.to)">{{ link.label }}</NuxtLink>
+              <NuxtLink v-for="link in section.links" :key="link.to" :to="contextualLink(link.to)">{{ link.label }}</NuxtLink>
             </div>
           </section>
         </template>
@@ -568,9 +379,13 @@ useHead(() => ({
           <h2>{{ specialContent?.faqTitle || t('course.faqTitle') }}</h2>
           <details v-for="item in faqItems" :key="item.q"><summary>{{ item.q }}</summary><p>{{ item.a }}</p></details>
         </section>
+        <section v-if="specialContent?.articles.length" id="related-guides" class="ed-public-section">
+          <h2>{{ locale === 'kk' ? 'Бағдарлама таңдауға көмектесетін материалдар' : 'Материалы для выбора программы' }}</h2>
+          <ul class="ed-public-list"><li v-for="article in specialContent.articles" :key="article.to"><NuxtLink :to="contextualLink(article.to)" class="ed-public-link">{{ article.label }}</NuxtLink></li></ul>
+        </section>
         <section class="ed-public-callout">
           <h2>{{ t('course.signupTitle') }}</h2>
-          <p>{{ t('course.signupText') }}</p>
+          <p>{{ specialContent?.signupText || t('course.signupText') }}</p>
           <div class="ed-public-actions"><NuxtLink :to="programSelectionRoute" class="ed-public-button">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink><a href="tel:+77766803282" class="ed-public-link" @click="recordContact">{{ t('cta.call') }}</a></div>
         </section>
       </div>
@@ -580,6 +395,7 @@ useHead(() => ({
         <ul v-if="specialContent"><li v-for="section in specialContent.sections" :key="section.id"><a :href="`#${section.id}`">{{ section.title }}</a></li></ul>
         <ul v-else><li><a href="#programme">{{ t('course.programTitle') }}</a></li><li v-for="section in standardSections" :key="section.id"><a :href="`#${section.id}`">{{ section.title }}</a></li></ul>
         <a href="#questions">{{ t('course.faqTitle') }}</a>
+        <a v-if="specialContent?.articles.length" href="#related-guides">{{ locale === 'kk' ? 'Пайдалы материалдар' : 'Полезные материалы' }}</a>
         <NuxtLink :to="programDetailsRoute">{{ locale === 'kk' ? 'Бағдарламаны ашу' : 'Открыть программу' }}</NuxtLink>
       </nav>
     </div>

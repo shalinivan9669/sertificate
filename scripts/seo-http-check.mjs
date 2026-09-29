@@ -4,21 +4,51 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { courses } from '../config/courses.js';
 import { additionalSourceDirections } from '../shared/source-products.ts';
+import { getPublicCourseSeo } from '../shared/public-course-seo.ts';
 import {
-  buildPublicRoutes, defaultSiteUrl, isNonIndexableRoute, localizePublicPath,
+  buildPublicRoutes, canonicalPublicPath, courseCardAliases, defaultSiteUrl, isNonIndexableRoute, localizePublicPath, stripLocale,
 } from '../config/public-route-policy.js';
 
+const decodeEntities = (value) => value
+  .replace(/&(amp|quot|apos|lt|gt|nbsp);/g, (entity) => ({ '&amp;': '&', '&quot;': '"', '&apos;': "'", '&lt;': '<', '&gt;': '>', '&nbsp;': ' ' })[entity])
+  .replace(/&#(x[\da-f]+|\d+);/gi, (_, number) => String.fromCodePoint(number[0].toLowerCase() === 'x' ? Number.parseInt(number.slice(1), 16) : Number(number)));
+
 const attributes = (tag) => Object.fromEntries(
-  [...tag.matchAll(/([\w:-]+)\s*=\s*["']([^"']*)["']/g)]
-    .map(([, key, value]) => [key.toLowerCase(), value.replaceAll('&amp;', '&')]),
+  [...tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+    .map(([, key, doubleQuoted, singleQuoted]) => [key.toLowerCase(), decodeEntities(doubleQuoted ?? singleQuoted)]),
 );
+
+export function buildCourseContractRoutes() {
+  const routes = [...courses.map(({ slug }) => `/courses/${slug}`),
+    ...additionalSourceDirections.map(({ id }) => `/courses/${id}`),
+    ...Object.keys(courseCardAliases).map((alias) => `/courses/${alias}`)];
+  return [...new Set(routes.flatMap((route) => [route, localizePublicPath(route, 'kk')]))];
+}
+
+export function assertCourseMetadataUniqueness(records) {
+  const seen = new Map();
+  for (const record of records) {
+    if (!/^\/courses\/[^/]+$/.test(stripLocale(record.route))) continue;
+    const locale = record.route.startsWith('/kk/') ? 'kk' : 'ru';
+    const canonicalGroup = canonicalPublicPath(record.route);
+    for (const field of ['title', 'description']) {
+      assert.ok(record[field]?.trim(), `${record.route}: course ${field} must not be empty`);
+      const key = `${locale}|${field}|${record[field]?.trim().toLocaleLowerCase()}`;
+      const prior = seen.get(key);
+      assert.ok(!prior || prior.canonicalGroup === canonicalGroup,
+        `${record.route}: duplicate course ${field} with ${prior?.route}`);
+      seen.set(key, { route: record.route, canonicalGroup });
+    }
+  }
+}
 
 export function inspectPublicHtml(html, route, siteUrl = defaultSiteUrl, options = {}) {
   const links = [...html.matchAll(/<link\b[^>]*>/gi)].map(([tag]) => attributes(tag));
   const metas = [...html.matchAll(/<meta\b[^>]*>/gi)].map(([tag]) => attributes(tag));
   const canonical = links.filter(({ rel }) => rel === 'canonical');
   assert.equal(canonical.length, 1, `${route}: exactly one canonical`);
-  assert.equal(new URL(canonical[0].href).toString(), new URL(route.split('?')[0], siteUrl).toString(), `${route}: self canonical`);
+  const expectedPath = canonicalPublicPath(route);
+  assert.equal(new URL(canonical[0].href).toString(), new URL(expectedPath, siteUrl).toString(), `${route}: expected canonical`);
   assert.equal((html.match(/<title\b/gi) || []).length, 1, `${route}: one title`);
   assert.equal(metas.filter(({ name }) => name === 'description').length, 1, `${route}: one description`);
   assert.equal((html.match(/<h1\b/gi) || []).length, 1, `${route}: one SSR H1`);
@@ -28,15 +58,32 @@ export function inspectPublicHtml(html, route, siteUrl = defaultSiteUrl, options
   } else {
     assert.doesNotMatch(robots, /\bnoindex\b/i, `${route}: indexable`);
   }
-  for (const [locale, hreflang] of [['ru', 'ru-KZ'], ['kk', 'kk-KZ']]) {
-    const alternate = links.find((link) => link.rel === 'alternate' && link.hreflang === hreflang);
-    assert.ok(alternate, `${route}: ${hreflang} alternate`);
-    assert.equal(new URL(alternate.href).toString(), new URL(localizePublicPath(route, locale), siteUrl).toString());
+  for (const [locale, hreflang] of [['ru', 'ru-KZ'], ['kk', 'kk-KZ'], ['ru', 'x-default']]) {
+    const alternates = links.filter((link) => link.rel === 'alternate' && link.hreflang === hreflang);
+    assert.equal(alternates.length, 1, `${route}: exactly one ${hreflang} alternate`);
+    assert.equal(new URL(alternates[0].href).toString(), new URL(localizePublicPath(expectedPath, locale), siteUrl).toString(), `${route}: ${hreflang} alternate targets preferred route`);
   }
   assert.match(html, route.startsWith('/kk') ? /<html\b[^>]*lang=["']kk-KZ["']/ : /<html\b[^>]*lang=["']ru-KZ["']/);
   assert.doesNotMatch(html, /"@type"\s*:\s*"LocalBusiness"/, `${route}: no invented city branches`);
   assert.doesNotMatch(html, /New flow entry|SEO-страница остаётся|runtime-flow/, `${route}: no developer copy`);
-  return { canonical: canonical[0].href, title: html.match(/<title[^>]*>(.*?)<\/title>/is)?.[1] };
+  const title = decodeEntities(html.match(/<title[^>]*>(.*?)<\/title>/is)?.[1] || '');
+  const description = metas.find(({ name }) => name === 'description')?.content || '';
+  const courseId = stripLocale(expectedPath).match(/^\/courses\/([^/]+)$/)?.[1];
+  if (courseId) {
+    const expected = getPublicCourseSeo(courseId, route.startsWith('/kk/') ? 'kk' : 'ru');
+    assert.ok(expected, `${route}: known course metadata`);
+    assert.equal(title, expected.title, `${route}: course title matches locale and direction`);
+    assert.equal(description, expected.description, `${route}: course description matches locale and direction`);
+    for (const [attribute, name, value] of [
+      ['property', 'og:title', expected.title], ['property', 'og:description', expected.description],
+      ['name', 'twitter:title', expected.title], ['name', 'twitter:description', expected.description],
+    ]) {
+      const found = metas.filter((meta) => meta[attribute] === name);
+      assert.equal(found.length, 1, `${route}: exactly one ${name}`);
+      assert.equal(found[0].content, value, `${route}: ${name} matches course metadata`);
+    }
+  }
+  return { canonical: canonical[0].href, title, description };
 }
 
 export async function runHttpSeoCheck(baseUrl, siteUrl = defaultSiteUrl, options = { all: false }) {
@@ -50,12 +97,16 @@ export async function runHttpSeoCheck(baseUrl, siteUrl = defaultSiteUrl, options
     '/karaganda/ohrana-truda', '/karaganda/promyshlennaya-bezopasnost',
     '/karaganda/online-obuchenie', ...courses.map(({ slug }) => `/${slug}`),
     ...additionalSourceDirections.map(({ id }) => `/courses/${id}`)];
-  const publicRoutes = options.all ? buildPublicRoutes() : [...new Set(sample.flatMap((route) => [route, localizePublicPath(route, 'kk')]))];
+  const publicRoutes = [...new Set([
+    ...(options.all ? buildPublicRoutes() : sample.flatMap((route) => [route, localizePublicPath(route, 'kk')])),
+    ...buildCourseContractRoutes(),
+  ])];
   for (const route of publicRoutes) {
     const { response, html } = await check(route);
     assert.equal(response.status, 200, `${route}: public HTTP 200`);
     report.public.push({ route, status: response.status, ...inspectPublicHtml(html, route, siteUrl, { indexable: options.indexable }) });
   }
+  assertCourseMetadataUniqueness(report.public);
   for (const route of ['/not-a-city/not-a-course', '/karaganda/not-a-course', '/unknown-direction',
     '/unknown-city/online-obuchenie', '/kk/unknown-city/ohrana-truda', '/courses/unknown-course']) {
     const { response } = await check(route);
@@ -77,6 +128,7 @@ export async function runHttpSeoCheck(baseUrl, siteUrl = defaultSiteUrl, options
   const locations = [...sitemap.html.matchAll(/<loc>(.*?)<\/loc>/g)].map(([, loc]) => new URL(loc.replaceAll('&amp;', '&')).toString());
   const expected = new Set(buildPublicRoutes().map((route) => new URL(route, siteUrl).toString()));
   assert.equal(locations.length, expected.size, 'sitemap matches explicit public inventory');
+  assert.equal(new Set(locations).size, expected.size, 'sitemap contains each expected URL exactly once');
   for (const loc of locations) {
     assert.ok(expected.has(loc), `unexpected sitemap location ${loc}`);
     assert.equal(isNonIndexableRoute(new URL(loc).pathname), false);
@@ -92,13 +144,17 @@ export async function runHttpSeoCheck(baseUrl, siteUrl = defaultSiteUrl, options
     assert.doesNotMatch(robots.html, /Disallow:\s*\/\s*(?:\r?\n|$)/i, 'indexable environment allows public crawling');
   }
   report.robots = { status: robots.response.status, assetsAllowed: options.indexable !== false };
-  await fs.mkdir('artifacts/seo', { recursive: true });
-  await fs.writeFile(`artifacts/seo/http-contract${options.all ? '-all' : ''}-report.json`, `${JSON.stringify(report, null, 2)}\n`);
+  const artifactDir = path.resolve(options.artifactDir || process.env.SEO_ARTIFACT_DIR || 'artifacts/seo');
+  await fs.mkdir(artifactDir, { recursive: true });
+  await fs.writeFile(path.join(artifactDir, `http-contract${options.all ? '-all' : ''}-report.json`), `${JSON.stringify(report, null, 2)}\n`);
   return report;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  runHttpSeoCheck(process.argv[2] || process.env.SEO_BASE_URL, process.env.NUXT_PUBLIC_SITE_URL || defaultSiteUrl, { all: process.argv.includes('--all'), indexable: process.env.OT_NOINDEX !== 'true' })
+  const artifactFlag = process.argv.indexOf('--artifact-dir');
+  assert.ok(artifactFlag === -1 || (process.argv[artifactFlag + 1] && !process.argv[artifactFlag + 1].startsWith('--')), '--artifact-dir requires a directory');
+  const baseUrl = process.argv.slice(2).find((argument, index, args) => !argument.startsWith('--') && args[index - 1] !== '--artifact-dir');
+  runHttpSeoCheck(baseUrl || process.env.SEO_BASE_URL, process.env.NUXT_PUBLIC_SITE_URL || defaultSiteUrl, { all: process.argv.includes('--all'), indexable: process.env.OT_NOINDEX !== 'true', artifactDir: artifactFlag === -1 ? undefined : process.argv[artifactFlag + 1] })
     .then((report) => console.log(`SEO HTTP contracts passed: ${report.public.length} public, ${report.private.length} private, ${report.missing.length} 404 routes; ${report.sitemap.urls} sitemap URLs.`))
     .catch((error) => { console.error(error); process.exitCode = 1; });
 }
