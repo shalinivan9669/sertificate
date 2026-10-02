@@ -13,8 +13,14 @@ import documentVerification from '../content/blog/udostoverenie-ohrana-truda-pro
 import trainingDirections from '../content/blog/ohrana-truda-tehnika-bezopasnosti-raznica.js';
 import briefings from '../content/blog/instruktazhi-ohrana-truda-zhurnal-kazakhstan.js';
 import trainingPlan from '../content/blog/plan-obucheniya-personala-2027.js';
+import safetyInspections from '../content/blog/proverki-ohrany-truda-itogi-2026.js';
+import complianceGuarantees from '../content/blog/antikorrupcionnyj-komplaens-trudovye-garantii-2026.js';
+import productionControl from '../content/blog/proizvodstvennyj-kontrol-neftegaz-2026.js';
+import internalTrainers from '../content/blog/vnutrennie-trenery-ohrana-truda-2026.js';
+import digitalSafety from '../content/blog/ii-umnye-kaski-ohrana-truda-2026.js';
 
 export const blogPosts = [
+  safetyInspections, complianceGuarantees, productionControl, internalTrainers, digitalSafety,
   gasWork, industrialFrequency, ptmExplained, electricalDocuments, documentVerification,
   trainingDirections, biotChanges, briefings, riskRegister, trainingPlan,
   occupationalSafety, industrialSafety, fireSafety, electricalSafety, workAtHeight,
