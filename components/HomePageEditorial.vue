@@ -17,23 +17,15 @@ const group = (id: string) =>
     "pervaya-pomoshch",
     "inklyuzivnaya-kultura",
     "antiterroristicheskaya-podgotovka",
+    "upravlenie-stressom",
+    "seminar-dekretirovannoy-gruppy-sez",
   ].includes(id)
     ? "people"
-    : id.includes("ekolog")
+    : id.includes("ekolog") || id === "iso-14001"
       ? "environment"
+      : ["soglasitelnaya-komissiya", "protivodeystvie-korruptsii", "iso-9001", "menedzhment-ohrany-zdorovya"].includes(id)
+        ? "management"
       : "safety";
-const iconFor = (id: string) =>
-  id === "pervaya-pomoshch"
-    ? "heart"
-    : id.includes("elektro")
-      ? "bolt"
-      : id.includes("ekolog")
-        ? "leaf"
-        : id === "ohrana-truda"
-          ? "shield"
-          : id === "promyshlennaya-bezopasnost"
-            ? "building"
-            : "book";
 const priority = [
   "ohrana-truda",
   "pervaya-pomoshch",
@@ -52,7 +44,6 @@ const allCourses = computed(() =>
     .map((course) => ({
       ...course,
       value: getPublicCourseValue(course.id),
-      icon: iconFor(course.id),
     })),
 );
 const filteredCourses = computed(() =>
@@ -65,9 +56,10 @@ const visibleCourses = computed(() =>
 );
 const filters = computed(() => [
   { id: "all", label: tr("Все направления", "Барлық бағыттар") },
-  { id: "safety", label: tr("Безопасная работа", "Қауіпсіз жұмыс") },
-  { id: "people", label: tr("Забота о людях", "Адамдарға қамқорлық") },
-  { id: "environment", label: tr("Окружающая среда", "Қоршаған орта") },
+  { id: "safety", label: tr("Охрана труда и безопасность", "Еңбекті қорғау және қауіпсіздік") },
+  { id: "people", label: tr("Первая помощь и защита людей", "Алғашқы көмек және адамдарды қорғау") },
+  { id: "environment", label: tr("Экология", "Экология") },
+  { id: "management", label: tr("Управление и трудовые отношения", "Басқару және еңбек қатынастары") },
 ]);
 const descriptions: Record<string, { ru: string; kk: string }> = {
   "ohrana-truda": {
@@ -116,7 +108,7 @@ const entryCards = computed(() => [
       "Найдём программу под вашу работу и задачу.",
       "Жұмысыңыз бен міндетіңізге сай бағдарлама табамыз.",
     ),
-    action: tr("Подобрать программу", "Бағдарлама таңдау"),
+    action: tr("Подобрать обучение", "Оқуды таңдау"),
     to: "/program-selection",
     tone: "sage",
   },
@@ -151,6 +143,13 @@ const steps = computed(() => [
     text: tr(
       "Изучите содержание, аудиторию и условия.",
       "Мазмұнымен, аудиториясымен және шарттарымен танысыңыз.",
+    ),
+  },
+  {
+    title: tr("Согласуйте условия", "Шарттарды келісіңіз"),
+    text: tr(
+      "Уточните формат, сроки и стоимость для вашей задачи.",
+      "Міндетіңізге сай форматты, мерзімді және бағаны нақтылаңыз.",
     ),
   },
   {
@@ -249,13 +248,13 @@ const faqs = computed(() => [
       :eyebrow="tr('Профессиональное обучение в Казахстане', 'Қазақстандағы кәсіби оқыту')"
       :lines="
         lang === 'kk'
-          ? ['Үлкен істің', 'негізі —', 'білім.']
-          : ['Знания,', 'на которых', 'держится дело.']
+          ? ['Қауіпсіз жұмысқа', 'арналған оқу.']
+          : ['Обучение для', 'безопасной работы.']
       "
       :description="
         tr(
-          'Охрана труда, безопасность и профессиональная подготовка. Для специалистов и команд.',
-          'Еңбекті қорғау, қауіпсіздік және кәсіби даярлық. Мамандар мен командалар үшін.',
+          'Охрана труда, промышленная и пожарная безопасность. Выберите программу для себя или организуйте обучение сотрудников.',
+          'Еңбекті қорғау, өнеркәсіптік және өрт қауіпсіздігі. Өзіңізге бағдарлама таңдаңыз немесе қызметкерлерді оқытуды ұйымдастырыңыз.',
         )
       "
       :image-alt="
@@ -273,61 +272,28 @@ const faqs = computed(() => [
     >
       <template #actions
         ><div class="ed-cover-actions">
-          <EditorialButton :to="link('/program-selection')">{{
-            tr("Подобрать обучение", "Оқуды таңдау")
+          <EditorialButton :to="link('/courses')">{{
+            tr("Каталог программ", "Бағдарламалар каталогы")
           }}</EditorialButton
-          ><EditorialButton :to="path('/cabinet')" variant="text">{{
-            tr("Продолжить обучение", "Оқуды жалғастыру")
+          ><EditorialButton :to="link('/program-selection')" variant="text">{{
+            tr("Подобрать обучение", "Оқуды таңдау")
           }}</EditorialButton>
         </div>
         <p class="ed-cover-note">
           {{ tr("На русском и казахском языке", "Орыс және қазақ тілдерінде") }}
         </p>
-        <EditorialMobileContents
-      /></template>
-      <template #contents
-        ><nav
-          class="ed-cover-contents"
-          :aria-label="tr('В этом разделе', 'Осы бөлімде')"
-        >
-          <span>{{ tr("СОДЕРЖАНИЕ", "МАЗМҰНЫ") }}</span
-          ><a href="#directions"
-            ><i aria-hidden="true" />{{ tr("Направления", "Бағыттар") }}</a
-          ><a href="#learning-path"
-            ><i aria-hidden="true" />{{ tr("Путь обучения", "Оқу жолы") }}</a
-          ><a href="#formats"
-            ><i aria-hidden="true" />{{ tr("Форматы", "Форматтар") }}</a
-          ><a href="#cities"
-            ><i aria-hidden="true" />{{ tr("Ваш город", "Сіздің қалаңыз") }}</a
-          >
-        </nav></template
-      >
+      </template>
     </EditorialCover>
 
-    <section class="ed-opening">
-      <div class="ed-wrap ed-opening-grid">
-        <p class="ed-opening-thought">
-          <span>{{ tr("З", "Б") }}</span
-          >{{
-            tr(
-              "нания становятся силой, когда за ними — человек.",
-              "ілім адам арқылы үлкен күшке айналады.",
-            )
-          }}
-        </p>
-        <a href="#directions" class="ed-next-chapter"
-          ><span class="ed-kicker"
-            >01 / {{ tr("НАПРАВЛЕНИЯ", "БАҒЫТТАР") }}</span
-          ><strong>{{
-            tr("Дело начинается с вас", "Іс сізден басталады")
-          }}</strong
-          ><CivicIcon name="arrow" /></a
-        ><span class="ed-opening-side"
-          >{{ tr("УЧИТЬСЯ.", "ҮЙРЕНУ.") }}<br />{{ tr("ПОНИМАТЬ.", "ТҮСІНУ.")
-          }}<br />{{ tr("ДЕЙСТВОВАТЬ.", "ӘРЕКЕТ ЕТУ.") }}</span
-        >
-      </div>
-    </section>
+    <div class="ed-assurance ed-wrap">
+      <NuxtLink :to="link('/licenses')">
+        <CivicIcon name="document" />
+        <span>{{ tr('Документы и аккредитация центра', 'Орталық құжаттары және аккредиттеу') }}</span>
+        <CivicIcon name="arrow" />
+      </NuxtLink>
+      <a href="#formats"><CivicIcon name="screen" /><span>{{ tr('Онлайн, очно и в вашей организации', 'Онлайн, күндізгі және ұйымыңызда') }}</span></a>
+      <a href="#learning-path"><CivicIcon name="book" /><span>{{ tr('От выбора программы до документа', 'Бағдарлама таңдаудан құжат алуға дейін') }}</span></a>
+    </div>
 
     <section
       class="ed-entry ed-wrap"
@@ -347,14 +313,14 @@ const faqs = computed(() => [
     <section id="directions" class="ed-section ed-wrap">
       <EditorialChapter
         number=""
-        :label="tr('Направления подготовки', 'Даярлық бағыттары')"
+        :label="tr('Программы OT Center', 'OT Center бағдарламалары')"
         :title="
           tr(
-            'Какие знания нужны\nвашему делу?',
-            'Ісіңізге қандай\nбілім қажет?',
+            'Выберите направление обучения',
+            'Оқу бағытын таңдаңыз',
           )
         "
-        ><NuxtLink :to="path('/courses')" class="ed-text-link"
+        ><NuxtLink :to="link('/courses')" class="ed-text-link"
           >{{ tr("Весь каталог", "Толық каталог")
           }}<CivicIcon name="arrow" /></NuxtLink
       ></EditorialChapter>
@@ -380,33 +346,15 @@ const faqs = computed(() => [
         {{ filteredCourses.length }}
       </p>
       <div class="ed-program-list">
-        <article
-          v-for="(course, index) in visibleCourses"
+        <EditorialProgramCard
+          v-for="course in visibleCourses"
           :key="course.id"
-          class="ed-program-row"
-        >
-          <span class="ed-program-number">{{
-            String(index + 1).padStart(2, "0")
-          }}</span>
-          <div class="ed-program-name">
-            <h3>
-              <NuxtLink :to="link('/courses/' + course.id)">{{
-                course.title[lang]
-              }}</NuxtLink>
-            </h3>
-            <p>{{ description(course.id) }}</p>
-          </div>
-          <div class="ed-program-value">
-            <strong v-if="course.value">{{ course.value.purpose[lang] }}</strong>
-            <NuxtLink :to="priceRequest(course.id)" class="ed-price-request" :aria-label="tr('Запросить стоимость: ', 'Бағасын сұрау: ') + course.title[lang]">{{ tr('Запросить стоимость', 'Бағасын сұрау') }} <span aria-hidden="true">↗</span></NuxtLink>
-          </div>
-          <NuxtLink
-            :to="link('/courses/' + course.id)"
-            class="ed-round-link"
-            :aria-label="tr('Программа: ', 'Бағдарлама: ') + course.title[lang]"
-            ><CivicIcon name="northeast"
-          /></NuxtLink>
-        </article>
+          :title="course.title[lang]"
+          :description="description(course.id)"
+          :purpose="course.value?.purpose[lang]"
+          :to="link('/courses/' + course.id)"
+          :request-to="priceRequest(course.id)"
+        />
       </div>
       <button
         v-if="filteredCourses.length > 6"
@@ -431,8 +379,8 @@ const faqs = computed(() => [
           :label="tr('От программы к результату', 'Бағдарламадан нәтижеге')"
           :title="
             tr(
-              'Уверенность\nприходит с подготовкой.',
-              'Сенімділік\nдайындықтан басталады.',
+              'Как проходит обучение',
+              'Оқу қалай өтеді',
             )
           "
           dark
@@ -487,7 +435,7 @@ const faqs = computed(() => [
         number=""
         :label="tr('Форматы обучения', 'Оқу форматтары')"
         :title="
-          tr('Учиться там,\nгде нужно вам.', 'Өзіңізге қолайлы\nжерде оқыңыз.')
+          tr('Выберите удобный формат', 'Ыңғайлы форматты таңдаңыз')
         "
       />
       <div class="ed-formats">
@@ -515,7 +463,7 @@ const faqs = computed(() => [
         <div>
           <p class="ed-kicker">{{ tr("Обучение рядом", "Жақын жердегі оқу") }}</p>
           <h2>
-            {{ tr("Общее дело.\nВаш город.", "Ортақ іс.\nСіздің қалаңыз.") }}
+            {{ tr("Обучение в вашем городе", "Қалаңыздағы оқу") }}
           </h2>
           <p>
             {{
@@ -538,35 +486,12 @@ const faqs = computed(() => [
       </div>
     </section>
 
-    <section class="ed-documents ed-wrap">
-      <span class="ed-document-mark" aria-hidden="true"
-        ><CivicIcon name="document"
-      /></span>
-      <div>
-        <p class="ed-kicker">
-          {{ tr("ОТКРЫТО И ПО СУЩЕСТВУ", "АШЫҚ ӘРІ НАҚТЫ") }}
-        </p>
-        <h2>{{ tr("Основание для доверия", "Сенімнің негізі") }}</h2>
-        <p>
-          {{
-            tr(
-              "Сведения об учебном центре, аккредитации и документах доступны для ознакомления.",
-              "Оқу орталығы, аккредиттеу және құжаттар туралы ақпаратпен танысуға болады.",
-            )
-          }}
-        </p>
-      </div>
-      <EditorialButton :to="path('/licenses')" variant="secondary">{{
-        tr("Документы центра", "Орталық құжаттары")
-      }}</EditorialButton>
-    </section>
-
     <section class="ed-faq ed-section ed-wrap">
       <div>
         <p class="ed-kicker">{{ tr("Ответы на вопросы", "Сұрақтарға жауаптар") }}</p>
         <h2>
           {{
-            tr("Хороший вопрос —\nуже начало.", "Жақсы сұрақ —\nістің басы.")
+            tr("Что нужно знать\nперед обучением", "Оқу алдында\nнені білу керек")
           }}
         </h2>
         <NuxtLink :to="path('/contacts')" class="ed-text-link"
@@ -589,13 +514,13 @@ const faqs = computed(() => [
         <h2>
           {{
             tr(
-              "К большому делу\nнужно быть готовым.",
-              "Үлкен іске\nдайын болыңыз.",
+              "Поможем выбрать\nнужную программу.",
+              "Қажетті бағдарламаны\nтаңдауға көмектесеміз.",
             )
           }}
         </h2>
-        <EditorialButton :to="path('/program-selection')">{{
-          tr("Найти своё обучение", "Өз оқуыңызды табу")
+        <EditorialButton :to="link('/program-selection')">{{
+          tr("Подобрать обучение", "Оқуды таңдау")
         }}</EditorialButton>
       </div>
     </section>

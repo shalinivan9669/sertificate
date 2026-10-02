@@ -41,7 +41,7 @@ const pairs = [
 });
 const tokens = {
   name: "OT Center / Знания, на которых держится дело",
-  version: 2,
+  version: 3,
   scope: ".editorial-site",
   variables,
   textPairs: pairs,
@@ -50,9 +50,11 @@ const tokens = {
       family: "OT Display",
       source: "Noto Serif Display",
       weight: 500,
-      desktop: "clamp(72px,6.65vw,104px)",
-      phone: "clamp(44px,12vw,67px)",
+      desktop: "clamp(48px,4.65vw,68px)",
+      phone: "clamp(34px,9.3vw,49px)",
     },
+    pageTitle: variables["--ed-page-title"],
+    sectionTitle: variables["--ed-section-title"],
     interface: { family: "OT Sans", source: "Noto Sans", size: 16 },
     reading: { size: 18, phone: 17, lineHeight: 1.85, maxMeasure: "66ch" },
     license: "SIL OFL 1.1",
@@ -64,7 +66,7 @@ const tokens = {
     columns: 12,
     phoneGutter: 20,
     coverRatio: "desktop: copy on a calm left area, scene to the right; phone: copy above scene",
-    breakpoints: [640, 700, 900, 1000, 1200],
+    breakpoints: [600, 700, 800, 900, 1000, 1200, 1400],
     verificationWidths: [360, 390, 820, 1280, 1440],
   },
   borders: {

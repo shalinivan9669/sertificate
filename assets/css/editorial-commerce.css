@@ -1,31 +1,16 @@
 /* Catalog, program passport and order surfaces. Shared colors and type belong to editorial.css. */
-.editorial-site .ed-commerce-kicker { color: var(--ed-muted, #526365); font-size: .7rem; line-height: 1.5; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.editorial-site .ed-commerce-kicker { color: var(--ed-muted, #526365); font-size: .8125rem; line-height: 1.5; font-weight: 500; }
 .editorial-site .ed-commerce-caption { color: var(--ed-muted, #526365); font-size: .8125rem; line-height: 1.55; }
 .editorial-site .ed-commerce-text-link { display: inline-flex; min-height: 44px; align-items: center; gap: .75rem; color: var(--ed-ink, #10262a); font-size: .875rem; font-weight: 600; text-underline-offset: .3em; }
 .editorial-site .ed-commerce-text-link:hover { text-decoration: underline; }
 .editorial-site .ed-catalog-filters { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto; gap: 1rem; align-items: end; padding: 1.5rem 0; border-block: 1px solid var(--ed-rule, #c9d0cd); }
 .editorial-site .ed-catalog-filters label, .editorial-site .ed-version-field { display: grid; gap: .6rem; min-width: 0; font-size: .875rem; font-weight: 500; }
-.editorial-site .ed-catalog-filters input, .editorial-site .ed-catalog-filters select, .editorial-site .ed-version-field select { min-width: 0; width: 100%; min-height: 48px; font-size: 1rem; background: white; border: 1px solid var(--ed-rule, #c9d0cd); border-radius: 4px; }
+.editorial-site .ed-catalog-filters input, .editorial-site .ed-catalog-filters select, .editorial-site .ed-version-field select { min-width: 0; width: 100%; min-height: 48px; font-size: 1rem; background: var(--ed-white); border: 1px solid var(--ed-field); border-radius: var(--ed-radius); }
 .editorial-site .ed-catalog-filters .lms-button { min-height: 48px; }
 .editorial-site .ed-catalog-summary { display: flex; align-items: center; justify-content: space-between; gap: .75rem 2rem; flex-wrap: wrap; font-size: .875rem; color: var(--ed-muted, #526365); }
 .editorial-site .ed-catalog-summary strong { color: var(--ed-ink, #10262a); font-weight: 600; }
-.editorial-site .ed-course-list { border-top: 1px solid var(--ed-rule, #c9d0cd); }
-.editorial-site .ed-course-row { display: grid; grid-template-columns: 2rem minmax(0, 1fr) minmax(200px, 28%); gap: 2rem; align-items: start; padding: 2.25rem 0; border-bottom: 1px solid var(--ed-rule, #c9d0cd); }
-.editorial-site .ed-course-number { font-size: .75rem; color: var(--ed-muted, #526365); padding-top: .15rem; font-variant-numeric: tabular-nums; }
-.editorial-site .ed-course-description { min-width: 0; }
-.editorial-site .ed-course-description h2 { margin-top: .7rem; font-family: var(--ed-display, Georgia, serif); font-size: clamp(1.5rem, 2.4vw, 2.25rem); font-weight: 400; line-height: 1.15; letter-spacing: -.025em; overflow-wrap: anywhere; }
-.editorial-site .ed-course-description h2 a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: .17em; }
-.editorial-site .ed-course-description h2 a:hover { text-decoration: underline; }
-.editorial-site .ed-course-summary { max-width: 60ch; color: var(--ed-muted, #526365); margin-top: .9rem; font-size: .9375rem; line-height: 1.65; }
-.editorial-site .ed-course-languages { margin-top: .85rem; font-size: .8rem; color: var(--ed-muted, #526365); }
-.editorial-site .ed-course-terms { min-width: 0; padding-top: 1.8rem; }
-.editorial-site .ed-course-value { color: var(--ed-ink, #10262a); font-size: 1.0625rem; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
 .editorial-site .ed-program-cost-note { color: var(--ed-muted, #526365); font-size: .875rem; line-height: 1.65; margin-block: 1.25rem; }
 .editorial-site .ed-program-cost-note strong { display: block; color: var(--ed-ink, #10262a); font-weight: 600; }
-.editorial-site .ed-course-terms .ed-commerce-caption { margin-top: .4rem; }
-.editorial-site .ed-course-action { display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.1rem; border-top: 1px solid var(--ed-rule, #c9d0cd); color: var(--ed-ink, #10262a); font-size: .8125rem; font-weight: 600; }
-.editorial-site .ed-course-action > span:last-child { font-size: 1.4rem; transition: transform 160ms ease; }
-.editorial-site .ed-course-action:hover > span:last-child { transform: translate(2px, -2px); }
 .editorial-site .ed-catalog-empty { padding: clamp(1.5rem, 4vw, 3rem); border: 1px solid var(--ed-rule, #c9d0cd); background: white; }
 .editorial-site .ed-catalog-empty h2 { max-width: 25ch; margin: 1rem 0; font-family: var(--ed-display, Georgia, serif); font-size: clamp(1.8rem, 3vw, 3rem); line-height: 1.12; font-weight: 400; }
 .editorial-site .ed-catalog-empty > p:not(.ed-commerce-kicker) { max-width: 60ch; color: var(--ed-muted, #526365); line-height: 1.65; }
@@ -70,22 +55,15 @@
 @media (max-width: 1023px) {
   .editorial-site .ed-program-grid { gap: 2.5rem; grid-template-columns: minmax(0, 1fr); }
   .editorial-site .ed-program-passport { grid-column: 1; grid-row: auto; }
-  .editorial-site .ed-course-row { gap: 1.25rem; grid-template-columns: 1.5rem minmax(0, 1fr) minmax(175px, 30%); }
 }
 @media (max-width: 640px) {
   .editorial-site .ed-catalog-filters { grid-template-columns: minmax(0, 1fr) auto; padding: 1.25rem 0; gap: 1rem .75rem; }
   .editorial-site .ed-catalog-search { grid-column: 1 / -1; }
   .editorial-site .ed-catalog-filters .lms-button { min-width: 5.5rem; padding-inline: .85rem; }
   .editorial-site .ed-catalog-summary { gap: .25rem 1rem; }
-  .editorial-site .ed-course-row { grid-template-columns: minmax(0, 1fr); gap: 1.2rem; padding: 1.5rem 0; }
-  .editorial-site .ed-course-number { display: none; }
-  .editorial-site .ed-course-description h2 { font-size: 1.8rem; }
-  .editorial-site .ed-course-terms { padding-top: 0; }
   .editorial-site .ed-course-price { font-size: 1.25rem; }
-  .editorial-site .ed-course-action { margin-top: .65rem; }
   .editorial-site .ed-program-passport { padding: 1.25rem; }
   .editorial-site .ed-program-grid { gap: 2rem; }
   .editorial-site .ed-program-passport .ed-program-price, .editorial-site .ed-order-sheet .ed-program-price { font-size: 2.5rem; }
   .editorial-site .ed-program-section { padding-top: 1.5rem; }
 }
-@media (prefers-reduced-motion: reduce) { .editorial-site .ed-course-action > span:last-child { transition: none; } }

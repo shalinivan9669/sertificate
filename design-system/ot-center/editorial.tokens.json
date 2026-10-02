@@ -1,6 +1,6 @@
 {
   "name": "OT Center / Знания, на которых держится дело",
-  "version": 2,
+  "version": 3,
   "scope": ".editorial-site",
   "variables": {
     "--ed-ink": "#10262a",
@@ -30,6 +30,8 @@
     "--ed-radius": "4px",
     "--ed-space": "clamp(20px,3.33vw,56px)",
     "--ed-max": "1360px",
+    "--ed-page-title": "clamp(34px,3.7vw,48px)",
+    "--ed-section-title": "clamp(30px,3.2vw,44px)",
     "--ed-motion": "180ms",
     "--ed-ease": "cubic-bezier(.2,.7,.3,1)"
   },
@@ -88,9 +90,11 @@
       "family": "OT Display",
       "source": "Noto Serif Display",
       "weight": 500,
-      "desktop": "clamp(72px,6.65vw,104px)",
-      "phone": "clamp(44px,12vw,67px)"
+      "desktop": "clamp(48px,4.65vw,68px)",
+      "phone": "clamp(34px,9.3vw,49px)"
     },
+    "pageTitle": "clamp(34px,3.7vw,48px)",
+    "sectionTitle": "clamp(30px,3.2vw,44px)",
     "interface": {
       "family": "OT Sans",
       "source": "Noto Sans",
@@ -125,11 +129,13 @@
     "phoneGutter": 20,
     "coverRatio": "desktop: copy on a calm left area, scene to the right; phone: copy above scene",
     "breakpoints": [
-      640,
+      600,
       700,
+      800,
       900,
       1000,
-      1200
+      1200,
+      1400
     ],
     "verificationWidths": [
       360,

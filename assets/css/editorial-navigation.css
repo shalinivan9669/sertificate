@@ -1,6 +1,7 @@
-.editorial-site .ed-header-chapters { display:flex; align-items:center; gap:26px; margin-inline:auto; }
+.editorial-site .ed-header-chapters { display:flex; align-items:center; gap:22px; margin-inline:auto; }
 .editorial-site .ed-header-chapters a { display:flex; align-items:center; min-height:44px; color:var(--ed-cream); font-size:14px; white-space:nowrap; }
-.editorial-site .ed-header-chapters a:hover { color:var(--ed-amber); }
+.editorial-site .ed-header-chapters a:hover, .editorial-site .ed-header-chapters a[aria-current] { color:var(--ed-amber); }
+.editorial-site .ed-header-chapters a[aria-current], .editorial-site .civic-context-bar a[aria-current] { text-decoration:underline; text-underline-offset:8px; text-decoration-thickness:2px; }
 .editorial-site .ed-menu-trigger { display:flex; align-items:center; justify-content:center; gap:10px; min-height:48px; min-width:48px; padding:10px 14px; border:1px solid var(--ed-dark-rule); border-radius:4px; color:var(--ed-cream); font-size:14px; }
 .ed-menu-trigger svg { width:22px; height:22px; }
 .editorial-site .ed-menu-trigger:hover { background:var(--ed-raised); border-color:var(--ed-brass); }
@@ -75,6 +76,10 @@
 .ed-assessment-links { border-top:1px solid var(--ed-rule); }
 .editorial-site .ed-assessment-links > a { display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:64px; padding:16px 0; border-bottom:1px solid var(--ed-rule); color:var(--ed-ink); }
 .ed-assessment-links > a > span:last-child { font-size:14px; text-decoration:underline; text-underline-offset:4px; }
+@media (min-width:1251px) and (max-width:1400px) {
+  .editorial-site .civic-account span { display:none; }
+  .editorial-site .civic-account { padding-inline:13px; }
+}
 @media (max-width:1200px) {
   .editorial-site .ed-header-chapters { gap:18px; }
   .ed-nav-layout { grid-template-columns:minmax(0,1fr) 240px; gap:24px; }
@@ -82,7 +87,7 @@
   .ed-nav-programs { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .ed-nav-programs > section:last-child { grid-column:1/-1; }
 }
-@media (max-width:1000px) { .editorial-site .ed-header-chapters { display:none; } }
+@media (max-width:1250px) { .editorial-site .ed-header-chapters { display:none; } }
 @media (max-width:700px) {
   .editorial-site .ed-navigation { width:100%; max-height:100dvh; height:100dvh; border:0; border-radius:0; }
   .ed-nav-masthead { padding:18px 20px; gap:12px; }

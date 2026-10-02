@@ -31,7 +31,7 @@ const failed = ref(false);
       <div class="ed-cover-copy">
         <p class="ed-kicker">{{ eyebrow }}</p>
         <h1 id="ed-cover-title" :aria-label="lines.join(' ')">
-          <span v-for="line in lines" :key="line">{{ line }}</span>
+          <span v-for="line in lines" :key="line">{{ line }}{{ ' ' }}</span>
         </h1>
         <div class="ed-cover-rule" />
         <p class="ed-cover-description">{{ description }}</p>
