@@ -3,10 +3,11 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cities } from '../content/cities';
 import { courses } from '../content/courses';
+import { formats } from '../config/formats.js';
 import { canonicalPublicPath, defaultSiteUrl } from '../config/public-route-policy.js';
 import { buildCourseContractRoutes, inspectPublicHtml } from './seo-http-check.mjs';
 
-type PageType = 'city' | 'course' | 'city-course' | 'course-detail';
+type PageType = 'city' | 'course' | 'city-course' | 'course-detail' | 'format' | 'city-format';
 
 type PageEntry = {
   route: string;
@@ -44,6 +45,8 @@ const SIMILARITY_THRESHOLDS: Record<PageType, number> = {
   course: 0.7,
   'city-course': 0.7,
   'course-detail': 0.7,
+  format: 0.7,
+  'city-format': 0.7,
 };
 
 const locales = ['ru', 'kk'];
@@ -188,7 +191,10 @@ const buildRoutes = () => {
     courses.map((course) => `/${city.slug}/${course.slug}`),
   );
 
-  return { cityRoutes, courseRoutes, cityCourseRoutes };
+  return { cityRoutes, courseRoutes, cityCourseRoutes,
+    formatRoutes: formats.map(format => `/${format.slug}`),
+    cityFormatRoutes: cities.flatMap(city => formats.map(format => `/${city.slug}/${format.slug}`)),
+  };
 };
 
 const readEntry = async (localizedRoute: string, type: PageType) => {
@@ -200,9 +206,7 @@ const readEntry = async (localizedRoute: string, type: PageType) => {
     })
     : await fs.readFile(filePath, 'utf8');
   const text = extractMainText(html);
-  if (type === 'course-detail') {
-    inspectPublicHtml(html, localizedRoute, process.env.NUXT_PUBLIC_SITE_URL || defaultSiteUrl, { indexable: process.env.OT_NOINDEX !== 'true' });
-  }
+  inspectPublicHtml(html, localizedRoute, process.env.NUXT_PUBLIC_SITE_URL || defaultSiteUrl, { indexable: process.env.OT_NOINDEX !== 'true' });
   if (!extractTitle(html) || !extractMetaContent(html, 'name', 'description') || !extractFirstH1(html)) {
     throw new Error(`${localizedRoute}: missing rendered title, description or H1`);
   }
@@ -228,12 +232,20 @@ const readEntry = async (localizedRoute: string, type: PageType) => {
 };
 
 const buildEntries = async () => {
-  const { cityRoutes, courseRoutes, cityCourseRoutes } = buildRoutes();
+  const { cityRoutes, courseRoutes, cityCourseRoutes, formatRoutes, cityFormatRoutes } = buildRoutes();
   const entries: PageEntry[] = [];
   const canonicalIssues: Array<{ route: string; canonicalPath: string | null }> = [];
   const requiresHttpVerification: string[] = [];
 
   for (const locale of locales) {
+    for (const [routes, type] of [[formatRoutes, 'format'], [cityFormatRoutes, 'city-format']] as const) {
+      for (const route of routes) {
+        const localizedRoute = withLocale(route, locale);
+        const { entry, canonicalPath } = await readEntry(localizedRoute, type);
+        if (canonicalPath !== canonicalPublicPath(localizedRoute)) canonicalIssues.push({ route: localizedRoute, canonicalPath });
+        entries.push(entry);
+      }
+    }
     for (const route of cityRoutes) {
       const localizedRoute = withLocale(route, locale);
       const { entry, canonicalPath } = await readEntry(localizedRoute, 'city');
@@ -313,7 +325,7 @@ export const collectDuplicateIssues = (list: PageEntry[]) => {
       }
     }
 
-    if (entry.type === 'course-detail' && descriptionKey) {
+    if (descriptionKey) {
       const existingRoute = descriptionMap.get(descriptionKey);
       if (existingRoute && existingRoute !== entry.route) {
         duplicates.push({ kind: 'description', a: existingRoute, b: entry.route, value: entry.description });
@@ -350,33 +362,12 @@ export const collectDuplicateIssues = (list: PageEntry[]) => {
 };
 
 const canIgnoreTemplateSimilarity = (a: PageEntry, b: PageEntry) => {
-  if (a.type === 'course-detail' && b.type === 'course-detail'
+  // Only verified historical aliases may share a body. Distinct titles alone
+  // must not hide repeated city/course content from editorial review.
+  return a.type === 'course-detail' && b.type === 'course-detail'
     && a.canonicalPath === canonicalPublicPath(a.route)
     && b.canonicalPath === canonicalPublicPath(b.route)
-    && a.canonicalPath === b.canonicalPath) return true;
-  const sameCourseAcrossCities =
-    a.type === 'city-course' &&
-    b.type === 'city-course' &&
-    Boolean(a.courseSlug) &&
-    a.courseSlug === b.courseSlug &&
-    Boolean(a.citySlug) &&
-    Boolean(b.citySlug) &&
-    a.citySlug !== b.citySlug;
-
-  const differentNationalCourses =
-    a.type === 'course' &&
-    b.type === 'course' &&
-    Boolean(a.courseSlug) &&
-    Boolean(b.courseSlug) &&
-    a.courseSlug !== b.courseSlug;
-
-  if (!sameCourseAcrossCities && !differentNationalCourses) return false;
-
-  return (
-    normalizeMeta(a.title) !== normalizeMeta(b.title) &&
-    normalizeMeta(a.description) !== normalizeMeta(b.description) &&
-    normalizeMeta(a.h1) !== normalizeMeta(b.h1)
-  );
+    && a.canonicalPath === b.canonicalPath;
 };
 
 export const run = async () => {

@@ -44,7 +44,6 @@ export function canonicalPublicPath(path) {
 export function canonicalPublicUrl(href) {
   const url = new URL(href);
   const canonical = canonicalPublicPath(url.pathname);
-  if (canonical === url.pathname) return href;
   url.pathname = canonical;
   url.search = '';
   url.hash = '';

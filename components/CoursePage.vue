@@ -7,6 +7,7 @@ import { getPublicCourseValue } from '~/shared/public-course-value';
 import { leadContextQuery, leadFormats } from '~/shared/lead-context';
 import { directionDetails } from '~/content/direction-details';
 import { getCourseGuidance } from '~/content/course-guidance';
+import { buildCityPageContext } from '~/content/city-page-context';
 import { getCityContentBySlug, getCourseContentBySlug, useSeoContent } from '~/composables/useSeoContent';
 
 const props = defineProps({
@@ -47,6 +48,9 @@ const localSeoContent = useSeoContent(
   computed(() => getCourseContentBySlug(props.course.slug)),
 );
 const cityOrganization = computed(() => localSeoContent.value?.modules.scenarios.items[2]);
+const cityContext = computed(() => route.params.city
+  ? buildCityPageContext(resolvedCity.value?.slug, 'course', props.course.slug, locale.value)
+  : null);
 
 const courseName = computed(() => props.course.name[locale.value] || props.course.name.ru);
 const courseValue = computed(() => getPublicCourseValue(props.course.slug));
@@ -120,6 +124,10 @@ const specialContent = computed(() => {
     articles: copy.articles.map(article => ({ ...article, to: localePath(article.to) })),
   };
 });
+// Local landing pages focus on arranging this group; national pages retain the full guide.
+const visibleGuidanceSections = computed(() => cityContext.value
+  ? specialContent.value?.sections.filter(section => ['who-needs', 'programme', 'docs'].includes(section.id)) || []
+  : specialContent.value?.sections || []);
 const specialDescription = computed(() => {
   if (props.course.slug === 'promyshlennaya-bezopasnost') {
     return locale.value === 'kk'
@@ -165,17 +173,17 @@ const programDetailsRoute = computed(() => ({
   query: leadContextQuery({ city: resolvedCity.value?.slug || route.query.city, format: route.query.format }),
 }));
 const contextualLink = (to) => ({ path: to, query: leadContextQuery({ programId: props.course.slug, city: resolvedCity.value?.slug || route.query.city, format: route.query.format }) });
-const standardSections = computed(() => [
+const standardSections = computed(() => cityContext.value ? [] : [
   { id: 'included', title: t('course.includesTitle'), items: includesItems.value },
   { id: 'benefits', title: t('course.benefitsTitle'), items: benefitsItems.value },
   { id: 'process', title: t('course.processTitle'), items: processItems.value },
   { id: 'why', title: t('course.whyTitle'), items: whyItems.value },
   { id: 'requirements', title: t('course.requirementsTitle'), items: requirementsItems.value },
 ]);
-const pageTitle = computed(() => specialContent.value?.title || metaTitle.value);
-const pageDescription = computed(() => specialDescription.value || metaDescription.value);
+const pageTitle = computed(() => cityContext.value ? metaTitle.value : specialContent.value?.title || metaTitle.value);
+const pageDescription = computed(() => cityContext.value?.description || specialDescription.value || metaDescription.value);
 // The former non-special template used the localized SEO title, including its city.
-const pageHeading = computed(() => specialContent.value?.heading || metaTitle.value);
+const pageHeading = computed(() => cityContext.value ? metaTitle.value.split(' | ')[0] : specialContent.value?.heading || metaTitle.value);
 const breadcrumbCurrentName = computed(() => specialContent.value?.heading || courseName.value);
 
 const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://otcenter.kz');
@@ -201,8 +209,7 @@ const defaultFaqItems = computed(() => {
   }));
 });
 const faqItems = computed(() => {
-  if (!specialContent.value?.faqItems) return defaultFaqItems.value;
-  return specialContent.value.faqItems;
+  return cityContext.value?.faqs || specialContent.value?.faqItems || defaultFaqItems.value;
 });
 
 const courseSchema = computed(() => ({
@@ -342,13 +349,15 @@ useHead(() => ({
 
     <div class="ed-public-body">
       <div class="ed-public-content">
-        <p v-if="cityIntro" class="ed-public-note">{{ cityIntro }}</p>
-        <section v-if="cityOrganization" id="city-organization" class="ed-public-section">
+        <p v-if="cityIntro && !cityContext" class="ed-public-note">{{ cityIntro }}</p>
+        <CityPageContext v-if="cityContext" :content="cityContext" />
+        <section v-else-if="cityOrganization" id="city-organization" class="ed-public-section">
           <h2>{{ cityOrganization.title }}</h2>
           <p>{{ cityOrganization.text }}</p>
         </section>
+        <CourseSearchIntent v-if="!cityContext" :direction-id="props.course.slug" />
         <template v-if="specialContent">
-          <section v-for="section in specialContent.sections" :id="section.id" :key="section.id" class="ed-public-section">
+          <section v-for="section in visibleGuidanceSections" :id="section.id" :key="section.id" class="ed-public-section">
             <h2>{{ section.title }}</h2>
             <p v-if="section.text">{{ section.text }}</p>
             <ul v-if="section.bullets" class="ed-public-list"><li v-for="item in section.bullets" :key="item">{{ item }}</li></ul>
@@ -391,8 +400,9 @@ useHead(() => ({
       </div>
       <nav class="ed-public-toc" :aria-label="locale === 'kk' ? 'Осы бетте' : 'На этой странице'">
         <h2>{{ locale === 'kk' ? 'Осы бетте' : 'На этой странице' }}</h2>
-        <a v-if="cityOrganization" href="#city-organization">{{ cityOrganization.title }}</a>
-        <ul v-if="specialContent"><li v-for="section in specialContent.sections" :key="section.id"><a :href="`#${section.id}`">{{ section.title }}</a></li></ul>
+        <template v-if="cityContext"><a v-for="section in cityContext.sections" :key="section.id" :href="`#${section.id}`">{{ section.title }}</a></template>
+        <a v-else-if="cityOrganization" href="#city-organization">{{ cityOrganization.title }}</a>
+        <ul v-if="specialContent"><li v-for="section in visibleGuidanceSections" :key="section.id"><a :href="`#${section.id}`">{{ section.title }}</a></li></ul>
         <ul v-else><li><a href="#programme">{{ t('course.programTitle') }}</a></li><li v-for="section in standardSections" :key="section.id"><a :href="`#${section.id}`">{{ section.title }}</a></li></ul>
         <a href="#questions">{{ t('course.faqTitle') }}</a>
         <a v-if="specialContent?.articles.length" href="#related-guides">{{ locale === 'kk' ? 'Пайдалы материалдар' : 'Полезные материалы' }}</a>

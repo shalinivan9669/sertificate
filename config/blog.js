@@ -18,8 +18,10 @@ import complianceGuarantees from '../content/blog/antikorrupcionnyj-komplaens-tr
 import productionControl from '../content/blog/proizvodstvennyj-kontrol-neftegaz-2026.js';
 import internalTrainers from '../content/blog/vnutrennie-trenery-ohrana-truda-2026.js';
 import digitalSafety from '../content/blog/ii-umnye-kaski-ohrana-truda-2026.js';
+import trainingDocuments from '../content/blog/obuchenie-udostoverenie-sertifikat-professiya.js';
 
 export const blogPosts = [
+  trainingDocuments,
   safetyInspections, complianceGuarantees, productionControl, internalTrainers, digitalSafety,
   gasWork, industrialFrequency, ptmExplained, electricalDocuments, documentVerification,
   trainingDirections, biotChanges, briefings, riskRegister, trainingPlan,

@@ -28,3 +28,9 @@ test('normalization preserves the configured origin and does not redirect the jo
   assert.equal(canonicalPublicUrl(`https://preview.example${route}`), 'https://preview.example/kk/courses/ptm');
   assert.equal(route, original);
 });
+
+test('all canonical URLs discard journey parameters and fragments without altering city paths', () => {
+  for (const path of ['/b2b', '/kk/courses/ohrana-truda', '/almaty/online-obuchenie']) {
+    assert.equal(canonicalPublicUrl(`https://www.otcenter.kz${path}?city=astana&format=online#form`), `https://www.otcenter.kz${path}`);
+  }
+});

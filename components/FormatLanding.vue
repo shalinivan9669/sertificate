@@ -4,6 +4,7 @@ import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#im
 import { leadContextQuery } from '~/shared/lead-context';
 import { getFormatByType } from '~/config/formats';
 import { getCityBySlug, getCityPrepositional } from '~/composables/useCity';
+import { buildCityPageContext } from '~/content/city-page-context';
 
 const props = defineProps({
   type: {
@@ -32,6 +33,11 @@ const heading = computed(() => ({
 const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
 const localePath = useLocalePath();
+// URL query preferences keep the national page stable; only city paths get local copy.
+const pathCity = computed(() => props.city && 'value' in props.city ? props.city.value : props.city);
+const cityContext = computed(() => route.params.city
+  ? buildCityPageContext(pathCity.value?.slug, 'format', props.type, locale.value)
+  : null);
 
 const cityPrepositional = computed(
   () =>
@@ -76,6 +82,7 @@ const metaTitle = computed(() => {
 
 const metaDescription = computed(() => {
   if (!format.value) return '';
+  if (cityContext.value) return cityContext.value.description;
   return resolveSeoValue(format.value.seo?.description).replaceAll(
     '{{cityPrepositional}}',
     cityPrepositional.value,
@@ -133,6 +140,11 @@ useHead(() => ({
         <div><p>{{ resolveLocalized(section.subtitle) }}</p><ul class="ed-public-list"><li v-for="item in resolveList(section.bullets)" :key="item">{{ item }}</li></ul></div>
       </section>
     </div>
+    <CityPageContext v-if="cityContext" :content="cityContext" />
+    <section v-if="cityContext" class="ed-public-section ed-public-faq">
+      <h2>{{ locale === 'kk' ? 'Жиі қойылатын сұрақтар' : 'Частые вопросы' }}</h2>
+      <details v-for="item in cityContext.faqs" :key="item.q"><summary>{{ item.q }}</summary><p>{{ item.a }}</p></details>
+    </section>
     <section class="ed-public-callout">
       <h2>{{ t('formatLanding.ctaTitle') }}</h2><p>{{ t('formatLanding.ctaDescription') }}</p>
       <div class="ed-public-actions"><NuxtLink :to="programSelectionRoute" class="ed-public-button">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink><a class="ed-public-link" href="tel:+77766803282">{{ t('cta.call') }}</a></div>

@@ -2426,5 +2426,103 @@
         "width": 1536
       }
     ]
+  },
+  "/images/blog/obuchenie-udostoverenie-sertifikat-professiya.webp": {
+    "width": 1536,
+    "height": 1024,
+    "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1536.webp",
+    "avif": [
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-320.avif",
+        "width": 320
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-480.avif",
+        "width": 480
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-768.avif",
+        "width": 768
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1152.avif",
+        "width": 1152
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1536.avif",
+        "width": 1536
+      }
+    ],
+    "webp": [
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-320.webp",
+        "width": 320
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-480.webp",
+        "width": 480
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-768.webp",
+        "width": 768
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1152.webp",
+        "width": 1152
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1536.webp",
+        "width": 1536
+      }
+    ]
+  },
+  "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1536.webp": {
+    "width": 1536,
+    "height": 1024,
+    "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1536.webp",
+    "avif": [
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-320.avif",
+        "width": 320
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-480.avif",
+        "width": 480
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-768.avif",
+        "width": 768
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1152.avif",
+        "width": 1152
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1536.avif",
+        "width": 1536
+      }
+    ],
+    "webp": [
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-320.webp",
+        "width": 320
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-480.webp",
+        "width": 480
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-768.webp",
+        "width": 768
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1152.webp",
+        "width": 1152
+      },
+      {
+        "src": "/images/optimized/obuchenie-udostoverenie-sertifikat-professiya-3030715b01c8-1536.webp",
+        "width": 1536
+      }
+    ]
   }
 }
