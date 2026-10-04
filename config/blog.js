@@ -23,7 +23,13 @@ import trainingDocuments from '../content/blog/obuchenie-udostoverenie-sertifika
 import heatingSeason from '../content/blog/otopitelnyj-sezon-bezopasnost-rabochih-mest-2026.js';
 import cafeFireSafety from '../content/blog/pozharnaya-bezopasnost-kafe-torgovlya-2026.js';
 
+import almatyHeating from '../content/blog/otopitelnyj-sezon-almaty-2026-2027.js';
+import karagandaHeating from '../content/blog/otopitelnyj-sezon-karaganda-2026-2027.js';
+import contractRecords from '../content/blog/esutd-trudovye-dogovory-proverka-2026.js';
+import constructionControl from '../content/blog/kontrol-ohrany-truda-strojploshchadka-2026.js';
+
 export const blogPosts = [
+  almatyHeating, karagandaHeating, contractRecords, constructionControl,
   heatingSeason, cafeFireSafety,
   trainingDocuments,
   safetyInspections, complianceGuarantees, productionControl, internalTrainers, digitalSafety,
