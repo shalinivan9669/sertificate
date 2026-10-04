@@ -20,7 +20,11 @@ import internalTrainers from '../content/blog/vnutrennie-trenery-ohrana-truda-20
 import digitalSafety from '../content/blog/ii-umnye-kaski-ohrana-truda-2026.js';
 import trainingDocuments from '../content/blog/obuchenie-udostoverenie-sertifikat-professiya.js';
 
+import heatingSeason from '../content/blog/otopitelnyj-sezon-bezopasnost-rabochih-mest-2026.js';
+import cafeFireSafety from '../content/blog/pozharnaya-bezopasnost-kafe-torgovlya-2026.js';
+
 export const blogPosts = [
+  heatingSeason, cafeFireSafety,
   trainingDocuments,
   safetyInspections, complianceGuarantees, productionControl, internalTrainers, digitalSafety,
   gasWork, industrialFrequency, ptmExplained, electricalDocuments, documentVerification,
