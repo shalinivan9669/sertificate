@@ -10,7 +10,7 @@ const accepted = ref(false);
 let orderKey = "";
 const { data, pending, error, refresh } = await useAsyncData(
   "lms-order-program-" + id,
-  () => api<any>("/catalog/programs/" + encodeURIComponent(id)),
+  () => api<any>("/checkout/programs/" + encodeURIComponent(id)),
 );
 const program = computed(() => data.value?.program || data.value);
 const version = computed(() =>

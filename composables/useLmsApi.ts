@@ -27,8 +27,6 @@ export interface LmsProgram {
     title: string;
     language: string;
     durationHours: number;
-    priceMinor: number | null;
-    currency: string;
     modules: LmsModule[];
     audience?: string;
     prerequisites?: string;
@@ -42,6 +40,9 @@ export interface LmsProgram {
     billingBasis?: "learner" | "organization";
   }>;
 }
+export type LmsCheckoutProgram = Omit<LmsProgram, 'versions'> & {
+  versions: Array<LmsProgram['versions'][number] & { priceMinor: number | null; currency: string }>;
+};
 export interface LmsModule {
   id: string;
   title: string;

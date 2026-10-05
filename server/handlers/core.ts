@@ -1,6 +1,6 @@
 import { defineEventHandler, getRequestURL, setHeader } from 'h3';
 import { authConfiguration } from '../services/auth';
-import { catalogProgram, catalogPrograms, createProgram, createVersion, getAuthoringGuide, listVersions, publishVersion, reviewVersion, updateVersion } from '../services/catalog';
+import { catalogProgram, catalogPrograms, checkoutProgram, checkoutPrograms, createProgram, createVersion, getAuthoringGuide, listVersions, publishVersion, reviewVersion, updateVersion } from '../services/catalog';
 import { activateEnrollment, completeLesson, confirmPractice, createEnrollment, enrollmentDetails, getLesson, myEnrollments } from '../services/learning';
 import { getAttempt, saveAnswer, startAttempt, submitAttempt } from '../services/assessment';
 import { changeRole, listUsers } from '../services/core-administration';
@@ -9,7 +9,7 @@ import { requireUser } from '../utils/auth';
 import { entityId, fail, integer, isoDate, jsonBody, requestKey, textValue } from '../utils/validation';
 
 export function isCorePath(path: string) {
-  return /^\/(?:auth\/config|catalog\/programs(?:\/[^/]+)?|me(?:\/enrollments)?|enrollments(?:\/.*)?|attempts(?:\/.*)?|admin\/programs(?:\/[^/]+\/authoring-guide)?|admin\/program-versions(?:\/.*)?|admin\/enrollments(?:\/.*)?|admin\/users(?:\/.*)?)$/.test(path);
+  return /^\/(?:auth\/config|catalog\/programs(?:\/[^/]+)?|checkout\/programs(?:\/[^/]+)?|me(?:\/enrollments)?|enrollments(?:\/.*)?|attempts(?:\/.*)?|admin\/programs(?:\/[^/]+\/authoring-guide)?|admin\/program-versions(?:\/.*)?|admin\/enrollments(?:\/.*)?|admin\/users(?:\/.*)?)$/.test(path);
 }
 
 /** Core route table. Existing named business endpoints take precedence over this catch-all. */
@@ -21,6 +21,15 @@ export default defineEventHandler(async (event) => {
   let match = path.match(/^\/catalog\/programs\/([^/]+)$/);
   if (method === 'GET' && match) return catalogProgram(entityId(match[1]));
   const actor = await requireUser(event);
+  if (method === 'GET' && path === '/checkout/programs') {
+    setHeader(event, 'Cache-Control', 'private, no-store');
+    return checkoutPrograms(actor);
+  }
+  match = path.match(/^\/checkout\/programs\/([^/]+)$/);
+  if (method === 'GET' && match) {
+    setHeader(event, 'Cache-Control', 'private, no-store');
+    return checkoutProgram(actor, entityId(match[1]));
+  }
   if (method === 'GET' && path === '/me') return { user: { id: actor.id, name: actor.name, email: actor.email, role: actor.role, twoFactorEnabled: actor.twoFactorEnabled, mfaVerified: Boolean(actor.mfaVerifiedAt && Date.now() - actor.mfaVerifiedAt < 12 * 60 * 60 * 1000) } };
   if (method === 'GET' && path === '/me/enrollments') return myEnrollments(actor);
   if (method === 'GET' && path === '/admin/users') return listUsers(actor, getRequestURL(event).searchParams.get('query') || '');

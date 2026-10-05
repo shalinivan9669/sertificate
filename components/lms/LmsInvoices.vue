@@ -17,8 +17,8 @@ const { data, pending, error, refresh } = await useAsyncData(
   "lms-invoices-" + (props.organizationId || "finance"),
   () => api<any>(endpoint.value),
 );
-const { data: catalog } = await useAsyncData("lms-catalog", () =>
-  api<{ programs: LmsProgram[] }>("/catalog/programs"),
+const { data: catalog } = await useAsyncData("lms-checkout-catalog", () =>
+  api<{ programs: LmsCheckoutProgram[] }>("/checkout/programs"),
 );
 const versions = computed(
   () =>

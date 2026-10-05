@@ -3,6 +3,7 @@ import { audit, databaseConfigured, execute, queryAll, queryOne, withTransaction
 import { courseDirections, legacyCourseDirections, resolveCourseDirection } from '../../shared/course-registry';
 import { getSourceProductForDirection, sourceProductDocument } from '../../shared/source-products';
 import { getPublicCoursePricing } from '../../shared/public-course-pricing';
+import { getInventoryPricing } from './inventory-pricing';
 import { entityId, fail, integer, record, strictKeys, textValue } from '../utils/validation';
 import { assertRole, type AppUser } from '../utils/auth';
 
@@ -101,7 +102,7 @@ export function publicVersion(row: VersionRow) {
   return {
     id: row.id, programId: row.program_id, version: row.version, title: data.title, language: data.language, intakeOpen: row.intake_open !== 0,
     audience: data.audience, prerequisites: data.prerequisites, outcomes: data.outcomes, limitations: data.limitations,
-    format: data.format, durationHours: data.durationHours, priceMinor: data.priceMinor, currency: data.currency, billingBasis: data.billingBasis ?? 'learner',
+    format: data.format, durationHours: data.durationHours, billingBasis: data.billingBasis ?? 'learner',
     accessModel: data.accessModel, documentDescription: data.documentDescription, support: data.support,
     reviewedAt: data.reviewedAt, publishedAt: row.published_at,
     modules: data.modules.map((module) => ({ id: module.id, title: module.title, lessons: module.lessons.map(({ id, title, required, kind }) => ({ id, title, required, kind })) })),
@@ -142,6 +143,23 @@ export async function catalogProgram(id: string) {
   return { program: { id: program.id, directionId: program.direction_id, slug: metadata.id, title: JSON.parse(program.title_json), publicPath: publicDirectionPath(metadata.id), ...inventoryMetadata(metadata.id), versions: versions.map(publicVersion), availability: versions.length ? 'published' : 'consultation' } };
 }
 
+/** Used only behind requireUser; never prerender or cache the checkout response. */
+export async function checkoutProgram(_actor: AppUser, id: string) {
+  const result = await catalogProgram(id);
+  const versions = await Promise.all(result.program.versions.map(async version => {
+    const row = await getVersion(version.id);
+    const data: ProgramData = JSON.parse(row.data_json);
+    return { ...version, priceMinor: data.priceMinor, currency: data.currency };
+  }));
+  return { program: { ...result.program, versions } };
+}
+
+export async function checkoutPrograms(actor: AppUser) {
+  const catalog = await catalogPrograms();
+  const programs = await Promise.all(catalog.programs.map(async program => (await checkoutProgram(actor, program.id)).program));
+  return { storageAvailable: catalog.storageAvailable, programs };
+}
+
 /** An authoring checklist from actual inventory metadata; this does not create or approve a draft. */
 export async function getAuthoringGuide(actor: AppUser, id: string) {
   assertRole(actor, ['editor', 'reviewer']);
@@ -168,7 +186,7 @@ export async function getAuthoringGuide(actor: AppUser, id: string) {
     { path: 'accessModel', provided: false, label: { ru: 'Условия предоставления доступа', kk: 'Қолжетімділік беру шарттары' } },
     { path: 'reviewedAt', provided: false, label: { ru: 'Дата проверки содержания', kk: 'Мазмұнды тексеру күні' } },
   ];
-  return { guide: { programId: program.id, directionId: program.direction_id, title, ...inventoryMetadata(program.direction_id),
+  return { guide: { programId: program.id, directionId: program.direction_id, title, ...inventoryMetadata(program.direction_id), pricing: getInventoryPricing(program.direction_id),
     source: source ? { documentId: source.sourceDocumentId, documentTitle: sourceProductDocument.title, sourcePage: source.sourcePage, sourceRow: source.sourceRow, sourceNameRaw: source.sourceNameRaw, sourceDescriptionRaw: source.sourceDescriptionRaw, sourceNoteRaw: source.sourceNoteRaw, standardAsWritten: source.standardAsWritten, clarifications: source.clarifications } : null,
     fields, missingFields: fields.filter(field => !field.provided).map(field => field.path),
     readiness: { canPublish: false, reason: source ? 'SOURCE_IS_SERVICE_INVENTORY' : 'ACADEMIC_CONTENT_NOT_PROVIDED' },
