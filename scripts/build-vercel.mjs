@@ -35,6 +35,6 @@ if (process.env.VERCEL_GIT_COMMIT_MESSAGE?.includes('[deploy without tests]')) {
   process.exit(0);
 }
 for (const script of ['scripts/seo-build-check.mjs', 'scripts/build-asset-check.mjs']) {
-  const verify = spawnSync(process.execPath, [script, '.vercel/output/static'], { cwd: root, stdio: 'inherit' });
+  const verify = spawnSync(process.execPath, ['--import', 'tsx', script, '.vercel/output/static'], { cwd: root, stdio: 'inherit' });
   if (verify.status !== 0) process.exit(verify.status || 1);
 }
