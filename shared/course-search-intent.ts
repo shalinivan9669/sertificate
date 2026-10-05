@@ -1,4 +1,5 @@
 import { resolveCourseDirection } from './course-registry';
+import { getCourseSearchContent } from './course-search-content';
 
 // Selection guidance, not an approved syllabus or a promise of qualification.
 const preparation: Record<string, [string, string]> = {
@@ -31,6 +32,7 @@ export function getCourseSearchIntent(value: unknown, locale: unknown = 'ru') {
   const kk = locale === 'kk' || locale === 'kk-KZ';
   const iso = ['iso-9001', 'iso-14001', 'menedzhment-ohrany-zdorovya'].includes(direction.id);
   return {
+    ...getCourseSearchContent(direction.id, locale),
     title: kk ? 'Бағдарлама мен оқу құжатын қалай таңдауға болады?' : 'Как выбрать обучение и документ по направлению',
     preparation: entry[kk ? 1 : 0],
     document: kk

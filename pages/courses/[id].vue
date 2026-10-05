@@ -3,6 +3,8 @@ import { leadContextQuery } from '~/shared/lead-context';
 import { preferredProgramVersion } from '~/shared/program-version-selection';
 import { getPublicCourseValue } from '~/shared/public-course-value';
 import { getPublicCourseSeo } from '~/shared/public-course-seo';
+import { getCourseSearchContent } from '~/shared/course-search-content';
+import { canonicalPublicPath } from '~/config/public-route-runtime';
 
 type ProgramDetails = Omit<LmsProgram, 'versions'> & {
   versions: Array<LmsProgram['versions'][number] & { limitations?: string; support?: string }>;
@@ -51,6 +53,10 @@ const courseValue = computed(() => getPublicCourseValue(program.value?.direction
 const audience = computed(() => version.value?.audience || guidance.value?.audience[locale.value === 'kk' ? 'kk' : 'ru']);
 const seo = computed(() => getPublicCourseSeo(requestedProgramId.value, locale.value)
   || getPublicCourseSeo(program.value?.directionId || program.value?.id, locale.value));
+const searchContent = computed(() => getCourseSearchContent(program.value?.directionId || requestedProgramId.value, locale.value));
+const pageHeading = computed(() => searchContent.value?.programHeading || title.value);
+const runtimeConfig = useRuntimeConfig();
+const absoluteUrl = (value: string) => new URL(value, runtimeConfig.public.siteUrl).toString();
 useHead(() => ({
   title: seo.value?.title || title.value + ' — OT Center',
   meta: seo.value ? [
@@ -60,6 +66,22 @@ useHead(() => ({
     { name: 'twitter:title', content: seo.value.title },
     { name: 'twitter:description', content: seo.value.description },
   ] : [],
+  script: program.value ? [{
+    key: 'public-program-structured-data', type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      '@context': 'https://schema.org', '@graph': [{
+        '@type': 'Course', name: pageHeading.value, description: seo.value?.description,
+        url: absoluteUrl(canonicalPublicPath(route.path)),
+        provider: { '@type': 'EducationalOrganization', name: 'OT Center', url: absoluteUrl('/') },
+      }, {
+        '@type': 'BreadcrumbList', itemListElement: [
+          { '@type': 'ListItem', position: 1, name: tr('Главная', 'Басты бет'), item: absoluteUrl(path('/')) },
+          { '@type': 'ListItem', position: 2, name: tr('Курсы', 'Курстар'), item: absoluteUrl(path('/courses')) },
+          { '@type': 'ListItem', position: 3, name: pageHeading.value, item: absoluteUrl(canonicalPublicPath(route.path)) },
+        ],
+      }],
+    }).replace(/</g, '\\u003c'),
+  }] : [],
 }));
 
 async function selectVersion(event: Event) {
@@ -92,7 +114,7 @@ async function enroll() {
 </script>
 
 <template>
-  <LmsShell :title="title" :back-query="catalogQuery">
+  <LmsShell :title="pageHeading" :back-query="catalogQuery">
     <LmsState :pending="pending" :error="error" @retry="refresh">
       <div v-if="program" class="ed-program-grid">
         <section class="ed-program-intro" aria-labelledby="program-overview">

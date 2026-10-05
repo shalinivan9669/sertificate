@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { blogPosts } from '../config/blog.js';
-import { courses } from '../config/courses.js';
+import { courseDirections } from '../shared/course-registry.ts';
 import { buildPublicRoutes } from '../config/public-route-policy.js';
 
 test('blog articles have distinct localized metadata, real covers and valid editorial dates', async () => {
@@ -10,7 +10,7 @@ test('blog articles have distinct localized metadata, real covers and valid edit
   const images = new Set();
   const titles = { ru: new Set(), kk: new Set() };
   const descriptions = { ru: new Set(), kk: new Set() };
-  const courseSlugs = new Set(courses.map((course) => course.slug));
+  const courseSlugs = new Set(courseDirections.map((course) => course.id));
   for (const post of blogPosts) {
     assert.ok(!slugs.has(post.slug), `duplicate article slug: ${post.slug}`);
     slugs.add(post.slug);

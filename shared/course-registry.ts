@@ -21,6 +21,15 @@ export function resolveCourseDirection(value: unknown) {
   return courseDirections.find((direction) => direction.id === value || direction.alias === value);
 }
 
+/** The primary service URL exists for legacy directions; other programs live in the catalog. */
+export function getCoursePublicPath(value: unknown): string | undefined {
+  const direction = resolveCourseDirection(value);
+  if (!direction) return undefined;
+  return legacyCourseDirections.some((item) => item.id === direction.id)
+    ? `/${direction.id}`
+    : `/courses/${direction.id}`;
+}
+
 /** Never accept protocols, backslashes, encoded slashes, or arbitrary callback destinations. */
 export function safeReturnTo(value: unknown, fallback = '/account') {
   if (typeof value !== 'string' || value.length > 2048 || /[\\\u0000-\u001f]/.test(value) || !value.startsWith('/') || value.startsWith('//')) return fallback;

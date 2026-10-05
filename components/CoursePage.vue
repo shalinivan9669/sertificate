@@ -4,6 +4,8 @@ import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#im
 import { getCityName, getCityPrepositional } from '~/composables/useCity';
 import { resolveCourseDirection } from '~/shared/course-registry';
 import { getPublicCourseValue } from '~/shared/public-course-value';
+import { getPublicCourseLandingSeo } from '~/shared/public-course-seo';
+import { getCourseSearchContent } from '~/shared/course-search-content';
 import { leadContextQuery, leadFormats } from '~/shared/lead-context';
 import { directionDetails } from '~/content/direction-details';
 import { getCourseGuidance } from '~/content/course-guidance';
@@ -180,10 +182,12 @@ const standardSections = computed(() => cityContext.value ? [] : [
   { id: 'why', title: t('course.whyTitle'), items: whyItems.value },
   { id: 'requirements', title: t('course.requirementsTitle'), items: requirementsItems.value },
 ]);
-const pageTitle = computed(() => cityContext.value ? metaTitle.value : specialContent.value?.title || metaTitle.value);
-const pageDescription = computed(() => cityContext.value?.description || specialDescription.value || metaDescription.value);
+const searchContent = computed(() => getCourseSearchContent(props.course.slug, locale.value));
+const landingSeo = computed(() => getPublicCourseLandingSeo(props.course.slug, locale.value));
+const pageTitle = computed(() => cityContext.value ? metaTitle.value : landingSeo.value?.title || specialContent.value?.title || metaTitle.value);
+const pageDescription = computed(() => cityContext.value?.description || landingSeo.value?.description || specialDescription.value || metaDescription.value);
 // The former non-special template used the localized SEO title, including its city.
-const pageHeading = computed(() => cityContext.value ? metaTitle.value.split(' | ')[0] : specialContent.value?.heading || metaTitle.value);
+const pageHeading = computed(() => cityContext.value ? metaTitle.value.split(' | ')[0] : searchContent.value?.heading || specialContent.value?.heading || metaTitle.value);
 const breadcrumbCurrentName = computed(() => specialContent.value?.heading || courseName.value);
 
 const baseUrl = computed(() => runtimeConfig.public.siteUrl || 'https://otcenter.kz');
@@ -302,7 +306,7 @@ useHead(() => ({
     { name: 'description', content: pageDescription.value },
     { property: 'og:title', content: pageTitle.value },
     { property: 'og:description', content: pageDescription.value },
-    { property: 'og:type', content: 'article' },
+    { property: 'og:type', content: 'website' },
     { name: 'twitter:title', content: pageTitle.value },
     { name: 'twitter:description', content: pageDescription.value },
   ],
@@ -355,7 +359,7 @@ useHead(() => ({
           <h2>{{ cityOrganization.title }}</h2>
           <p>{{ cityOrganization.text }}</p>
         </section>
-        <CourseSearchIntent v-if="!cityContext" :direction-id="props.course.slug" />
+        <CourseSearchIntent v-if="!cityContext" :direction-id="props.course.slug" :include-articles="!specialContent" />
         <template v-if="specialContent">
           <section v-for="section in visibleGuidanceSections" :id="section.id" :key="section.id" class="ed-public-section">
             <h2>{{ section.title }}</h2>
@@ -402,6 +406,7 @@ useHead(() => ({
         <h2>{{ locale === 'kk' ? 'Осы бетте' : 'На этой странице' }}</h2>
         <template v-if="cityContext"><a v-for="section in cityContext.sections" :key="section.id" :href="`#${section.id}`">{{ section.title }}</a></template>
         <a v-else-if="cityOrganization" href="#city-organization">{{ cityOrganization.title }}</a>
+        <a v-if="!cityContext" href="#training-documents">{{ locale === 'kk' ? 'Оқу бағытын таңдау' : 'Как выбрать обучение' }}</a>
         <ul v-if="specialContent"><li v-for="section in visibleGuidanceSections" :key="section.id"><a :href="`#${section.id}`">{{ section.title }}</a></li></ul>
         <ul v-else><li><a href="#programme">{{ t('course.programTitle') }}</a></li><li v-for="section in standardSections" :key="section.id"><a :href="`#${section.id}`">{{ section.title }}</a></li></ul>
         <a href="#questions">{{ t('course.faqTitle') }}</a>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { courseDirections } from "~/shared/course-registry";
+import { courseDirections, legacyCourseDirections, getCoursePublicPath } from "~/shared/course-registry";
+import { getCourseSearchContent } from "~/shared/course-search-content";
 import { sourceProductCardSummaries } from "~/shared/source-products";
 import { getPublicCourseValue } from "~/shared/public-course-value";
 import { leadContextQuery } from "~/shared/lead-context";
@@ -54,6 +55,11 @@ const filteredCourses = computed(() =>
 const visibleCourses = computed(() =>
   expanded.value ? filteredCourses.value : filteredCourses.value.slice(0, 6),
 );
+const serviceLinks = computed(() => legacyCourseDirections.map((course) => ({
+  id: course.id,
+  label: getCourseSearchContent(course.id, lang.value)?.heading,
+  to: link(getCoursePublicPath(course.id)!),
+})));
 const filters = computed(() => [
   { id: "all", label: tr("Все направления", "Барлық бағыттар") },
   { id: "safety", label: tr("Охрана труда и безопасность", "Еңбекті қорғау және қауіпсіздік") },
@@ -248,8 +254,8 @@ const faqs = computed(() => [
       :eyebrow="tr('Профессиональное обучение в Казахстане', 'Қазақстандағы кәсіби оқыту')"
       :lines="
         lang === 'kk'
-          ? ['Қауіпсіз жұмысқа', 'арналған оқу.']
-          : ['Обучение для', 'безопасной работы.']
+          ? ['Еңбекті қорғау', 'және қауіпсіздік', 'бойынша оқыту.']
+          : ['Обучение по', 'охране труда', 'и безопасности.']
       "
       :description="
         tr(
@@ -370,6 +376,11 @@ const faqs = computed(() => [
         }}<span>{{ filteredCourses.length }}</span
         ><CivicIcon name="arrow" />
       </button>
+      <div class="ed-public-section">
+        <h3>{{ tr('Обучение по направлениям безопасности в Казахстане', 'Қазақстанда қауіпсіздік бағыттары бойынша оқыту') }}</h3>
+        <p>{{ tr('Сравните задачи подготовки и требования к участникам. На страницах направлений — выбор программы, документы и материалы по теме.', 'Даярлық міндеттері мен қатысушыларға талаптарды салыстырыңыз. Бағыт беттерінде бағдарлама таңдау, құжаттар және тақырыптық материалдар берілген.') }}</p>
+        <div class="ed-public-links"><NuxtLink v-for="service in serviceLinks" :key="service.id" :to="service.to">{{ service.label }}</NuxtLink></div>
+      </div>
     </section>
 
     <section id="learning-path" class="ed-story">

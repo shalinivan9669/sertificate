@@ -5,7 +5,8 @@ import { useHead, useRoute, createError, useLocalePath, useI18n, useRuntimeConfi
 import { formatBlogDate, getBlogWordCount } from '~/config/blog-format';
 import { getSortedBlogPosts } from '#build/blog-summaries.mjs';
 import { loadBlogPost } from '#build/blog-loaders.mjs';
-import { courses } from '~/config/courses';
+import { getCoursePublicPath } from '~/shared/course-registry';
+import { getCourseSearchContent } from '~/shared/course-search-content';
 
 // Re-run setup for another article/language, including its 404 and SSR metadata.
 definePageMeta({ key: (route) => route.path });
@@ -72,7 +73,11 @@ const relatedPosts = computed(() => getSortedBlogPosts()
   }))
   .sort((a, b) => b.relevance - a.relevance)
   .slice(0, 3));
-const getCourseName = (slug) => localize(courses.find((item) => item.slug === slug)?.name) || slug;
+const relatedTraining = computed(() => (localizedPost.value?.relatedCourses || []).flatMap((id) => {
+  const destination = getCoursePublicPath(id);
+  const label = getCourseSearchContent(id, locale.value)?.heading;
+  return destination && label ? [{ id, label, to: contextRoute(destination) }] : [];
+}));
 
 useHead(() => {
   const article = localizedPost.value;
@@ -150,7 +155,7 @@ useHead(() => {
         <div class="ed-public-content ed-legal-body">
           <div class="article-content" v-html="localizedPost.bodyHtml" />
           <section class="ed-public-callout"><h2>{{ copy.helpTitle }}</h2><p>{{ copy.helpText }}</p><div class="ed-public-actions"><NuxtLink :to="articleLeadRoute" class="ed-public-button">{{ copy.contact }}</NuxtLink></div></section>
-          <section v-if="localizedPost.relatedCourses.length" class="ed-public-section"><h2>{{ t('blogPost.relatedTitle') }}</h2><div class="ed-public-links"><NuxtLink v-for="course in localizedPost.relatedCourses" :key="course" :to="contextRoute(`/${course}`)">{{ getCourseName(course) }}</NuxtLink></div></section>
+          <section v-if="relatedTraining.length" class="ed-public-section"><h2>{{ t('blogPost.relatedTitle') }}</h2><div class="ed-public-links"><NuxtLink v-for="course in relatedTraining" :key="course.id" :to="course.to">{{ course.label }}</NuxtLink></div></section>
         </div>
         <nav v-if="localizedPost.toc.length" class="ed-public-toc" :aria-label="copy.contents"><h2>{{ copy.contents }}</h2><ol><li v-for="item in localizedPost.toc" :key="item.id"><a :href="`#${item.id}`">{{ item.title }}</a></li></ol></nav>
       </div>
