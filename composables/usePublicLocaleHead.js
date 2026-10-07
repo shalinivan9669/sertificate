@@ -1,5 +1,6 @@
 import { useHead, useLocaleHead, useRoute } from '#imports';
-import { canonicalPublicUrl, isNonIndexableRoute } from '~/config/public-route-runtime';
+import { canonicalPublicUrl, isNonIndexableRoute, stripLocale } from '~/config/public-route-runtime';
+import { getBlogPublishedLocales } from '#build/blog-summaries.mjs';
 
 export function usePublicLocaleHead() {
   const route = useRoute();
@@ -7,9 +8,11 @@ export function usePublicLocaleHead() {
   const localeHead = useLocaleHead({ dir: true, lang: true, seo: { canonicalQueries: [] } });
   useHead(() => {
     const privateRoute = isNonIndexableRoute(route.path);
+    const article = /^\/blog\//.test(stripLocale(route.path));
+    const articleLocales = article ? getBlogPublishedLocales(stripLocale(route.path)) : ['ru', 'kk'];
     return {
       htmlAttrs: localeHead.value.htmlAttrs,
-      link: privateRoute ? [] : localeHead.value.link?.map((link) => (
+      link: privateRoute ? [] : localeHead.value.link?.filter((link) => link.rel !== 'alternate' || articleLocales.length > 1).map((link) => (
         link.href && (link.rel === 'canonical' || link.rel === 'alternate')
           ? { ...link, href: canonicalPublicUrl(link.href) }
           : link

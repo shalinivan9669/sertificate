@@ -2,11 +2,12 @@
 import { computed } from 'vue';
 import { useHead, useI18n } from '#imports';
 import HomePageEditorial from '~/components/HomePageEditorial.vue';
+import { seoExpansionMetadata } from '~/content/seo-expansion-metadata';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
-const metaTitle = computed(() => t('home.metaTitle'));
-const metaDescription = computed(() => t('home.metaDescription'));
+const metaTitle = computed(() => locale.value === 'ru' ? seoExpansionMetadata.home.title : t('home.metaTitle'));
+const metaDescription = computed(() => locale.value === 'ru' ? seoExpansionMetadata.home.description : t('home.metaDescription'));
 
 useHead(() => ({
   title: metaTitle.value,

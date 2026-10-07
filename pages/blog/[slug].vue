@@ -20,7 +20,7 @@ const contextRoute = (path) => ({ path: localePath(path), query: leadContextQuer
 const formatDate = (date) => formatBlogDate(date, locale.value);
 const copy = computed(() => locale.value === 'kk' ? {
   home: 'Басты бет', blog: 'Блог', breadcrumbs: 'Навигация жолы',
-  published: 'Жарияланды', updated: 'Жаңартылды', minutes: 'мин оқу',
+  published: 'Жарияланды', updated: 'Жаңартылды', checked: 'Тексерілді', checkedNote: 'Дереккөздер мен редакциялық толықтыруды салыстыру күні.', minutes: 'мин оқу',
   author: 'Материалды дайындаған', contents: 'Мақала мазмұны',
   imageNote: 'Тақырыптық иллюстрация жасанды интеллект көмегімен жасалды.',
   helpTitle: 'Компания қызметкерлеріне оқу таңдаңыз',
@@ -28,7 +28,7 @@ const copy = computed(() => locale.value === 'kk' ? {
   contact: 'Топтық оқуды талқылау', related: 'Тақырып бойынша тағы', allArticles: 'Барлық мақалалар',
 } : {
   home: 'Главная', blog: 'Блог', breadcrumbs: 'Хлебные крошки',
-  published: 'Опубликовано', updated: 'Обновлено', minutes: 'мин чтения',
+  published: 'Опубликовано', updated: 'Обновлено', checked: 'Проверено', checkedNote: 'Дата редакционной сверки источников и внесённого блока.', minutes: 'мин чтения',
   author: 'Материал подготовлен', contents: 'В этой статье',
   imageNote: 'Тематическая иллюстрация создана с помощью искусственного интеллекта.',
   helpTitle: 'Подберите обучение для сотрудников компании',
@@ -63,7 +63,7 @@ const localizedPost = computed(() => post.value ? {
 } : null);
 const wordCount = computed(() => getBlogWordCount(localizedPost.value?.bodyHtml));
 const readingMinutes = computed(() => Math.max(1, Math.ceil(wordCount.value / 180)));
-const relatedPosts = computed(() => getSortedBlogPosts()
+const relatedPosts = computed(() => getSortedBlogPosts(locale.value)
   .filter((item) => item.slug !== post.value?.slug)
   .map((item) => ({
     ...item,
@@ -148,7 +148,7 @@ useHead(() => {
     <article>
       <EditorialPageHeader :title="localizedPost.title" :lead="localizedPost.description" :back-to="contextRoute('/blog')" :back-label="copy.allArticles">
         <template #context><div class="ed-public-tags"><span v-for="tag in localizedPost.tags" :key="tag">{{ tag }}</span></div></template>
-        <div class="ed-journal-meta"><span>{{ copy.published }}: <time :datetime="localizedPost.date">{{ formatDate(localizedPost.date) }}</time></span><span v-if="localizedPost.updatedAt && localizedPost.updatedAt !== localizedPost.date">{{ copy.updated }}: <time :datetime="localizedPost.updatedAt">{{ formatDate(localizedPost.updatedAt) }}</time></span><span>≈ {{ readingMinutes }} {{ copy.minutes }}</span><span>{{ copy.author }} <NuxtLink :to="contextRoute('/contacts')" :aria-label="locale === 'kk' ? 'OT Center редакциясының байланыстары' : 'Контакты редакции OT Center'">OT Center</NuxtLink></span></div>
+        <div class="ed-journal-meta"><span>{{ copy.published }}: <time :datetime="localizedPost.date">{{ formatDate(localizedPost.date) }}</time></span><span v-if="localizedPost.updatedAt && localizedPost.updatedAt !== localizedPost.date">{{ copy.updated }}: <time :datetime="localizedPost.updatedAt">{{ formatDate(localizedPost.updatedAt) }}</time></span><span v-if="localizedPost.checkedAt" :title="copy.checkedNote">{{ copy.checked }}: <time :datetime="localizedPost.checkedAt">{{ formatDate(localizedPost.checkedAt) }}</time></span><span>≈ {{ readingMinutes }} {{ copy.minutes }}</span><span>{{ copy.author }} <NuxtLink :to="contextRoute('/contacts')" :aria-label="locale === 'kk' ? 'OT Center редакциясының байланыстары' : 'Контакты редакции OT Center'">OT Center</NuxtLink></span></div>
       </EditorialPageHeader>
       <figure v-if="localizedPost.image?.src" class="ed-article-figure"><ResponsiveImage sizes="(max-width: 767px) calc(100vw - 40px), (max-width: 1360px) calc(100vw - 96px), 1264px" :src="localizedPost.image.src" :alt="localizedPost.imageAlt" :width="localizedPost.image.width" :height="localizedPost.image.height" :style="localizedPost.image.fit === 'contain' ? { objectFit: 'contain' } : undefined" fetchpriority="high" loading="eager" decoding="async" /><figcaption>{{ localizedPost.imageCaption }}</figcaption></figure>
       <div class="ed-public-body">
@@ -166,6 +166,7 @@ useHead(() => {
 </template>
 
 <style scoped>
+.ed-article :deep(.ed-page-heading h1) { overflow-wrap: anywhere; hyphens: auto; }
 .article-content { color: var(--ed-ink); font-size: 1.0625rem; line-height: 1.85; overflow-wrap: anywhere; }
 .article-content :deep(> :first-child) { margin-top: 0; }
 .article-content :deep(h2), .article-content :deep(h3) { color: var(--ed-ink); font-family: var(--ed-display); font-weight: 500; line-height: 1.35; scroll-margin-top: 2rem; }
@@ -193,6 +194,7 @@ useHead(() => {
 .article-content :deep(hr) { margin: 2rem 0; border-color: var(--ed-rule); }
 .article-content :deep(.sources) { font-size: .875rem; }
 @media (max-width: 639px) {
+  .ed-article :deep(.ed-page-heading h1) { font-size: clamp(30px, 8vw, 34px); }
   .article-content { font-size: 1rem; line-height: 1.8; }
   .article-content :deep(h2) { font-size: 1.375rem; }
   .article-content :deep(h3) { font-size: 1.125rem; }

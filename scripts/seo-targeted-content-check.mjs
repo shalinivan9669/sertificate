@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 import { courseDirections, legacyCourseDirections, getCoursePublicPath } from '../shared/course-registry.ts';
 import { getCourseSearchContent } from '../shared/course-search-content.ts';
 import { blogPosts, getSortedBlogPosts } from '../config/blog.js';
+import { getPublishedBlogLocales } from '../config/blog-publication.js';
+import { selectCourseArticles } from '../config/course-article-selection.js';
 import { canonicalPublicPath, localizePublicPath } from '../config/public-route-runtime.js';
 import { publicMoneyFindings } from '../shared/public-data-guard.ts';
 
@@ -57,7 +59,7 @@ for (const locale of ['ru', 'kk']) {
     }
     const selectionSection = card.html.match(/<section\b[^>]*id=["']training-documents["'][^>]*>[\s\S]*?<\/section>/i)?.[0] || '';
     const selectionDestinations = links(selectionSection);
-    const relatedArticles = getSortedBlogPosts().filter(post => post.relatedCourses?.includes(direction.id)).slice(0, 3);
+    const relatedArticles = selectCourseArticles(getSortedBlogPosts(locale), direction.id);
     for (const article of relatedArticles) {
       assert.ok(selectionDestinations.includes(localizePublicPath(article._path, locale)), `${cardPath}: visible reciprocal article link inside program explanation`);
     }
@@ -82,7 +84,7 @@ for (const locale of ['ru', 'kk']) {
     assert.ok(business.destinations.includes(localizePublicPath(getCoursePublicPath(id), locale)), `business: ${id} industry selection link`);
   }
   records.push({ route: localizePublicPath('/b2b', locale), kind: 'business' });
-  for (const article of blogPosts) {
+  for (const article of blogPosts.filter((post) => getPublishedBlogLocales(post).includes(locale))) {
     const route = localizePublicPath(article._path, locale);
     const rendered = await page(route);
     for (const id of article.relatedCourses || []) {

@@ -4,6 +4,9 @@ import { useLocalePath, useSwitchLocalePath, useI18n } from '#imports';
 import CitySwitcher from '~/components/CitySwitcher.vue';
 import { usePublicLocaleHead } from '~/composables/usePublicLocaleHead';
 import { resolveCourseDirection } from '~/shared/course-registry';
+import { isNonIndexableRoute } from '~/config/public-route-runtime';
+import { publicContactPhone } from '~/config/public-contacts';
+import { getBlogPublishedLocales } from '#build/blog-summaries.mjs';
 const localePath = useLocalePath();
 const switchLocalePath = useSwitchLocalePath();
 const localeLinksReady = ref(false);
@@ -15,8 +18,10 @@ const languageLink = (code) => {
 const { locale } = useI18n();
 const { open: menuOpen, show: showMenu, link: menuLink } = useEditorialMenu();
 const route = useRoute();
+const showWhatsApp = computed(() => !isNonIndexableRoute(route.path) && !menuOpen.value);
 const isLearning = computed(() => /^\/(?:kk\/)?(?:learn|cabinet|admin|auth|payment|certificates)(?:\/|$)/.test(route.path));
 const currentPath = computed(() => route.path.replace(/^\/kk(?=\/|$)/, '') || '/');
+const canSwitchLanguage = (code) => !currentPath.value.startsWith('/blog/') || getBlogPublishedLocales(currentPath.value).includes(code);
 const isCurrentSection = (destination) => destination === '/courses'
   ? /^\/(?:courses|program-selection)(?:\/|$)/.test(currentPath.value) || Boolean(resolveCourseDirection(currentPath.value.split('/').filter(Boolean).at(-1)))
   : currentPath.value === destination;
@@ -40,7 +45,7 @@ const copy = computed(() => locale.value === 'kk' ? {
 });
 </script>
 <template>
-  <div class="civic-site editorial-site" :class="{ 'ed-workspace': isLearning }">
+  <div class="civic-site editorial-site" :class="{ 'ed-workspace': isLearning, 'has-whatsapp-contact': showWhatsApp }">
     <a class="civic-skip" href="#main-content">{{ copy.skip }}</a>
     <div class="civic-topline"><div class="civic-container"><span><span class="civic-status-dot" />{{ copy.eyebrow }}</span><span class="civic-country">{{ copy.country }}</span></div></div>
     <header class="civic-header">
@@ -54,7 +59,7 @@ const copy = computed(() => locale.value === 'kk' ? {
         </nav>
         <div class="civic-header-actions">
           <div class="ed-header-city"><CivicIcon name="pin" /><CitySwitcher /></div>
-          <div class="civic-language" aria-label="Русский / Қазақша"><NuxtLink :to="languageLink('ru')" :aria-current="locale === 'ru' ? 'true' : undefined" :class="{ active: locale === 'ru' }" lang="ru">RU</NuxtLink><NuxtLink :to="languageLink('kk')" :aria-current="locale === 'kk' ? 'true' : undefined" :class="{ active: locale === 'kk' }" lang="kk">KK</NuxtLink></div>
+          <div class="civic-language" aria-label="Русский / Қазақша"><NuxtLink v-if="canSwitchLanguage('ru')" :to="languageLink('ru')" :aria-current="locale === 'ru' ? 'true' : undefined" :class="{ active: locale === 'ru' }" lang="ru">RU</NuxtLink><NuxtLink v-if="canSwitchLanguage('kk')" :to="languageLink('kk')" :aria-current="locale === 'kk' ? 'true' : undefined" :class="{ active: locale === 'kk' }" lang="kk">KK</NuxtLink></div>
           <NuxtLink :to="menuLink('/cabinet')" class="civic-account" :aria-label="copy.cabinet"><CivicIcon name="user" /><span>{{ copy.cabinet }}</span></NuxtLink>
           <button type="button" class="ed-menu-trigger" :aria-label="copy.menu" :aria-expanded="menuOpen" aria-haspopup="dialog" aria-controls="editorial-menu" @click="showMenu()"><span>{{ copy.menu }}</span><CivicIcon name="menu" /></button>
         </div>
@@ -68,9 +73,14 @@ const copy = computed(() => locale.value === 'kk' ? {
         <div class="civic-footer-about"><NuxtLink :to="localePath('/')" class="civic-brand"><span class="civic-brand-mark" aria-hidden="true"><CivicIcon name="sun" /></span><span>OT<span class="civic-brand-light">Center</span></span></NuxtLink><p>{{ copy.about }}</p><span class="civic-footer-motto">{{ copy.eyebrow }}</span></div>
         <div><h2>{{ copy.platform }}</h2><NuxtLink :to="localePath('/courses')">{{ copy.catalog }}</NuxtLink><NuxtLink :to="localePath('/program-selection')">{{ copy.selection }}</NuxtLink><NuxtLink :to="localePath('/b2b')">{{ copy.business }}</NuxtLink><NuxtLink :to="localePath('/cabinet')">{{ copy.cabinet }}</NuxtLink></div>
         <div><h2>{{ copy.company }}</h2><NuxtLink :to="localePath('/licenses')">{{ copy.accreditation }}</NuxtLink><NuxtLink :to="localePath('/blog')">{{ copy.blog }}</NuxtLink><NuxtLink :to="localePath('/contacts')">{{ copy.contacts }}</NuxtLink></div>
-        <div class="civic-footer-contact"><h2>{{ copy.help }}</h2><a href="tel:+77766803282">8 (776) 680-32-82</a><a href="mailto:otcenterkz@proton.me">otcenterkz@proton.me</a><span>Қазақстан · Казахстан</span></div>
+        <div class="civic-footer-contact"><h2>{{ copy.help }}</h2><a :href="`tel:${publicContactPhone.e164}`">{{ publicContactPhone.display }}</a><a href="mailto:otcenterkz@proton.me">otcenterkz@proton.me</a><span>Қазақстан · Казахстан</span></div>
       </div>
       <div class="civic-container civic-footer-bottom"><span>© {{ new Date().getFullYear() }} OT Center. {{ copy.rights }}</span><div><NuxtLink :to="localePath('/privacy')">{{ copy.privacy }}</NuxtLink><NuxtLink :to="localePath('/public-offer')">{{ copy.offer }}</NuxtLink></div></div>
     </footer>
+    <PublicWhatsAppContact v-if="showWhatsApp" />
   </div>
 </template>
+
+<style scoped>
+.has-whatsapp-contact { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+</style>

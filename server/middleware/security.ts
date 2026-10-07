@@ -1,6 +1,7 @@
 import { defineEventHandler, getHeader, getMethod, getRequestURL, setHeader, createError } from 'h3';
 import { enforceBodyLimit } from '../utils/request-body';
 import { eventObservation, markDomainError, runWithRequestObservation } from '../utils/observability';
+import { isSeoDraftPreviewApiPath } from '../utils/seo-draft-preview';
 export default defineEventHandler(event => runWithRequestObservation(event, async () => {
   const requestId = eventObservation(event).context.requestId; event.context.requestId = requestId;
   setHeader(event, 'X-Request-Id', requestId); setHeader(event, 'X-Content-Type-Options', 'nosniff');
@@ -10,7 +11,7 @@ export default defineEventHandler(event => runWithRequestObservation(event, asyn
   const path = getRequestURL(event).pathname;
   if (!path.startsWith('/api/')) return;
   setHeader(event, 'Cache-Control', 'private, no-store'); setHeader(event, 'X-Robots-Tag', 'noindex, nofollow');
-  if (!['/api/health', '/api/ready', '/api/amo-lead'].includes(path) && !path.startsWith('/api/v1/') && !path.startsWith('/api/auth/')) {
+  if (!['/api/health', '/api/ready', '/api/amo-lead'].includes(path) && !path.startsWith('/api/v1/') && !path.startsWith('/api/auth/') && !isSeoDraftPreviewApiPath(path)) {
     throw markDomainError(createError({ statusCode: 404, statusMessage: 'ENDPOINT_NOT_FOUND' }), 'ENDPOINT_NOT_FOUND');
   }
   if (['GET', 'HEAD', 'OPTIONS'].includes(getMethod(event))) return;

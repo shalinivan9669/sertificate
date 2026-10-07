@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getSortedBlogPosts } from '../config/blog.js';
+import { getPublishedBlogLocales } from '../config/blog-publication.js';
 import { getBlogReadingMinutes } from '../config/blog-format.js';
 import { buildBlogClientData } from '../scripts/blog-client-data.mjs';
 import { renderBlogClientTemplates } from '../scripts/blog-client-templates.mjs';
@@ -20,7 +21,7 @@ test('blog cards preserve current metadata and reading time without article bodi
     assert.deepEqual(summary.title, source.title);
     assert.deepEqual(summary.image, source.image);
     assert.equal(summary.updatedAt, source.updatedAt);
-    for (const locale of ['ru', 'kk']) assert.equal(summary.readingMinutes[locale], getBlogReadingMinutes(source.bodyHtml[locale]));
+    for (const locale of getPublishedBlogLocales(source)) assert.equal(summary.readingMinutes[locale], getBlogReadingMinutes(source.bodyHtml[locale]));
   }
   assert.ok(Buffer.byteLength(JSON.stringify(summaries)) < Buffer.byteLength(JSON.stringify(posts)) / 8);
 });
@@ -28,20 +29,21 @@ test('blog cards preserve current metadata and reading time without article bodi
 test('each article payload contains only its requested language and preserves SEO, contents and body', () => {
   const posts = getSortedBlogPosts();
   const { articles } = buildBlogClientData(posts);
-  assert.equal(Object.keys(articles).length, posts.length * 2);
-  for (const post of posts) for (const locale of ['ru', 'kk']) {
+  assert.equal(Object.keys(articles).length, posts.reduce((total, post) => total + getPublishedBlogLocales(post).length, 0));
+  for (const post of posts) for (const locale of getPublishedBlogLocales(post)) {
     const article = articles[`${post.slug}:${locale}`];
     assert.equal(article.bodyHtml, post.bodyHtml[locale]);
     assert.equal(article.seoTitle, post.seoTitle[locale]);
     assert.equal(article.title, post.title[locale]);
     assert.deepEqual(article.toc, post.toc[locale]);
-    assert.equal(article.image.alt, post.image.alt[locale]);
+    if (post.image) assert.equal(article.image.alt, post.image.alt[locale]);
+    else assert.equal(article.image, undefined);
     assert.deepEqual(article.relatedCourses, post.relatedCourses);
   }
 });
 
 test('client data is derived from new editorial input rather than a stored summary snapshot', () => {
-  const post = structuredClone(getSortedBlogPosts()[0]);
+  const post = structuredClone(getSortedBlogPosts().find((post) => getPublishedBlogLocales(post).length === 2 && post.image));
   post.title.ru = 'Changed source title';
   post.seoTitle.kk = 'Changed Kazakh SEO title';
   post.description.kk = 'Changed Kazakh description';
@@ -85,7 +87,8 @@ test('generated dynamic modules resolve every locale, safe unknown slugs, and co
     assert.deepEqual(await loadBlogPost(slug, locale), JSON.parse(JSON.stringify(article)));
     const otherLocale = locale === 'ru' ? 'kk' : 'ru';
     const shard = files[`blog-content/${slug}.${locale}.mjs`];
-    assert.ok(!shard.includes(JSON.stringify(source.articles[`${slug}:${otherLocale}`].bodyHtml)));
+    if (source.articles[`${slug}:${otherLocale}`]) assert.ok(!shard.includes(JSON.stringify(source.articles[`${slug}:${otherLocale}`].bodyHtml)));
+    else assert.equal(await loadBlogPost(slug, otherLocale), null, 'an unpublished translation has no loader');
   }
 });
 

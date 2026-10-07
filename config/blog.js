@@ -27,8 +27,17 @@ import almatyHeating from '../content/blog/otopitelnyj-sezon-almaty-2026-2027.js
 import karagandaHeating from '../content/blog/otopitelnyj-sezon-karaganda-2026-2027.js';
 import contractRecords from '../content/blog/esutd-trudovye-dogovory-proverka-2026.js';
 import constructionControl from '../content/blog/kontrol-ohrany-truda-strojploshchadka-2026.js';
+import trainingQuotes from '../content/blog/kp-na-obuchenie-personala-kak-sravnit.js';
+import trainingCloseout from '../content/blog/audit-obucheniya-pered-koncom-goda.js';
+import qualityStandardTraining from '../content/blog/iso-9001-2026-obuchenie-plan-2027.js';
+import environmentalStandardTraining from '../content/blog/iso-14001-2026-podgotovka-personala.js';
+import firstAidCourseSelection from '../content/blog/pervaya-pomoshch-vybor-kursa-dlya-kompanii.js';
+import shiftTraining from '../content/blog/obuchenie-smennoy-komandy-yazyki-grafik.js';
+import { getBlogModifiedAt, getPublishedBlogLocales } from './blog-publication.js';
 
-export const blogPosts = [
+const registeredPosts = [
+  trainingQuotes, trainingCloseout, qualityStandardTraining,
+  environmentalStandardTraining, firstAidCourseSelection, shiftTraining,
   almatyHeating, karagandaHeating, contractRecords, constructionControl,
   heatingSeason, cafeFireSafety,
   trainingDocuments,
@@ -38,9 +47,12 @@ export const blogPosts = [
   occupationalSafety, industrialSafety, fireSafety, electricalSafety, workAtHeight,
 ];
 
+export const blogPosts = registeredPosts.filter((post) => getPublishedBlogLocales(post).length > 0);
+
 // Content revision dates reflect editorial updates, not deployment timestamps.
-export const getSortedBlogPosts = () =>
-  [...blogPosts].sort((a, b) => new Date(b.updatedAt || b.date).getTime() - new Date(a.updatedAt || a.date).getTime());
+export const getSortedBlogPosts = (locale) =>
+  blogPosts.filter((post) => !locale || getPublishedBlogLocales(post).includes(locale))
+    .sort((a, b) => new Date(getBlogModifiedAt(b, locale)).getTime() - new Date(getBlogModifiedAt(a, locale)).getTime());
 
 export const findBlogPost = (slug) => blogPosts.find((post) => post.slug === slug);
 

@@ -18,7 +18,8 @@ test('every public direction has its own localized metadata backed by existing e
       }
       assert.ok(metadata.title.trim());
       assert.ok(metadata.description.trim());
-      assert.equal((metadata.title.match(/OT Center/g) || []).length, 1);
+      // The selected READY BiOT snippet intentionally omits a brand suffix.
+      assert.equal((metadata.title.match(/OT Center/g) || []).length, direction.id === 'ohrana-truda' && locale === 'ru' ? 0 : 1);
       titles.add(metadata.title);
       descriptions.add(metadata.description);
       assert.doesNotMatch(metadata.description, /Обучение по охране труда, ТБ, БИОТ и промышленной безопасности/);
@@ -49,6 +50,7 @@ test('unknown directions do not inherit a different course and locale fallback i
   }
   assert.deepEqual(getPublicCourseSeo('iso-9001', 'kk-KZ'), getPublicCourseSeo('iso-9001', 'kk'));
   assert.deepEqual(getPublicCourseSeo('iso-9001', 'ru-KZ'), getPublicCourseSeo('iso-9001', 'ru'));
+  assert.deepEqual(getPublicCourseSeo('ohrana-truda', 'ru-KZ'), getPublicCourseSeo('ohrana-truda', 'ru'));
   assert.deepEqual(getPublicCourseSeo('iso-9001'), getPublicCourseSeo('iso-9001', 'ru'));
 });
 

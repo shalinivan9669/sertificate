@@ -1,4 +1,6 @@
 <script setup>
+import { seoExpansionMetadata } from '~/content/seo-expansion-metadata';
+import { publicContactPhone } from '~/config/public-contacts';
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch, useHead, useI18n, useLocalePath, useNuxtApp, useRoute, useRouter } from '#imports';
 import { courseDirections } from '~/shared/course-registry';
 import { leadCities, leadCityLabel, leadCityValue, leadFormats, leadProgramQuery, leadProgramsComment, readLeadContext, readLeadPrograms } from '~/shared/lead-context';
@@ -143,11 +145,11 @@ const handleSubmit = async (event) => {
 };
 
 useHead(() => ({
-  title: t('contacts.title'),
+  title: tr(seoExpansionMetadata.contacts.title, t('contacts.title')),
   meta: [
     {
       name: 'description',
-      content: t('contacts.subtitle'),
+      content: tr(seoExpansionMetadata.contacts.description, t('contacts.subtitle')),
     },
   ],
 }));
@@ -155,11 +157,11 @@ useHead(() => ({
 
 <template>
   <div class="ed-public ed-contacts">
-    <EditorialPageHeader :title="t('contacts.title')" :lead="t('contacts.subtitle')" />
+    <EditorialPageHeader :title="tr(seoExpansionMetadata.contacts.h1, t('contacts.title'))" :lead="t('contacts.subtitle')" />
     <div class="ed-request-layout">
       <aside class="ed-contact-details">
         <h2>{{ t('contacts.detailsTitle') }}</h2>
-        <dl><div class="ed-contact-method"><dt>{{ t('footer.phoneLabel') }}</dt><dd><a href="tel:+77766803282" @click="track('contact_click')">8 (776) 680-32-82</a></dd></div><div class="ed-contact-method"><dt>{{ t('footer.emailLabel') }}</dt><dd><a href="mailto:otcenterkz@proton.me" @click="track('contact_click')">otcenterkz@proton.me</a></dd></div><div class="ed-contact-method"><dt>{{ t('contacts.scheduleLabel') }}</dt><dd>{{ t('contacts.scheduleValue') }}</dd></div></dl>
+        <dl><div class="ed-contact-method"><dt>{{ t('footer.phoneLabel') }}</dt><dd><a :href="`tel:${publicContactPhone.e164}`" @click="track('contact_click')">{{ publicContactPhone.display }}</a></dd></div><div class="ed-contact-method"><dt>{{ t('footer.emailLabel') }}</dt><dd><a href="mailto:otcenterkz@proton.me" @click="track('contact_click')">otcenterkz@proton.me</a></dd></div><div class="ed-contact-method"><dt>{{ t('contacts.scheduleLabel') }}</dt><dd>{{ t('contacts.scheduleValue') }}</dd></div></dl>
         <NuxtLink class="ed-public-link" :to="{ path: path('/b2b'), query: companyRequestQuery }">{{ tr('Обучение сотрудников компании', 'Компания қызметкерлерін оқыту') }}</NuxtLink>
       </aside>
       <section id="request-form" class="ed-request-panel">

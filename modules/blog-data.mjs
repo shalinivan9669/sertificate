@@ -30,7 +30,7 @@ export default defineNuxtModule({
     registerTemplates();
     nuxt.hook('builder:watch', async (_event, path) => {
       const normalized = path.replaceAll('\\', '/');
-      if (!normalized.includes('content/blog/') && !['config/blog.js', 'config/blog-format.js', 'scripts/blog-client-data.mjs'].some((file) => normalized.endsWith(file))) return;
+      if (!normalized.includes('content/blog/') && !['config/blog.js', 'config/blog-format.js', 'config/blog-publication.js', 'scripts/blog-client-data.mjs'].some((file) => normalized.endsWith(file))) return;
       files = renderBlogClientTemplates(await readSource());
       registerTemplates();
       await updateTemplates({ filter: (template) => template.filename.startsWith('blog-') });

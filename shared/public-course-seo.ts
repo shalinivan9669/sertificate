@@ -1,5 +1,6 @@
 import { resolveCourseDirection } from './course-registry';
 import { getCourseSearchContent } from './course-search-content';
+import { seoExpansionServices } from '../content/seo-expansion-services';
 
 export type PublicCourseSeo = { title: string; description: string };
 
@@ -33,6 +34,10 @@ export function getPublicCourseSeo(directionId: unknown, locale: unknown = 'ru')
   const direction = resolveCourseDirection(directionId);
   const search = getCourseSearchContent(directionId, locale);
   if (!direction || !search) return undefined;
+  if (direction.id === 'ohrana-truda' && locale !== 'kk' && locale !== 'kk-KZ') {
+    const { title, description } = seoExpansionServices.SV02;
+    return { title, description };
+  }
   const description = descriptions[direction.id]?.[locale === 'kk' || locale === 'kk-KZ' ? 1 : 0];
   return description ? { title: `${search.programHeading} | OT Center`, description } : undefined;
 }
@@ -40,5 +45,9 @@ export function getPublicCourseSeo(directionId: unknown, locale: unknown = 'ru')
 /** National service pages introduce the direction; catalog cards describe a program. */
 export function getPublicCourseLandingSeo(directionId: unknown, locale: unknown = 'ru'): PublicCourseSeo | undefined {
   const search = getCourseSearchContent(directionId, locale);
+  if (resolveCourseDirection(directionId)?.id === 'ohrana-truda' && locale !== 'kk' && locale !== 'kk-KZ') {
+    const { title, description } = seoExpansionServices.SV01;
+    return { title, description };
+  }
   return search ? { title: `${search.heading} | OT Center`, description: search.summary } : undefined;
 }

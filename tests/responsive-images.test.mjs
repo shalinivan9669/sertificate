@@ -5,7 +5,7 @@ import { blogPosts } from '../config/blog.js';
 
 test('all active blog covers and the LCP hero have real responsive AVIF and WebP assets', async () => {
   const manifest = JSON.parse(await readFile(new URL('../config/responsive-images.json', import.meta.url), 'utf8'));
-  const sources = ['/images/editorial/workshop-mentor-v2.png', ...blogPosts.map(post => post.image.src)];
+  const sources = ['/images/editorial/workshop-mentor-v2.png', ...blogPosts.filter(post => post.image?.src).map(post => post.image.src)];
   for (const src of sources) {
     const entry = manifest[src];
     assert.ok(entry, `missing responsive image: ${src}`);

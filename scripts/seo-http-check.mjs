@@ -5,6 +5,8 @@ import { pathToFileURL } from 'node:url';
 import { courses } from '../config/courses.js';
 import { additionalSourceDirections } from '../shared/source-products.ts';
 import { getPublicCourseSeo } from '../shared/public-course-seo.ts';
+import { blogPosts } from '../config/blog.js';
+import { getPublishedBlogLocales } from '../config/blog-publication.js';
 import {
   buildPublicRoutes, canonicalPublicPath, courseCardAliases, defaultSiteUrl, isNonIndexableRoute, localizePublicPath, stripLocale,
 } from '../config/public-route-policy.js';
@@ -58,10 +60,24 @@ export function inspectPublicHtml(html, route, siteUrl = defaultSiteUrl, options
   } else {
     assert.doesNotMatch(robots, /\bnoindex\b/i, `${route}: indexable`);
   }
-  for (const [locale, hreflang] of [['ru', 'ru-KZ'], ['kk', 'kk-KZ'], ['ru', 'x-default']]) {
-    const alternates = links.filter((link) => link.rel === 'alternate' && link.hreflang === hreflang);
-    assert.equal(alternates.length, 1, `${route}: exactly one ${hreflang} alternate`);
-    assert.equal(new URL(alternates[0].href).toString(), new URL(localizePublicPath(expectedPath, locale), siteUrl).toString(), `${route}: ${hreflang} alternate targets preferred route`);
+  const article = blogPosts.find((post) => post._path === stripLocale(expectedPath));
+  const publishedLocales = article ? getPublishedBlogLocales(article) : ['ru', 'kk'];
+  const expectedAlternates = publishedLocales.length > 1 ? [['ru', 'ru-KZ'], ['kk', 'kk-KZ'], ['ru', 'x-default']] : [];
+  const alternates = links.filter((link) => link.rel === 'alternate' && link.hreflang);
+  assert.ok(expectedAlternates.length ? [3, 5].includes(alternates.length) : alternates.length === 0, `${route}: alternates exist only for published equivalents`);
+  // Nuxt i18n may also emit the base-language pair alongside its regional pair.
+  // Both forms describe the same real translations and must target those URLs.
+  const allowedAlternates = new Map(expectedAlternates.length ? [...expectedAlternates, ['ru', 'ru'], ['kk', 'kk']].map(([locale, hreflang]) => [hreflang, locale]) : []);
+  for (const alternate of alternates) {
+    const locale = allowedAlternates.get(alternate.hreflang);
+    assert.ok(locale, `${route}: unsupported ${alternate.hreflang} alternate`);
+    assert.equal(alternates.filter((link) => link.hreflang === alternate.hreflang).length, 1, `${route}: exactly one ${alternate.hreflang} alternate`);
+    assert.equal(new URL(alternate.href).toString(), new URL(localizePublicPath(expectedPath, locale), siteUrl).toString(), `${route}: ${alternate.hreflang} alternate targets preferred route`);
+  }
+  for (const [locale, hreflang] of expectedAlternates) {
+    const equivalents = alternates.filter((link) => link.hreflang === hreflang);
+    assert.equal(equivalents.length, 1, `${route}: exactly one ${hreflang} alternate`);
+    assert.equal(new URL(equivalents[0].href).toString(), new URL(localizePublicPath(expectedPath, locale), siteUrl).toString(), `${route}: ${hreflang} alternate targets preferred route`);
   }
   assert.match(html, route.startsWith('/kk') ? /<html\b[^>]*lang=["']kk-KZ["']/ : /<html\b[^>]*lang=["']ru-KZ["']/);
   assert.doesNotMatch(html, /"@type"\s*:\s*"LocalBusiness"/, `${route}: no invented city branches`);
@@ -107,8 +123,9 @@ export async function runHttpSeoCheck(baseUrl, siteUrl = defaultSiteUrl, options
     report.public.push({ route, status: response.status, ...inspectPublicHtml(html, route, siteUrl, { indexable: options.indexable }) });
   }
   assertCourseMetadataUniqueness(report.public);
+  const unpublishedArticleRoutes = blogPosts.flatMap((post) => ['ru', 'kk'].filter((locale) => !getPublishedBlogLocales(post).includes(locale)).map((locale) => localizePublicPath(post._path, locale)));
   for (const route of ['/not-a-city/not-a-course', '/karaganda/not-a-course', '/unknown-direction',
-    '/unknown-city/online-obuchenie', '/kk/unknown-city/ohrana-truda', '/courses/unknown-course']) {
+    '/unknown-city/online-obuchenie', '/kk/unknown-city/ohrana-truda', '/courses/unknown-course', ...unpublishedArticleRoutes]) {
     const { response } = await check(route);
     assert.equal(response.status, 404, `${route}: real HTTP 404 without fallback redirect`);
     report.missing.push({ route, status: response.status });

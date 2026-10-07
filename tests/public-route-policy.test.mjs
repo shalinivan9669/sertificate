@@ -5,6 +5,7 @@ import { cities } from '../config/cities.js';
 import { courses } from '../config/courses.js';
 import { formats } from '../config/formats.js';
 import { blogPosts } from '../config/blog.js';
+import { getBlogModifiedAt, getPublishedBlogLocales } from '../config/blog-publication.js';
 import { additionalSourceDirections } from '../shared/source-products.ts';
 import {
   buildPrivateRouteRules, buildPublicRoutes, buildSitemapEntries,
@@ -26,7 +27,7 @@ test('all existing directions, cities and format combinations retain both public
     }
   }
   assert.equal(routes.size, buildPublicRoutes().length, 'no duplicate sitemap URLs');
-  assert.equal(routes.size, 550 + (blogPosts.length - 1) * 2, '550 preserved addresses plus both locales for each additional article');
+  assert.equal(routes.size, 548 + blogPosts.reduce((total, post) => total + getPublishedBlogLocales(post).length, 0), '548 preserved non-article addresses plus actually published article locales');
   assert.ok(routes.has('/blog/pozharnyj-tekhnicheskiy-minimum'), 'the established article address remains published');
   assert.equal(additionalSourceDirections.length, 11);
   for (const direction of additionalSourceDirections) for (const locale of ['ru', 'kk']) {
@@ -91,13 +92,14 @@ test('sitemap alternates are reciprocal and lastmod comes only from actual blog 
     assert.equal(new URL(entry.loc).origin, 'https://otcenter.kz');
     const basePath = localizePublicPath(new URL(entry.loc).pathname, 'ru');
     const post = blogPosts.find((item) => item._path === basePath);
-    const latestBlogRevision = blogPosts.map((item) => item.updatedAt || item.date).sort().at(-1);
-    assert.equal(entry.lastmod, post ? post.updatedAt || post.date : basePath === '/blog' ? latestBlogRevision : undefined);
+    const locale = new URL(entry.loc).pathname.startsWith('/kk/') ? 'kk' : 'ru';
+    const latestBlogRevision = blogPosts.filter((item) => getPublishedBlogLocales(item).includes(locale)).map((item) => getBlogModifiedAt(item, locale)).sort().at(-1);
+    assert.equal(entry.lastmod, post ? getBlogModifiedAt(post, locale) : basePath === '/blog' ? latestBlogRevision : undefined);
     if (post?.image?.src) assert.deepEqual(entry.images, [{ loc: new URL(post.image.src, 'https://otcenter.kz').toString() }]);
     else assert.equal(entry.images, undefined);
-    assert.equal(entry.alternatives.length, 3);
+    assert.equal(entry.alternatives.length, !post || getPublishedBlogLocales(post).length > 1 ? 3 : 0);
     for (const alternate of entry.alternatives) assert.ok(locations.has(alternate.href));
-    assert.ok(entry.alternatives.some(({ href }) => href === entry.loc));
+    if (entry.alternatives.length) assert.ok(entry.alternatives.some(({ href }) => href === entry.loc));
   }
 });
 

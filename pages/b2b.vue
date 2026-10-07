@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { seoExpansionServices } from '~/content/seo-expansion-services';
 import { leadCities, leadCityLabel, leadCityValue, leadFormats, leadProgramsComment, readLeadContext, readLeadPrograms } from '~/shared/lead-context';
 const { tr, locale, request, errorText } = useLmsApi();
 const path = useLocalePath();
@@ -106,14 +107,14 @@ async function submit() {
 }
 useHead(() => ({
   title: tr(
-    "Промбезопасность и охрана труда: обучение для компаний",
+    seoExpansionServices.SV09.title,
     "Компанияларға өнеркәсіптік қауіпсіздік және еңбекті қорғау оқуы",
   ),
   meta: [
     {
       name: "description",
       content: tr(
-        "Обучение сотрудников по промышленной безопасности и охране труда в Казахстане. Подбор программ для ИТР и рабочих, график, формат и расчёт стоимости группы.",
+        seoExpansionServices.SV09.description,
         "Қазақстанда қызметкерлерді өнеркәсіптік қауіпсіздік пен еңбекті қорғауға оқыту. ИТЖ мен жұмысшыларға бағдарлама, кесте, формат және топ құнын келісу.",
       ),
     },
@@ -122,7 +123,7 @@ useHead(() => ({
 </script>
 <template>
   <div class="ed-public">
-    <EditorialPageHeader :title="tr('Обучение по охране труда и безопасности для компаний', 'Компанияларға еңбекті қорғау және қауіпсіздік бойынша оқыту')" :lead="tr('Поможем подобрать программы по должностям и рабочим задачам, согласовать график и организовать обучение сотрудников.', 'Лауазымдар мен жұмыс міндеттері бойынша бағдарламаларды таңдап, кестені келісуге және қызметкерлерді оқытуды ұйымдастыруға көмектесеміз.')">
+    <EditorialPageHeader :title="tr(seoExpansionServices.SV09.h1, 'Компанияларға еңбекті қорғау және қауіпсіздік бойынша оқыту')" :lead="tr('Поможем подобрать программы по должностям и рабочим задачам, согласовать график и организовать обучение сотрудников.', 'Лауазымдар мен жұмыс міндеттері бойынша бағдарламаларды таңдап, кестені келісуге және қызметкерлерді оқытуды ұйымдастыруға көмектесеміз.')">
       <div class="ed-public-actions"><a href="#team-request" class="ed-public-button">{{ tr('Обсудить обучение команды', 'Команданы оқытуды талқылау') }}</a><NuxtLink :to="path('/cabinet/organization')" class="ed-public-link">{{ tr('Кабинет организации', 'Ұйым кабинеті') }}</NuxtLink></div>
     </EditorialPageHeader>
     <div class="ed-public-steps">
@@ -194,6 +195,7 @@ useHead(() => ({
       <p>{{ tr('Задачи персонала могут включать пожарную безопасность, перемещение грузов, санитарные процедуры и готовность оказать первую помощь. Опишите обязанности каждой группы, чтобы согласовать отдельные программы для ответственных лиц и работников.', 'Персонал міндеттері өрт қауіпсіздігін, жүкті жылжытуды, санитариялық рәсімдерді және алғашқы көмекке дайындықты қамтуы мүмкін. Жауапты тұлғалар мен жұмыскерлерге бөлек бағдарламалар келісу үшін әр топтың міндетін сипаттаңыз.') }}</p>
       <div class="ed-public-links"><NuxtLink :to="path('/ptm')">{{ tr('ПТМ и пожарная безопасность', 'Өрт-техникалық минимум және өрт қауіпсіздігі') }}</NuxtLink><NuxtLink :to="path('/courses/seminar-dekretirovannoy-gruppy-sez')">{{ tr('Санитарная подготовка работников', 'Жұмыскерлердің санитариялық даярлығы') }}</NuxtLink><NuxtLink :to="path('/pervaya-pomoshch')">{{ tr('Курс первой помощи', 'Алғашқы көмек курсы') }}</NuxtLink></div>
     </section>
+    <SeoServiceBlock content-id="SV09" />
     <div class="ed-request-layout">
       <section id="team-request" class="ed-request-panel">
         <h2 class="text-2xl font-bold">

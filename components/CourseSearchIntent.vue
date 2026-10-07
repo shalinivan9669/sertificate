@@ -4,7 +4,8 @@ import { getCoursePublicPath, resolveCourseDirection } from '~/shared/course-reg
 import { getCourseSearchContent } from '~/shared/course-search-content';
 import { leadContextQuery } from '~/shared/lead-context';
 import { getSortedBlogPosts } from '#build/blog-summaries.mjs';
-const props = withDefaults(defineProps<{ directionId?: string; includeArticles?: boolean }>(), { includeArticles: true });
+import { selectCourseArticles } from '~/config/course-article-selection';
+const props = withDefaults(defineProps<{ directionId?: string; includeArticles?: boolean; serviceBlock?: 'SV01' | 'SV02' }>(), { includeArticles: true });
 const { locale } = useI18n();
 const path = useLocalePath();
 const route = useRoute();
@@ -16,9 +17,7 @@ const related = computed(() => (content.value?.related || []).flatMap((id) => {
 }));
 const articles = computed(() => {
   const direction = resolveCourseDirection(props.directionId);
-  return direction ? getSortedBlogPosts()
-    .filter((post) => post.relatedCourses?.includes(direction.id))
-    .slice(0, 3)
+  return direction ? selectCourseArticles(getSortedBlogPosts(locale.value), direction.id)
     .map((post) => ({ slug: post.slug, label: post.title[locale.value === 'kk' ? 'kk' : 'ru'], to: path(`/blog/${post.slug}`) })) : [];
 });
 </script>
@@ -29,14 +28,17 @@ const articles = computed(() => {
     <p>{{ content.summary }}</p>
     <h3>{{ content.question }}</h3>
     <p>{{ content.answer }}</p>
+    <SeoServiceBlock v-if="locale === 'ru' && serviceBlock" :content-id="serviceBlock" />
+    <template v-else>
     <h3>{{ locale === 'kk' ? 'Тіркелуге дейін нені хабарлау керек?' : 'Что сообщить перед записью' }}</h3>
     <p>{{ content.preparation }}</p>
     <h3>{{ locale === 'kk' ? 'Оқу нәтижесі мен құжат' : 'Результат обучения и документы' }}</h3>
     <p>{{ content.document }}</p>
     <h3>{{ locale === 'kk' ? 'Оқу бағасын қалай білуге болады?' : 'Как узнать стоимость обучения' }}</h3>
     <p>{{ content.price }}</p>
+    </template>
     <NuxtLink class="ed-commerce-text-link" :to="path('/blog/obuchenie-udostoverenie-sertifikat-professiya')">{{ locale === 'kk' ? 'Куәлік, сертификат және кәсіптік даярлық туралы' : 'Удостоверение, сертификат и обучение рабочей профессии: как выбрать' }} <span aria-hidden="true">↗</span></NuxtLink>
-    <template v-if="includeArticles !== false && articles.length">
+    <template v-if="includeArticles !== false && articles.length && !(locale === 'ru' && serviceBlock === 'SV02')">
       <h3>{{ locale === 'kk' ? 'Оқу таңдауға көмектесетін материалдар' : 'Материалы для выбора обучения' }}</h3>
       <ul class="ed-public-list"><li v-for="article in articles" :key="article.slug"><NuxtLink :to="article.to">{{ article.label }}</NuxtLink></li></ul>
     </template>

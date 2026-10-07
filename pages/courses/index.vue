@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { leadContextQuery } from '~/shared/lead-context';
 import { getPublicCourseValue } from '~/shared/public-course-value';
+import { seoExpansionMetadata } from '~/content/seo-expansion-metadata';
 
 const { api, tr, locale } = useLmsApi();
 const path = useLocalePath();
@@ -54,13 +55,13 @@ const availability = (program: LmsProgram) => program.versions.some(version => v
   ? tr('Есть варианты для записи', 'Тіркелуге болатын нұсқалар бар')
   : program.versions.length ? tr('Набор уточняется', 'Қабылдау нақтыланады') : tr('Подбор с консультантом', 'Кеңесшімен таңдау');
 useHead(() => ({
-  title: tr('Каталог программ — OT Center', 'Бағдарламалар каталогы — OT Center'),
-  meta: [{ name: 'description', content: tr('Направления и программы обучения OT Center. Содержание, условия, языки и запись на обучение.', 'OT Center оқу бағыттары мен бағдарламалары. Мазмұны, шарттары, тілдері және оқуға жазылу.') }],
+  title: tr(seoExpansionMetadata.catalog.title, 'Бағдарламалар каталогы — OT Center'),
+  meta: [{ name: 'description', content: tr(seoExpansionMetadata.catalog.description, 'OT Center оқу бағыттары мен бағдарламалары. Мазмұны, шарттары, тілдері және оқуға жазылу.') }],
 }));
 </script>
 
 <template>
-  <LmsShell :title="tr('Программы обучения', 'Оқу бағдарламалары')" :subtitle="tr('Сравните направления и содержание. Выберите программу или запросите стоимость обучения для вашей команды.', 'Бағыттар мен мазмұнын салыстырыңыз. Бағдарлама таңдаңыз немесе командаңызға оқу бағасын сұраңыз.')">
+  <LmsShell :title="tr(seoExpansionMetadata.catalog.h1, 'Оқу бағдарламалары')" :subtitle="tr('Сравните направления и содержание. Выберите программу или запросите стоимость обучения для вашей команды.', 'Бағыттар мен мазмұнын салыстырыңыз. Бағдарлама таңдаңыз немесе командаңызға оқу бағасын сұраңыз.')">
     <form class="ed-catalog-filters" role="search" @submit.prevent="applyFilters()">
       <label class="ed-catalog-search"><span>{{ tr('Поиск программы', 'Бағдарламаны іздеу') }}</span><input v-model="search" type="search" maxlength="150" :placeholder="tr('Например, охрана труда', 'Мысалы, еңбекті қорғау')" /></label>
       <label><span>{{ tr('Направление', 'Бағыт') }}</span><select v-model="direction"><option value="">{{ tr('Все направления', 'Барлық бағыттар') }}</option><option v-for="item in LMS_DIRECTIONS" :key="item.id" :value="item.id">{{ locale === 'kk' ? item.kk : item.ru }}</option></select></label>

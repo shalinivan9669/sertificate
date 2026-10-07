@@ -129,7 +129,7 @@ const specialContent = computed(() => {
 // Local landing pages focus on arranging this group; national pages retain the full guide.
 const visibleGuidanceSections = computed(() => cityContext.value
   ? specialContent.value?.sections.filter(section => ['who-needs', 'programme', 'docs'].includes(section.id)) || []
-  : specialContent.value?.sections || []);
+  : specialContent.value?.sections.filter(section => !(locale.value === 'ru' && isLaborSafety.value && !resolvedCity.value && section.id === 'before-enrollment')) || []);
 const specialDescription = computed(() => {
   if (props.course.slug === 'promyshlennaya-bezopasnost') {
     return locale.value === 'kk'
@@ -359,7 +359,7 @@ useHead(() => ({
           <h2>{{ cityOrganization.title }}</h2>
           <p>{{ cityOrganization.text }}</p>
         </section>
-        <CourseSearchIntent v-if="!cityContext" :direction-id="props.course.slug" :include-articles="!specialContent" />
+        <CourseSearchIntent v-if="!cityContext" :direction-id="props.course.slug" :include-articles="!specialContent" :service-block="props.course.slug === 'ohrana-truda' && !resolvedCity ? 'SV01' : undefined" />
         <template v-if="specialContent">
           <section v-for="section in visibleGuidanceSections" :id="section.id" :key="section.id" class="ed-public-section">
             <h2>{{ section.title }}</h2>

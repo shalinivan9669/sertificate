@@ -5,6 +5,7 @@ import { sourceProductCardSummaries } from "~/shared/source-products";
 import { getPublicCourseValue } from "~/shared/public-course-value";
 import { leadContextQuery } from "~/shared/lead-context";
 import { cities } from "~/config/cities";
+import { seoExpansionMetadata } from '~/content/seo-expansion-metadata';
 
 const { locale } = useI18n();
 const path = useLocalePath();
@@ -255,7 +256,7 @@ const faqs = computed(() => [
       :lines="
         lang === 'kk'
           ? ['Еңбекті қорғау', 'және қауіпсіздік', 'бойынша оқыту.']
-          : ['Обучение по', 'охране труда', 'и безопасности.']
+          : [seoExpansionMetadata.home.h1]
       "
       :description="
         tr(
