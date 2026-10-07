@@ -30,6 +30,14 @@ export function localizePublicPath(path, locale = 'ru') {
   return locale === 'kk' ? (base === '/' ? '/kk' : `/kk${base}`) : base;
 }
 
+// Selection belongs to explicit catalogue and conversion journeys. Informational
+// navigation points at the same clean URLs advertised by canonical and sitemap.
+export function preservesLeadContext(path) {
+  const base = stripLocale(path);
+  return isNonIndexableRoute(path) || base === '/courses' || /^\/courses\/[^/]+$/.test(base)
+    || base === '/contacts' || base === '/b2b';
+}
+
 export function canonicalPublicPath(path) {
   const pathname = path.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
   const locale = /^\/kk(?:\/|$)/.test(pathname) ? 'kk' : 'ru';

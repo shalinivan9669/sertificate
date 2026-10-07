@@ -16,7 +16,10 @@ test('all existing directions, cities and format combinations retain both public
   const routes = new Set(buildPublicRoutes());
   assert.equal(courses.length, 9, 'the nine legacy directions remain published');
   for (const locale of ['ru', 'kk']) {
-    for (const course of courses) assert.ok(routes.has(localizePublicPath(`/${course.slug}`, locale)));
+    for (const course of courses) {
+      assert.ok(routes.has(localizePublicPath(`/${course.slug}`, locale)));
+      assert.ok(routes.has(localizePublicPath(`/courses/${course.slug}`, locale)), 'canonical programme details must be in the sitemap');
+    }
     for (const city of cities) {
       assert.ok(routes.has(localizePublicPath(`/${city.slug}`, locale)));
       for (const entity of [...courses, ...formats]) {
@@ -27,7 +30,7 @@ test('all existing directions, cities and format combinations retain both public
     }
   }
   assert.equal(routes.size, buildPublicRoutes().length, 'no duplicate sitemap URLs');
-  assert.equal(routes.size, 548 + blogPosts.reduce((total, post) => total + getPublishedBlogLocales(post).length, 0), '548 preserved non-article addresses plus actually published article locales');
+  assert.equal(routes.size, 566 + blogPosts.reduce((total, post) => total + getPublishedBlogLocales(post).length, 0), '566 non-article addresses including 18 canonical programme pages, plus actually published article locales');
   assert.ok(routes.has('/blog/pozharnyj-tekhnicheskiy-minimum'), 'the established article address remains published');
   assert.equal(additionalSourceDirections.length, 11);
   for (const direction of additionalSourceDirections) for (const locale of ['ru', 'kk']) {
@@ -100,6 +103,14 @@ test('sitemap alternates are reciprocal and lastmod comes only from actual blog 
     assert.equal(entry.alternatives.length, !post || getPublishedBlogLocales(post).length > 1 ? 3 : 0);
     for (const alternate of entry.alternatives) assert.ok(locations.has(alternate.href));
     if (entry.alternatives.length) assert.ok(entry.alternatives.some(({ href }) => href === entry.loc));
+  }
+});
+
+test('default sitemap uses the canonical production host without an environment override', () => {
+  for (const entry of buildSitemapEntries()) {
+    assert.equal(new URL(entry.loc).origin, 'https://www.otcenter.kz');
+    for (const alternate of entry.alternatives) assert.equal(new URL(alternate.href).origin, 'https://www.otcenter.kz');
+    for (const image of entry.images || []) assert.equal(new URL(image.loc).origin, 'https://www.otcenter.kz');
   }
 });
 

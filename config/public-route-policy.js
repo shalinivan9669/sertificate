@@ -10,12 +10,15 @@ export { canonicalPublicPath, canonicalPublicUrl, courseCardAliases, isNonIndexa
 // One inventory is shared by Nitro, the sitemap generator and route contract tests.
 // Existing public addresses are retained; interactive and personal state is never
 // discovered by crawling links during a build.
-export const defaultSiteUrl = 'https://otcenter.kz';
+export const defaultSiteUrl = 'https://www.otcenter.kz';
 
 export function buildPublicRoutes() {
   const national = [
     '/', '/courses', '/b2b', '/blog', '/contacts', '/licenses', '/privacy', '/public-offer',
     ...additionalSourceDirections.map((direction) => `/courses/${direction.id}`),
+    // Programme details have their own content and self-canonical identity,
+    // alongside the broader national service pages below.
+    ...courses.map((course) => `/courses/${course.slug}`),
     ...courses.map((course) => `/${course.slug}`),
     ...formats.map((format) => `/${format.slug}`),
     ...cities.flatMap((city) => [

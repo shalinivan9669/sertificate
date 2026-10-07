@@ -123,7 +123,7 @@ async function enroll() {
           <p v-if="courseValue || guidance" class="ed-program-lead">{{ courseValue?.description[locale === 'kk' ? 'kk' : 'ru'] || guidance?.summary[locale === 'kk' ? 'kk' : 'ru'] }}</p>
           <p v-else class="ed-program-lead">{{ tr('Изучите содержание и выберите подходящие условия. Язык, формат и порядок записи зависят от доступной версии программы.', 'Мазмұнын қарап, қолайлы шарттарды таңдаңыз. Тіл, формат және тіркелу тәртібі бағдарламаның қолжетімді нұсқасына байланысты.') }}</p>
           <div v-if="audience" class="ed-program-audience"><h3>{{ tr('Кому подойдёт', 'Кімге арналған') }}</h3><p>{{ audience }}</p></div>
-          <NuxtLink v-if="program.publicPath !== '/courses/' + program.slug" class="ed-commerce-text-link" :to="{ path: path(program.publicPath), query: contextQuery }">{{ tr('Подробнее о направлении', 'Бағыт туралы толығырақ') }} <span aria-hidden="true">↗</span></NuxtLink>
+          <NuxtLink v-if="program.publicPath !== '/courses/' + program.slug" class="ed-commerce-text-link" :to="path(program.publicPath)">{{ tr('Подробнее о направлении', 'Бағыт туралы толығырақ') }} <span aria-hidden="true">↗</span></NuxtLink>
         </section>
         <aside class="ed-program-passport" aria-labelledby="program-terms">
           <p class="ed-commerce-kicker">{{ tr('Ваш следующий шаг', 'Келесі қадамыңыз') }}</p>

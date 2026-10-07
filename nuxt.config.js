@@ -1,7 +1,7 @@
 ﻿import { cities } from './config/cities';
 import { buildPrivateRouteRules, buildPublicRoutes, buildSitemapEntries, defaultSiteUrl } from './config/public-route-policy.js';
 
-// Preserve the existing host until the owner approves a domain migration.
+// Match the existing production host even when no environment override is set.
 const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || defaultSiteUrl;
 const siteName = 'OT Center';
 const defaultLocale = 'ru-KZ';

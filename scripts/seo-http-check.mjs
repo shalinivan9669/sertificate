@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { courses } from '../config/courses.js';
+import { formats } from '../config/formats.js';
 import { additionalSourceDirections } from '../shared/source-products.ts';
 import { getPublicCourseSeo } from '../shared/public-course-seo.ts';
 import { blogPosts } from '../config/blog.js';
@@ -44,6 +45,19 @@ export function assertCourseMetadataUniqueness(records) {
   }
 }
 
+export function inspectPublicHeaders(headers, route, options = {}) {
+  const robots = headers.get('x-robots-tag') || '';
+  if (options.indexable !== false) {
+    assert.doesNotMatch(robots, /\b(?:noindex|none)\b/i, `${route}: public HTTP headers must allow indexing`);
+  }
+}
+
+export function assertStablePublicSeo(reference, variant, route) {
+  for (const field of ['canonical', 'title', 'description', 'h1']) {
+    assert.equal(variant[field], reference[field], `${route}: journey preferences must preserve ${field}`);
+  }
+}
+
 export function inspectPublicHtml(html, route, siteUrl = defaultSiteUrl, options = {}) {
   const links = [...html.matchAll(/<link\b[^>]*>/gi)].map(([tag]) => attributes(tag));
   const metas = [...html.matchAll(/<meta\b[^>]*>/gi)].map(([tag]) => attributes(tag));
@@ -54,11 +68,12 @@ export function inspectPublicHtml(html, route, siteUrl = defaultSiteUrl, options
   assert.equal((html.match(/<title\b/gi) || []).length, 1, `${route}: one title`);
   assert.equal(metas.filter(({ name }) => name === 'description').length, 1, `${route}: one description`);
   assert.equal((html.match(/<h1\b/gi) || []).length, 1, `${route}: one SSR H1`);
-  const robots = metas.find(({ name }) => name === 'robots')?.content || '';
+  const robots = metas.filter(({ name }) => /^(?:robots|googlebot|googlebot-news)$/i.test(name || ''))
+    .map(({ content }) => content || '').join(',');
   if (options.indexable === false) {
-    assert.match(robots, /\bnoindex\b/i, `${route}: explicit non-indexable environment`);
+    assert.match(robots, /\b(?:noindex|none)\b/i, `${route}: explicit non-indexable environment`);
   } else {
-    assert.doesNotMatch(robots, /\bnoindex\b/i, `${route}: indexable`);
+    assert.doesNotMatch(robots, /\b(?:noindex|none)\b/i, `${route}: indexable`);
   }
   const article = blogPosts.find((post) => post._path === stripLocale(expectedPath));
   const publishedLocales = article ? getPublishedBlogLocales(article) : ['ru', 'kk'];
@@ -99,12 +114,14 @@ export function inspectPublicHtml(html, route, siteUrl = defaultSiteUrl, options
       assert.equal(found[0].content, value, `${route}: ${name} matches course metadata`);
     }
   }
-  return { canonical: canonical[0].href, title, description };
+  const h1 = decodeEntities(html.match(/<h1\b[^>]*>(.*?)<\/h1>/is)?.[1] || '')
+    .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return { canonical: canonical[0].href, title, description, h1 };
 }
 
 export async function runHttpSeoCheck(baseUrl, siteUrl = defaultSiteUrl, options = { all: false }) {
   assert.ok(baseUrl, 'Pass the URL of an already running local/staging SSR server');
-  const report = { baseUrl, canonicalHost: siteUrl, indexable: options.indexable !== false, checkedAt: new Date().toISOString(), inventoryMode: options.all ? 'all' : 'sample', public: [], private: [], missing: [] };
+  const report = { baseUrl, canonicalHost: siteUrl, indexable: options.indexable !== false, checkedAt: new Date().toISOString(), inventoryMode: options.all ? 'all' : 'sample', public: [], queryVariants: [], private: [], missing: [] };
   const check = async (route) => {
     const response = await fetch(new URL(route, baseUrl), { redirect: 'manual', signal: AbortSignal.timeout(30_000) });
     return { response, html: await response.text() };
@@ -120,9 +137,30 @@ export async function runHttpSeoCheck(baseUrl, siteUrl = defaultSiteUrl, options
   for (const route of publicRoutes) {
     const { response, html } = await check(route);
     assert.equal(response.status, 200, `${route}: public HTTP 200`);
+    inspectPublicHeaders(response.headers, route, { indexable: options.indexable });
     report.public.push({ route, status: response.status, ...inspectPublicHtml(html, route, siteUrl, { indexable: options.indexable }) });
   }
   assertCourseMetadataUniqueness(report.public);
+  // Query preferences remain usable by conversion links, while each format's
+  // indexable identity is owned by its national/city path in both languages.
+  const stableFormatRoutes = [...formats.map(({ slug }) => `/${slug}`), '/almaty/online-obuchenie']
+    .flatMap((route) => [route, localizePublicPath(route, 'kk')]);
+  for (const route of stableFormatRoutes) {
+    let reference = report.public.find((record) => record.route === route);
+    if (!reference) {
+      const { response, html } = await check(route);
+      assert.equal(response.status, 200, `${route}: format baseline HTTP 200`);
+      inspectPublicHeaders(response.headers, route, { indexable: options.indexable });
+      reference = inspectPublicHtml(html, route, siteUrl, { indexable: options.indexable });
+    }
+    const variantRoute = `${route}?city=astana&format=onsite`;
+    const { response, html } = await check(variantRoute);
+    assert.equal(response.status, 200, `${variantRoute}: preferences remain accessible`);
+    inspectPublicHeaders(response.headers, variantRoute, { indexable: options.indexable });
+    const variant = inspectPublicHtml(html, variantRoute, siteUrl, { indexable: options.indexable });
+    assertStablePublicSeo(reference, variant, variantRoute);
+    report.queryVariants.push({ route: variantRoute, status: response.status, ...variant });
+  }
   const unpublishedArticleRoutes = blogPosts.flatMap((post) => ['ru', 'kk'].filter((locale) => !getPublishedBlogLocales(post).includes(locale)).map((locale) => localizePublicPath(post._path, locale)));
   for (const route of ['/not-a-city/not-a-course', '/karaganda/not-a-course', '/unknown-direction',
     '/unknown-city/online-obuchenie', '/kk/unknown-city/ohrana-truda', '/courses/unknown-course', ...unpublishedArticleRoutes]) {

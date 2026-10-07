@@ -31,11 +31,15 @@ const { locale, t, tm } = useI18n();
 const localePath = useLocalePath();
 const route = useRoute();
 const runtimeConfig = useRuntimeConfig();
+const journeyContext = useLeadJourneyContext(computed(() => ({
+  programId: props.course.slug, city: resolvedCity.value?.slug || route.query.city, format: route.query.format,
+  ...(route.query.programs !== undefined ? { programs: route.query.programs } : {}),
+})));
 const { track } = useLmsAnalytics();
 const recordContact = () => track('contact_click', { programId: resolveCourseDirection(props.course.slug)?.id, city: resolvedCity.value?.slug });
 const consultationRoute = computed(() => ({
   path: localePath('/contacts'),
-  query: leadContextQuery({ programId: props.course.slug, city: resolvedCity.value?.slug || route.query.city, format: route.query.format }),
+  query: leadContextQuery(journeyContext.value),
 }));
 const priceRequestRoute = computed(() => ({ ...consultationRoute.value, query: { ...consultationRoute.value.query, request: 'price' }, hash: '#request-form' }));
 onMounted(() => {
@@ -164,7 +168,7 @@ const programSelectionRoute = computed(() => ({
   path: localePath('/program-selection'),
   query: {
     direction: resolveCourseDirection(props.course.slug)?.id,
-    ...leadContextQuery({ city: resolvedCity.value?.slug || route.query.city, format: route.query.format }),
+    ...leadContextQuery({ city: journeyContext.value.city, format: journeyContext.value.format }),
     source: 'course',
   },
 }));
@@ -172,9 +176,9 @@ const programSelectionRoute = computed(() => ({
 const selectedFormat = computed(() => leadFormats.find(item => item.id === route.query.format)?.title[locale.value === 'kk' ? 'kk' : 'ru']);
 const programDetailsRoute = computed(() => ({
   path: localePath('/courses/' + (resolveCourseDirection(props.course.slug)?.id || props.course.slug)),
-  query: leadContextQuery({ city: resolvedCity.value?.slug || route.query.city, format: route.query.format }),
+  query: leadContextQuery({ city: journeyContext.value.city, format: journeyContext.value.format }),
 }));
-const contextualLink = (to) => ({ path: to, query: leadContextQuery({ programId: props.course.slug, city: resolvedCity.value?.slug || route.query.city, format: route.query.format }) });
+const catalogRoute = computed(() => ({ path: localePath('/courses'), query: leadContextQuery(journeyContext.value) }));
 const standardSections = computed(() => cityContext.value ? [] : [
   { id: 'included', title: t('course.includesTitle'), items: includesItems.value },
   { id: 'benefits', title: t('course.benefitsTitle'), items: benefitsItems.value },
@@ -333,9 +337,9 @@ useHead(() => ({
 
 <template>
   <article class="ed-public ed-direction">
-    <EditorialPageHeader :title="pageHeading" :lead="pageDescription" :back-to="contextualLink(localePath('/courses'))" :back-label="locale === 'kk' ? 'Оқу бағыттары' : 'Направления обучения'">
+    <EditorialPageHeader :title="pageHeading" :lead="pageDescription" :back-to="catalogRoute" :back-label="locale === 'kk' ? 'Оқу бағыттары' : 'Направления обучения'">
       <template #context>
-        <NuxtLink v-if="resolvedCity?.slug" :to="contextualLink(localePath(`/${resolvedCity.slug}`))">{{ getCityName(resolvedCity, locale) }}</NuxtLink><span v-if="selectedFormat">{{ selectedFormat }}</span>
+        <NuxtLink v-if="resolvedCity?.slug" :to="localePath(`/${resolvedCity.slug}`)">{{ getCityName(resolvedCity, locale) }}</NuxtLink><span v-if="selectedFormat">{{ selectedFormat }}</span>
       </template>
       <div class="ed-public-actions">
         <NuxtLink :to="programSelectionRoute" class="ed-public-button">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink>
@@ -367,7 +371,7 @@ useHead(() => ({
             <ul v-if="section.bullets" class="ed-public-list"><li v-for="item in section.bullets" :key="item">{{ item }}</li></ul>
             <NuxtLink v-if="section.programLink" :to="programDetailsRoute" class="ed-public-link">{{ locale === 'kk' ? 'Бағдарламаның мазмұны мен оқу шарттары' : 'Содержание программы и условия обучения' }}</NuxtLink>
             <div v-if="section.links" class="ed-public-links">
-              <NuxtLink v-for="link in section.links" :key="link.to" :to="contextualLink(link.to)">{{ link.label }}</NuxtLink>
+              <NuxtLink v-for="link in section.links" :key="link.to" :to="link.to">{{ link.label }}</NuxtLink>
             </div>
           </section>
         </template>
@@ -394,7 +398,7 @@ useHead(() => ({
         </section>
         <section v-if="specialContent?.articles.length" id="related-guides" class="ed-public-section">
           <h2>{{ locale === 'kk' ? 'Бағдарлама таңдауға көмектесетін материалдар' : 'Материалы для выбора программы' }}</h2>
-          <ul class="ed-public-list"><li v-for="article in specialContent.articles" :key="article.to"><NuxtLink :to="contextualLink(article.to)" class="ed-public-link">{{ article.label }}</NuxtLink></li></ul>
+          <ul class="ed-public-list"><li v-for="article in specialContent.articles" :key="article.to"><NuxtLink :to="article.to" class="ed-public-link">{{ article.label }}</NuxtLink></li></ul>
         </section>
         <section class="ed-public-callout">
           <h2>{{ t('course.signupTitle') }}</h2>

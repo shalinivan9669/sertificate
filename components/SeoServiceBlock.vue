@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { seoExpansionServices } from '~/content/seo-expansion-services';
 import { getSortedBlogPosts } from '#build/blog-summaries.mjs';
-import { leadContextQuery } from '~/shared/lead-context';
 const { contentId } = defineProps<{ contentId: keyof typeof seoExpansionServices }>();
 const { locale } = useI18n();
-const route = useRoute();
 const content = computed(() => locale.value === 'ru' ? seoExpansionServices[contentId] : undefined);
 const planningArticles = computed(() => content.value && contentId === 'SV01'
   ? getSortedBlogPosts('ru').filter(post => [
@@ -19,7 +17,7 @@ const planningArticles = computed(() => content.value && contentId === 'SV01'
   <section v-if="planningArticles.length" class="seo-service-block">
     <h2>Планирование обучения для компании</h2>
     <ul>
-      <li v-for="post in planningArticles" :key="post.slug"><NuxtLink :to="{ path: post._path, query: leadContextQuery(route.query) }">{{ post.title.ru }}</NuxtLink></li>
+      <li v-for="post in planningArticles" :key="post.slug"><NuxtLink :to="post._path">{{ post.title.ru }}</NuxtLink></li>
     </ul>
   </section>
   <div v-if="content && contentId === 'SV09'" class="ed-public-links">

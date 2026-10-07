@@ -1,5 +1,6 @@
 <script setup>
 import { leadContextQuery } from '~/shared/lead-context';
+import { preservesLeadContext } from '~/config/public-route-runtime';
 import { computed } from 'vue';
 import { useHead, useRoute, useLocalePath, useI18n, useRuntimeConfig } from '#imports';
 import { formatBlogDate } from '~/config/blog-format';
@@ -10,8 +11,9 @@ const route = useRoute();
 const localePath = useLocalePath();
 const { locale, t } = useI18n();
 const runtimeConfig = useRuntimeConfig();
+const journeyContext = useLeadJourneyContext(computed(() => route.query));
 const localize = (value) => value?.[locale.value] || value?.ru || value;
-const contextRoute = (path) => ({ path: localePath(path), query: leadContextQuery(route.query) });
+const contextRoute = (path) => ({ path: localePath(path), ...(preservesLeadContext(path) ? { query: leadContextQuery(journeyContext.value) } : {}) });
 const formatDate = (date) => formatBlogDate(date, locale.value);
 const copy = computed(() => locale.value === 'kk' ? {
   title: 'Қазақстандағы еңбек және өнеркәсіптік қауіпсіздік туралы блог',

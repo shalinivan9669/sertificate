@@ -3,6 +3,7 @@ import { getCourseSearchIntent } from '~/shared/course-search-intent';
 import { getCoursePublicPath, resolveCourseDirection } from '~/shared/course-registry';
 import { getCourseSearchContent } from '~/shared/course-search-content';
 import { leadContextQuery } from '~/shared/lead-context';
+import { preservesLeadContext } from '~/config/public-route-runtime';
 import { getSortedBlogPosts } from '#build/blog-summaries.mjs';
 import { selectCourseArticles } from '~/config/course-article-selection';
 const props = withDefaults(defineProps<{ directionId?: string; includeArticles?: boolean; serviceBlock?: 'SV01' | 'SV02' }>(), { includeArticles: true });
@@ -13,7 +14,8 @@ const content = computed(() => getCourseSearchIntent(props.directionId, locale.v
 const related = computed(() => (content.value?.related || []).flatMap((id) => {
   const destination = getCoursePublicPath(id);
   const label = getCourseSearchContent(id, locale.value)?.heading;
-  return destination && label ? [{ id, label, to: { path: path(destination), query: leadContextQuery({ city: route.query.city, format: route.query.format }) } }] : [];
+  return destination && label ? [{ id, label, to: { path: path(destination), ...(preservesLeadContext(destination)
+    ? { query: leadContextQuery({ city: route.query.city, format: route.query.format }) } : {}) } }] : [];
 }));
 const articles = computed(() => {
   const direction = resolveCourseDirection(props.directionId);

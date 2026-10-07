@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useHead, useI18n, useLocalePath, useRoute, useRuntimeConfig } from '#imports';
 import { leadContextQuery } from '~/shared/lead-context';
 import { getFormatByType } from '~/config/formats';
-import { getCityBySlug, getCityPrepositional } from '~/composables/useCity';
+import { getCityPrepositional } from '~/composables/useCity';
 import { buildCityPageContext } from '~/content/city-page-context';
 
 const props = defineProps({
@@ -16,10 +16,6 @@ const props = defineProps({
     default: null,
   },
 });
-
-const resolvedCity = computed(() =>
-  (props.city && 'value' in props.city ? props.city.value : props.city) || getCityBySlug(route.query.city),
-);
 
 const format = computed(() => getFormatByType(props.type));
 const { locale, t } = useI18n();
@@ -35,13 +31,19 @@ const runtimeConfig = useRuntimeConfig();
 const localePath = useLocalePath();
 // URL query preferences keep the national page stable; only city paths get local copy.
 const pathCity = computed(() => props.city && 'value' in props.city ? props.city.value : props.city);
+const journeyContext = useLeadJourneyContext(computed(() => ({
+  city: pathCity.value?.slug || route.query.city,
+  format: { online: 'online', ochnoe: 'classroom', vyezdnoe: 'onsite' }[props.type] || route.query.format,
+  programId: route.query.program,
+  ...(route.query.programs !== undefined ? { programs: route.query.programs } : {}),
+})));
 const cityContext = computed(() => route.params.city
   ? buildCityPageContext(pathCity.value?.slug, 'format', props.type, locale.value)
   : null);
 
 const cityPrepositional = computed(
   () =>
-    getCityPrepositional(resolvedCity.value, locale.value) ||
+    getCityPrepositional(pathCity.value, locale.value) ||
     (locale.value === 'kk' ? 'Қазақстанда' : 'в Казахстане'),
 );
 
@@ -94,10 +96,7 @@ const programSelectionRoute = computed(() => ({
   query: {
     source: 'format',
     slug: format.value?.slug || '',
-    ...leadContextQuery({
-      format: { online: 'online', ochnoe: 'classroom', vyezdnoe: 'onsite' }[props.type] || route.query.format,
-      city: resolvedCity.value?.slug || route.query.city,
-    }),
+    ...leadContextQuery(journeyContext.value),
   },
 }));
 
@@ -130,7 +129,7 @@ useHead(() => ({
 
 <template>
   <article v-if="format" class="ed-public ed-format-page">
-    <EditorialPageHeader :title="resolvedCity ? metaTitle : heading" :lead="metaDescription" :back-to="{ path: localePath('/courses'), query: leadContextQuery(programSelectionRoute.query) }" :back-label="locale === 'kk' ? 'Оқу бағыттары' : 'Направления обучения'">
+    <EditorialPageHeader :title="pathCity ? metaTitle : heading" :lead="metaDescription" :back-to="{ path: localePath('/courses'), query: leadContextQuery(programSelectionRoute.query) }" :back-label="locale === 'kk' ? 'Оқу бағыттары' : 'Направления обучения'">
       <template #context><span>{{ cityPrepositional }}</span></template>
       <div class="ed-public-actions"><NuxtLink :to="programSelectionRoute" class="ed-public-button">{{ locale === 'kk' ? 'Бағдарлама таңдау' : 'Подобрать программу' }}</NuxtLink><a href="#format-details" class="ed-public-link">{{ locale === 'kk' ? 'Формат туралы' : 'Об этом формате' }}</a></div>
     </EditorialPageHeader>
@@ -140,6 +139,7 @@ useHead(() => ({
         <div><p>{{ resolveLocalized(section.subtitle) }}</p><ul class="ed-public-list"><li v-for="item in resolveList(section.bullets)" :key="item">{{ item }}</li></ul></div>
       </section>
     </div>
+    <FormatPreparationGuide v-if="!pathCity" :type="type" />
     <CityPageContext v-if="cityContext" :content="cityContext" />
     <section v-if="cityContext" class="ed-public-section ed-public-faq">
       <h2>{{ locale === 'kk' ? 'Жиі қойылатын сұрақтар' : 'Частые вопросы' }}</h2>

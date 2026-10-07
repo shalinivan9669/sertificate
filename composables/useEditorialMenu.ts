@@ -1,4 +1,5 @@
 import { getCityBySlug } from '~/composables/useCity';
+import { preservesLeadContext } from '~/config/public-route-runtime';
 
 export type EditorialMenuSection = 'start' | 'programs' | 'places' | 'learning' | 'center';
 
@@ -24,10 +25,10 @@ export function useEditorialMenu() {
   function link(destination: string, options: { format?: string; city?: string; hash?: string } = {}) {
     const selectedCity = options.city || city.value?.slug;
     const selectedFormat = options.format || format.value;
-    return { path: path(destination), query: {
+    return { path: path(destination), query: preservesLeadContext(destination) ? {
       ...(selectedCity ? { city: selectedCity } : {}),
       ...(selectedFormat ? { format: selectedFormat } : {}),
-    }, ...(options.hash ? { hash: options.hash } : {}) };
+    } : {}, ...(options.hash ? { hash: options.hash } : {}) };
   }
   function localLink(destination: string, formatValue?: string) {
     return link(`${city.value ? '/' + city.value.slug : ''}/${destination}`, { format: formatValue });

@@ -1,7 +1,6 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n, useLocalePath } from '#imports';
-import { leadContextQuery } from '~/shared/lead-context';
 const props = defineProps({
   content: {
     type: Object,
@@ -29,7 +28,7 @@ const copy = computed(() => locale.value === 'kk' ? {
 const relatedLinks = computed(() =>
   (props.content.modules.related.links || []).map((link) => ({
     ...link,
-    to: { path: localePath(link.to), query: leadContextQuery(props.ctaQuery) },
+    to: localePath(link.to),
   })),
 );
 
@@ -49,7 +48,7 @@ const programSelectionRoute = computed(() => ({
       <section id="scenarios"><h2>{{ content.modules.scenarios.title }}</h2><div class="ed-public-scenarios"><div v-for="item in content.modules.scenarios.items" :key="item.title"><h3>{{ item.title }}</h3><p>{{ item.text }}</p></div></div></section>
       <section id="process"><h2>{{ content.modules.process.title }}</h2><div><ol class="ed-public-list"><li v-for="step in content.modules.process.steps" :key="step.title"><strong>{{ step.title }}.</strong> {{ step.text }}</li></ol><div v-if="content.modules.process.notes?.length"><p v-for="note in content.modules.process.notes" :key="note">{{ note }}</p></div></div></section>
       <section id="questions"><h2>{{ content.modules.faq.title }}</h2><div class="ed-public-faq"><details v-for="item in content.modules.faq.faqs" :key="item.q"><summary>{{ item.q }}</summary><p>{{ item.a }}</p></details></div></section>
-      <section id="directions"><h2>{{ content.modules.related.title }}</h2><div class="ed-public-links"><NuxtLink v-for="link in relatedLinks" :key="link.to.path" :to="link.to">{{ link.label }}</NuxtLink></div></section>
+      <section id="directions"><h2>{{ content.modules.related.title }}</h2><div class="ed-public-links"><NuxtLink v-for="link in relatedLinks" :key="link.to" :to="link.to">{{ link.label }}</NuxtLink></div></section>
     </div>
     <section class="ed-public-callout"><h2>{{ copy.title }}</h2><p>{{ copy.text }}</p><div class="ed-public-actions"><NuxtLink class="ed-public-button" :to="programSelectionRoute">{{ ctaLabel || copy.label }}</NuxtLink></div></section>
   </article>

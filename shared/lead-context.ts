@@ -24,6 +24,49 @@ export function readLeadContext(input: unknown) {
   };
 }
 
+/** Saved preferences affect conversion links only after client hydration. */
+export function resolveLeadJourneyContext(explicitInput: unknown, savedInput: unknown, hydrated = false, defaultInput: unknown = {}) {
+  const explicit = readLeadContext(explicitInput);
+  const saved = hydrated ? readLeadContext(savedInput) : readLeadContext({});
+  const defaults = readLeadContext(defaultInput);
+  const programInput = hasLeadProgramSelection(explicitInput) ? explicitInput
+    : hydrated && hasLeadProgramSelection(savedInput) ? savedInput : defaultInput;
+  const programs = readLeadPrograms(programInput);
+  return {
+    programId: programs[0] || '',
+    ...(programs.length > 1 ? { programs: programs.join(',') } : {}),
+    city: explicit.city || saved.city || defaults.city,
+    format: explicit.format || saved.format || defaults.format,
+  };
+}
+
+export function hasLeadProgramSelection(input: unknown) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
+  const value = input as Record<string, unknown>;
+  return ['programs', 'programIds', 'directionIds', 'program', 'programId', 'direction']
+    .some(key => Object.hasOwn(value, key) && value[key] !== undefined && value[key] !== null);
+}
+
+export function leadProgramSelectionFingerprint(input: unknown) {
+  return JSON.stringify(readLeadPrograms(input));
+}
+
+/** A viewed programme remains a fallback only while the actual selection is unchanged. */
+export function resolveSavedLeadJourneyContext(selectionInput: unknown, journeyInput: unknown) {
+  const selected = readLeadContext(selectionInput);
+  const programs = readLeadPrograms(selectionInput);
+  const journey = journeyInput && typeof journeyInput === 'object' && !Array.isArray(journeyInput)
+    ? journeyInput as Record<string, unknown> : {};
+  const currentJourney = typeof journey.programs === 'string'
+    && journey.selectionFingerprint === leadProgramSelectionFingerprint(selectionInput);
+  return {
+    ...(selected.city ? { city: selected.city } : {}),
+    ...(selected.format ? { format: selected.format } : {}),
+    ...(programs.length ? { programs: programs.join(',') } : {}),
+    ...(currentJourney ? { programs: readLeadPrograms({ programs: journey.programs }).join(',') } : {}),
+  };
+}
+
 /** Accept only known direction IDs/aliases, preserving selection order. */
 export function readLeadPrograms(input: unknown): string[] {
   const value = input && typeof input === 'object' && !Array.isArray(input)

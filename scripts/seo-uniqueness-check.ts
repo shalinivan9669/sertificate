@@ -5,7 +5,7 @@ import { cities } from '../content/cities';
 import { courses } from '../content/courses';
 import { formats } from '../config/formats.js';
 import { canonicalPublicPath, defaultSiteUrl } from '../config/public-route-policy.js';
-import { buildCourseContractRoutes, inspectPublicHtml } from './seo-http-check.mjs';
+import { buildCourseContractRoutes, inspectPublicHeaders, inspectPublicHtml } from './seo-http-check.mjs';
 
 type PageType = 'city' | 'course' | 'city-course' | 'course-detail' | 'format' | 'city-format';
 
@@ -202,6 +202,7 @@ const readEntry = async (localizedRoute: string, type: PageType) => {
   const html = SSR_BASE_URL
     ? await fetch(new URL(localizedRoute, SSR_BASE_URL), { signal: AbortSignal.timeout(30_000) }).then(async (response) => {
       if (response.status !== 200) throw new Error(`${localizedRoute}: expected SSR 200, got ${response.status}`);
+      inspectPublicHeaders(response.headers, localizedRoute, { indexable: process.env.OT_NOINDEX !== 'true' });
       return response.text();
     })
     : await fs.readFile(filePath, 'utf8');

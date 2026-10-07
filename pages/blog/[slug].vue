@@ -1,5 +1,6 @@
 <script setup>
 import { leadContextQuery } from '~/shared/lead-context';
+import { preservesLeadContext } from '~/config/public-route-runtime';
 import { computed } from 'vue';
 import { useHead, useRoute, createError, useLocalePath, useI18n, useRuntimeConfig, useAsyncData } from '#imports';
 import { formatBlogDate, getBlogWordCount } from '~/config/blog-format';
@@ -16,7 +17,6 @@ const { locale, t } = useI18n();
 const runtimeConfig = useRuntimeConfig();
 const localize = (value) => value?.[locale.value] || value?.ru || value;
 const absoluteUrl = (path) => new URL(path, runtimeConfig.public.siteUrl).toString();
-const contextRoute = (path) => ({ path: localePath(path), query: leadContextQuery(route.query) });
 const formatDate = (date) => formatBlogDate(date, locale.value);
 const copy = computed(() => locale.value === 'kk' ? {
   home: 'Басты бет', blog: 'Блог', breadcrumbs: 'Навигация жолы',
@@ -43,9 +43,11 @@ const { data: post, error } = await useAsyncData(`blog:${slug}:${locale.value}`,
   return article;
 }, { deep: false });
 if (error.value) throw createError(error.value);
+const journeyContext = useLeadJourneyContext(computed(() => route.query), computed(() => ({ programId: post.value?.relatedCourses?.[0] })));
+const contextRoute = (path) => ({ path: localePath(path), ...(preservesLeadContext(path) ? { query: leadContextQuery(journeyContext.value) } : {}) });
 const articleLeadRoute = computed(() => ({
   path: localePath('/b2b'),
-  query: leadContextQuery({ city: route.query.city, format: route.query.format, program: post.value?.relatedCourses?.[0] }),
+  query: leadContextQuery(journeyContext.value),
   hash: '#team-request',
 }));
 
