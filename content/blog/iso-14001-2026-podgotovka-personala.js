@@ -30,6 +30,18 @@ export default {
     "iso-14001",
     "ekologicheskaya-bezopasnost"
   ],
+  "image": {
+    "src": "/images/optimized/iso-14001-2026-podgotovka-personala-20261007-e1b10a614af7-1536.webp",
+    "width": 1536,
+    "height": 1024,
+    "fit": "cover",
+    "alt": {
+      "ru": "Специалисты по экологии обсуждают план промышленной площадки"
+    },
+    "caption": {
+      "ru": "Тематическая иллюстрация создана с помощью искусственного интеллекта."
+    }
+  },
   "toc": {
     "ru": [
       {

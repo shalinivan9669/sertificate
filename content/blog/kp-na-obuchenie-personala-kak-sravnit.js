@@ -29,6 +29,18 @@ export default {
   "relatedCourses": [
     "ohrana-truda"
   ],
+  "image": {
+    "src": "/images/optimized/kp-na-obuchenie-personala-kak-sravnit-20261007-886b729517cb-1536.webp",
+    "width": 1536,
+    "height": 1024,
+    "fit": "cover",
+    "alt": {
+      "ru": "Три папки с предложениями и ноутбук на рабочем столе для сравнения условий обучения"
+    },
+    "caption": {
+      "ru": "Тематическая иллюстрация создана с помощью искусственного интеллекта."
+    }
+  },
   "toc": {
     "ru": [
       {

@@ -29,6 +29,18 @@ export default {
   "relatedCourses": [
     "ohrana-truda"
   ],
+  "image": {
+    "src": "/images/optimized/audit-obucheniya-pered-koncom-goda-20261007-f7a7404c3cf0-1536.webp",
+    "width": 1536,
+    "height": 1024,
+    "fit": "cover",
+    "alt": {
+      "ru": "Координатор обучения сверяет папку с записями и план на доске"
+    },
+    "caption": {
+      "ru": "Тематическая иллюстрация создана с помощью искусственного интеллекта."
+    }
+  },
   "toc": {
     "ru": [
       {

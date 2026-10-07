@@ -29,6 +29,18 @@ export default {
   "relatedCourses": [
     "ohrana-truda"
   ],
+  "image": {
+    "src": "/images/optimized/obuchenie-smennoy-komandy-yazyki-grafik-20261007-19129fcfd7d9-1536.webp",
+    "width": 1536,
+    "height": 1024,
+    "fit": "cover",
+    "alt": {
+      "ru": "Команда смены и инструктор обсуждают цветное расписание обучения"
+    },
+    "caption": {
+      "ru": "Тематическая иллюстрация создана с помощью искусственного интеллекта."
+    }
+  },
   "toc": {
     "ru": [
       {

@@ -29,6 +29,18 @@ export default {
   "relatedCourses": [
     "pervaya-pomoshch"
   ],
+  "image": {
+    "src": "/images/optimized/pervaya-pomoshch-vybor-kursa-dlya-kompanii-20261007-e868c93db604-1536.webp",
+    "width": 1536,
+    "height": 1024,
+    "fit": "cover",
+    "alt": {
+      "ru": "Учебный манекен для сердечно-лёгочной реанимации и сумка первой помощи в классе"
+    },
+    "caption": {
+      "ru": "Тематическая иллюстрация создана с помощью искусственного интеллекта."
+    }
+  },
   "toc": {
     "ru": [
       {
