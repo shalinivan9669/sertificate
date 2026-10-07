@@ -1,2 +1,5 @@
 # Migration checksums must be identical in Windows checkouts and Linux deployments.
 server/db/migrations/*.sql text eol=lf
+# Preserve the approved downloadable templates byte for byte, including CSV line endings.
+public/downloads/seo-2026-2027/* -text
+public/downloads/seo-2026-2027/*.csv whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
